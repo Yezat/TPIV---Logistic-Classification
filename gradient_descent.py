@@ -26,7 +26,6 @@ import math
 import calibration
 from scipy.optimize import basinhopping
 from scipy.optimize import minimize
-import numdifftools as nd
 # from sklearn.linear_model import LinearModelLoss
 # from sklearn._loss import LinearModelLoss
 from sklearn.linear_model._linear_loss import LinearModelLoss
