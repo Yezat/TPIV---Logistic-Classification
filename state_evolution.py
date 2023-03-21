@@ -2,15 +2,16 @@ import numpy as np
 from typing import Tuple
 from scipy.integrate import quad, dblquad
 from scipy.optimize import fixed_point, root
-from scipy.special import erfc
+from scipy.special import erfc,erf
 import matplotlib.pyplot as plt
 from erm import *
 from util import *
 from data import *
+import warnings
 
 BLEND_FPE = 0.75
-TOL_FPE = 1e-7
-MIN_ITER_FPE = 100
+TOL_FPE = 1e-4
+MIN_ITER_FPE = 20
 MAX_ITER_FPE = 5000
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
@@ -53,7 +54,15 @@ def f_out(V: float, w: float, y: float, Q: float, epsilon: float) -> float:
     return 1/V * ( proximal(V,y,Q,epsilon,w) - w )
 
 def f_out_0(y: float, w: float, V: float, tau: float) -> float:
-    return 2*y * gaussian(w*y,0,V+tau**2) / (erfc(-w*y/np.sqrt(2*(V+tau**2))))
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            return 2*y * gaussian(w*y,0,V+tau**2) / (erfc(-w*y/np.sqrt(2*(V+tau**2))))
+        except Warning:
+            print("Warning in f_out_0")
+            print("y: ", y, "w: ", w, "V: ", V, "tau: ", tau)
+            raise Exception("Warning in f_out_0")
+
 
 def z_out(y: float, mean: float, var: float, Q: float, epsilon: float = 0.0, int_lims: float = 20.0) -> float:
     def integrand(z):
@@ -61,35 +70,47 @@ def z_out(y: float, mean: float, var: float, Q: float, epsilon: float = 0.0, int
     
     return quad(integrand, -int_lims, int_lims, epsabs=1e-10, epsrel=1e-10, limit=200)[0]
 
-def z_out_0(y: float, m: float, q: float, xi: float,tau: float, rho_w_star:float) -> float:
-    return 0.5 * erfc( - (y * m * np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+# def z_out_0(y: float, m: float, q: float, xi: float,tau: float, rho_w_star:float) -> float:
+    # return 0.5 * erfc( - (y * m * np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+
+# we write z_ou_0 as in (56) of the uncertainty paper
+def z_out_0(y: float, w: float, V: float, tau: float) -> float:
+    return 0.5 * erfc(- (y * w) / np.sqrt(2*(tau**2 + V)))
 
 def eta(m: float, q: float, rho_w_star: float) -> float:
     return m * m / (rho_w_star * q)
 
 def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
     
+    print("m_hat_func")
+    # print parameters
+    print("m: ", m,"q: ", q,"sigma: ", sigma,"rho_w_star: ", rho_w_star,"alpha: ", alpha,"epsilon: ", epsilon,"tau: ", tau,"int_lims: ", int_lims)
+
     def integrand(y, xi):
         e = eta(m,q,rho_w_star)
         w_0 = np.sqrt(rho_w_star*e) * xi
 
         V_0 = rho_w_star + (1-e)
 
-        z_0 = z_out_0(y,m,q,xi,tau,rho_w_star)
+        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
 
-        f_0 = f_out_0(y,w_0,V_0,tau)
+        f_0 = y * gaussian(w_0*y,0,V_0+tau**2)
 
         f_o = f_out(sigma, np.sqrt(q) * xi, y, sigma+q,epsilon)
 
-        return z_0 * f_0 * f_o * gaussian(xi)
+        return f_0 * f_o * gaussian(xi)
 
     return alpha * dblquad(integrand,-np.inf,np.inf,-int_lims,int_lims,epsabs=1e-10,epsrel=1e-10)[0]
 
 def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
-    
+    print("q_hat_func")
     def integrand(y, xi):
 
-        z_0 = z_out_0(y,m,q,xi,tau,rho_w_star)
+        e = eta(m,q,rho_w_star)
+        w_0 = np.sqrt(rho_w_star*e) * xi
+        V_0 = rho_w_star + (1-e)
+
+        z_0 = z_out_0(y,w_0,V_0,tau)
         f_o = f_out(sigma, np.sqrt(q) * xi, y, sigma+q,epsilon)
 
         return z_0 * f_o**2 * gaussian(xi)
@@ -98,9 +119,13 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     return alpha * dblquad(integrand,-np.inf,np.inf,-int_lims,int_lims,epsabs=1e-10,epsrel=1e-10)[0]
 
 def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, int_lims: float = 20.0):
-    
+    print("sigma_hat_func")
     def integrand(y, xi):
-        z_0 = z_out_0(y,m,q,xi,tau,rho_w_star)
+        e = eta(m,q,rho_w_star)
+        w_0 = np.sqrt(rho_w_star*e) * xi
+        V_0 = rho_w_star + (1-e)
+
+        z_0 = z_out_0(y,w_0,V_0,tau)
 
         f_o_prime = derivative_f_out(sigma,y,sigma+q,epsilon,np.sqrt(q) * xi)
 
@@ -111,6 +136,9 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 # m,q,sigma -> see application
 
 def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims):
+    print("var_hat_func")
+    # print parameters
+    print("m: ", m,"q: ", q,"sigma: ", sigma,"rho_w_star: ", rho_w_star,"alpha: ", alpha,"epsilon: ", epsilon,"tau: ", tau,"int_lims: ", int_lims)
     m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,int_lims)
     q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,int_lims)
     sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,tau,epsilon,int_lims)
@@ -184,8 +212,11 @@ if __name__ == "__main__":
     # proximal(0.5, -17.30126733377969, 1.0, 0, 4.764398807031843, debug=True)
 
 
-    m,q,sigma = fixed_point_finder((0.5,0.5,0.5),rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam)
+    # y: -19.478130570343435 w:  164.80196123904906 V:  1.5 tau:  2
+    # f_out_0(-19.478130570343435, 164.80196123904906, 1.5, 2)
 
+
+    m,q,sigma = fixed_point_finder((0.5,0.5,0.5),rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam)
     print("m: ", m)
     print("q: ", q)
     print("sigma: ", sigma)
