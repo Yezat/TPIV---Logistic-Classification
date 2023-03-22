@@ -113,6 +113,7 @@ class DatabaseConnection:
         self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{ERM_TABLE}'")
         if self.cursor.fetchone() is None:
             print("Creating table",ERM_TABLE,"...")
+            # TODO, this isn't correct yet and the ERM class will change...
             self.cursor.execute(f"CREATE TABLE {ERM_TABLE} (code_version TEXT, date TEXT, q REAL, rho REAL, m REAL, alpha REAL, epsilon REAL, tau REAL, lam REAL, abs_tol REAL, min_iter INTEGER, max_iter INTEGER, blend_fpe REAL, int_lims REAL, generalization_error REAL, final_state TEXT, final_state_error REAL)")
             self.connection.commit()
 
