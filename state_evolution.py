@@ -1,18 +1,15 @@
 import numpy as np
 from typing import Tuple
 from scipy.integrate import quad, dblquad
-from scipy.optimize import fixed_point, root
-from scipy.special import erfc,erf
+from scipy.optimize import fixed_point, root, minimize_scalar, minimize
+from scipy.special import erfc,erf, logsumexp
 import matplotlib.pyplot as plt
 from erm import *
 from util import *
 from data import *
 import warnings
 
-BLEND_FPE = 0.75
-TOL_FPE = 1e-4
-MIN_ITER_FPE = 20
-MAX_ITER_FPE = 5000
+
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
@@ -25,6 +22,9 @@ def p_out(y: float, z: float, Q: float, epsilon: float = 0.0) -> float:
 
 def second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
     return y**2 / (4 * np.cosh(y*z/2 - epsilon/2 * np.sqrt(Q)))
+    
+def first_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
+    return -y / (1 + np.exp(y*z - epsilon * np.sqrt(Q)))
 
 def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) -> float:
     return 1/(1 + V * second_derivative_loss(y,z,Q,epsilon))
@@ -34,18 +34,38 @@ def derivative_f_out(V: float, y: float, Q: float, epsilon: float, w: float) -> 
     return 1/V * (derivative_proximal(V,y,z,Q,epsilon) - 1)
 
 def function_fixed_point(y: float, z: float, Q: float, epsilon: float, V: float, w: float) -> float:
-    return y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w -z
+    return y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w
+    
+def proximal_loss(y: float, z: float, epsilon: float, Q: float, V: float, w: float) -> float:
+    # print("proximal_loss:")
+    # print("y: ", y, type(y), "z: ", z, type(z), "epsilon: ", epsilon, "Q: ", Q, "V: ", V, "w: ", w)
+    if type(z) == np.ndarray:
+        z = z[0]
+    return logsumexp([np.log(1),-y*z + epsilon * np.sqrt(Q)]) + V/2 * (z - w)**2
 
 #https://en.wikipedia.org/wiki/Fixed-point_iteration
 #https://math.stackexchange.com/questions/1683654/proximal-operator-for-the-logistic-loss-function
+#https://web.stanford.edu/~boyd/papers/pdf/prox_algs.pdf
+# See chapter 6 on how to minimize the f(x) + (1/2) * V * (x - w)**2 (equation 6.1)
+# Just before Chapter 3.4 there is an approximation given by w - V * f'(w)
 def proximal(V: float, y: float, Q: float, epsilon: float, w:float, debug = False) -> float:
     if debug:
         print("proximal:")
         print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)
     z = 0.0
     # fixed_point(lambda z: function_fixed_point(y,z,Q,epsilon,V,w), z)
-    result = root(lambda z: function_fixed_point(y,z,Q,epsilon,V,w), z)
-    z = result.x[0]
+    
+
+    result = root(lambda z: function_fixed_point(y,z,Q,epsilon,V,w) - z, 0)
+
+    # result = root(lambda z: proximal_loss(y,z,epsilon,Q,V,w), 0, method='hybr')
+    # result = minimize_scalar(lambda z: proximal_loss(y,z,epsilon,Q,V,w),method="Brent")
+
+    # result = minimize(lambda z: proximal_loss(y,z,epsilon,Q,V,w),0)
+    z = result.x
+
+    # approximation:
+    # z = w - V * first_derivative_loss(y,w,Q,epsilon)
     if debug:
         print("result: ", z)
     return z
@@ -153,6 +173,9 @@ def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam):
 def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
 
+
+
+
 def fixed_point_finder(
     initial_condition: Tuple[float, float, float],
     rho_w_star: float,
@@ -160,10 +183,11 @@ def fixed_point_finder(
     epsilon: float,
     tau: float,
     lam: float,
-    int_lims: float = 20.0,
-    abs_tol: float = TOL_FPE,
-    min_iter: int = MIN_ITER_FPE,
-    max_iter: int = MAX_ITER_FPE,
+    abs_tol: float,
+    min_iter: int,
+    max_iter: int,
+    blend_fpe: float,
+    int_lims: float,    
 ):
     m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
     err = 1.0
@@ -184,9 +208,9 @@ def fixed_point_finder(
         if iter_nb % 100 == 0:
             print("\t", err)
 
-        m = damped_update(new_m, m, BLEND_FPE)
-        q = damped_update(new_q, q, BLEND_FPE)
-        sigma = damped_update(new_sigma, sigma, BLEND_FPE)
+        m = damped_update(new_m, m, blend_fpe)
+        q = damped_update(new_q, q, blend_fpe)
+        sigma = damped_update(new_sigma, sigma, blend_fpe)
 
         iter_nb += 1
         if iter_nb > max_iter:
@@ -198,14 +222,19 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 300
-    n = 3000
+    n = 600
     n_test = 100000
     w = sample_weights(d)
     p = 0.75
     dp = 0.1
     tau = 2
-    lam = 0.01
-    epsilon = 0
+    lam = 1e-5
+    epsilon = 0.04
+    BLEND_FPE = 0.75
+    TOL_FPE = 1e-4
+    MIN_ITER_FPE = 20
+    MAX_ITER_FPE = 5000
+    int_lims = 20.0
     
 
     # V:  0.5 y:  -17.30126733377969 Q:  1.0 epsilon:  0 w:  4.764398807031843
@@ -216,7 +245,32 @@ if __name__ == "__main__":
     # f_out_0(-19.478130570343435, 164.80196123904906, 1.5, 2)
 
 
-    m,q,sigma = fixed_point_finder((0.5,0.5,0.5),rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam)
+    # y:  19.478130570343435 z:  [68.17374282] Q:  1.0 epsilon:  0.04 V:  0.5 w:  164.80196123904906
+    # function_fixed_point(19.478130570343435, 68.17374282, 1.0, 0.04,0.5, 164.80196123904906)
+    # proximal(0.5, 15.478130570343435, 1.0, 0.04, 164.80196123904906, debug=True)
+    # y = 19.478130570343435
+    # z = 68.17374282
+    # Q = 1.0
+    # epsilon = 0.04
+    # V = 0.5
+    # w = 164.80196123904906
+    # argmin = np.inf
+    # min = np.inf
+    # for z in np.linspace(-100,100,100):
+    #     argument = y*z - epsilon * np.sqrt(Q)
+    #     print("argument", argument)
+    #     e = np.exp(argument)
+    #     print("e", e)
+    #     r = y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w -z
+    #     print("result", r)
+    #     if r < min:
+    #         min = r
+    #         argmin = z
+
+    # print("argmin", argmin)
+    # print("min", min)
+
+    m,q,sigma = fixed_point_finder((0.5,0.5,0.5),rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=int_lims)
     print("m: ", m)
     print("q: ", q)
     print("sigma: ", sigma)
