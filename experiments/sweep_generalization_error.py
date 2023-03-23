@@ -73,9 +73,7 @@ def run_state_evolution(lock,logger, experiment_id: str, alpha: float,epsilon: f
             db.insert_state_evolution(st_exp_info)
             logger.info(f"Saved State Evolution to db with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, gen_error={gen_error}")
         end = time.time()
-        logger.debug(f"Saving to db took {end-start} seconds")
-    
-
+        logger.debug(f"Saving to db took {end-start} seconds")   
 
 
 started_procs = []
@@ -102,27 +100,45 @@ def start_work(procs, number_of_workers):
                     pbar.update(1)
     logging.info("Done with starting work")
 
-
+class SweepExperiment:
+    def __init__(self):
+        # WARNING: this does not affect the experiment outcome, one should use the sweep_experiment.json file to change the parameters. However, if sweep_experiment.json does not exist, the default values are used
+        # TODO: make sure all integration parameters from state_evolution are here and get stored in db
+        # experiment name parametrizable
+        self.alphas = np.linspace(0.1,5,10)
+        self.epsilons = np.array([0,0.02])
+        self.lambdas = np.array([1e-3]) # TODO try negative regularization
+        self.tau = 2
+        self.d = 300
+        self.state_evolution_repetitions = 3
+        self.erm_repetitions = 5
+        self.erm_method = "gd"
 
 if __name__ == "__main__":
     logger = multiprocessing.log_to_stderr()
     logger.setLevel(level=logging.INFO)
     
+    # see if a filename has been past as an argument
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    else:
+        filename = "sweep_experiment.json"
+
+    # load the experiment parameters from the json file
+    sweep_experiment = SweepExperiment()
+    try:
+        with open(filename) as f:
+            sweep_experiment.__dict__ = json.load(f)
+    except FileNotFoundError:
+        logging.error("Could not find file %s. Using the standard elements instead", filename)
+        
+        
     # get an experiment id
     experiment_id = create_experiment_id()
 
     logging.info("Starting Experiment with id %s", experiment_id)
-
-    # define the experiment
-    alphas = np.linspace(0.1,5,10)
-    epsilons = np.array([0,0.02])
-    lambdas = np.array([1e-3]) # TODO try negative regularization
-    tau = 2
-    d = 300
-    state_evolution_repetitions = 3
-    erm_repetitions = 5
-    erm_method = "gd"
-    experiment = ExperimentInformation(experiment_id,state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,tau,d)
+    
+    experiment = ExperimentInformation(experiment_id,sweep_experiment.state_evolution_repetitions,sweep_experiment.erm_repetitions,sweep_experiment.alphas,sweep_experiment.epsilons,sweep_experiment.lambdas,sweep_experiment.tau,sweep_experiment.d)
     with DatabaseHandler(logger) as db:
         db.insert_experiment(experiment)
 
@@ -136,16 +152,16 @@ if __name__ == "__main__":
     procs = queue.Queue()
 
     # iterate all the parameters and create process objects for each parameter
-    for alpha in alphas:
-        for epsilon in epsilons:
-            for lam in lambdas:
+    for alpha in experiment.alphas:
+        for epsilon in experiment.epsilons:
+            for lam in experiment.lambdas:
                 
-                for _ in range(state_evolution_repetitions):
-                    proc = Process(target=run_state_evolution, args=(lock,logger,experiment_id,alpha,epsilon,lam,tau,d))
+                for _ in range(experiment.state_evolution_repetitions):
+                    proc = Process(target=run_state_evolution, args=(lock,logger,experiment_id,alpha,epsilon,lam,experiment.tau,experiment.d))
                     procs.put(proc)
                     
-                for _ in range(erm_repetitions):
-                    proc = Process(target=run_erm, args=(lock,logger,experiment_id,alpha,epsilon,lam,tau,d))
+                for _ in range(experiment.erm_repetitions):
+                    proc = Process(target=run_erm, args=(lock,logger,experiment_id,alpha,epsilon,lam,experiment.tau,experiment.d,sweep_experiment.erm_method))
                     procs.put(proc)
 
     # start the processes

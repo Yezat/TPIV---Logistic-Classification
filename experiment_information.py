@@ -123,7 +123,7 @@ class DatabaseHandler:
         self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{ERM_TABLE}'")
         if self.cursor.fetchone() is None:
             self.logger(f"Creating table {ERM_TABLE} ...")
-            self.cursor.execute(f"CREATE TABLE {ERM_TABLE} (id TEXT, code_version TEXT, experimend_id TEXT, date TEXT, q REAL, m REAL, rho REAL, cosb REAL, epsilon REAL, lam REAL, generalization_error_erm REAL, generalization_error_overlap REAL, chosen_minimizer TEXT, training_error REAL, test_loss REAL, d INTEGER, tau REAL, alpha REAL)")
+            self.cursor.execute(f"CREATE TABLE {ERM_TABLE} (id TEXT, code_version TEXT, experiment_id TEXT, date TEXT, q REAL, m REAL, rho REAL, cosb REAL, epsilon REAL, lam REAL, generalization_error_erm REAL, generalization_error_overlap REAL, chosen_minimizer TEXT, training_error REAL, test_loss REAL, d INTEGER, tau REAL, alpha REAL)")
             self.connection.commit()
 
     def insert_experiment(self, experiment_information: ExperimentInformation):

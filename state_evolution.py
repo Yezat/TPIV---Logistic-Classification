@@ -67,7 +67,7 @@ def proximal(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
     return z
 
 def f_out(V: float, w: float, y: float, Q: float, epsilon: float) -> float:
-    return 1/V * ( proximal(V,y,Q,epsilon,w) - w )
+    return 1/V * ( proximal(V,y,Q,epsilon,w) - w ) # directly write root.
 
 def f_out_0(y: float, w: float, V: float, tau: float) -> float:
     with warnings.catch_warnings():
@@ -150,7 +150,6 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
     return -alpha * dblquad(integrand,-np.inf,np.inf,-int_lims,int_lims,epsabs=1e-10,epsrel=1e-10)[0]
 
 # m,q,sigma -> see application
-
 def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims):
     logging.info("var_hat_func")
     logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
@@ -167,8 +166,6 @@ def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam):
 
 def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
-
-
 
 
 def fixed_point_finder(
