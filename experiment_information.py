@@ -13,10 +13,12 @@ import sqlite3
 from data import *
 
 class ExperimentInformation:
-    def __init__(self, experiment_id: str, code_version: str, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray,tau: np.ndarray, d: int):
+    def __init__(self, experiment_id: str, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray,tau: np.ndarray, d: int):
         self.experiment_id: str = experiment_id
-        self.code_version: str = code_version
+        self.code_version: str = __version__
         self.date: datetime = datetime.datetime.now()
+        self.state_evolution_repetitions: int = state_evolution_repetitions
+        self.erm_repetitions: int = erm_repetitions
         self.alphas: np.ndarray = alphas
         self.epsilons: np.ndarray = epsilons
         self.lambdas: np.ndarray = lambdas
@@ -28,8 +30,9 @@ class ExperimentInformation:
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
     def __init__(self, experiment_id: str, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float):
-        self.code_version = __version__
-        self.experiment_id = experiment_id
+        self.id: str = str(uuid.uuid4())
+        self.code_version: str = __version__
+        self.experiment_id: str = experiment_id
         rho_w_star = 1.0
         self.generalization_error: float = generalization_error(rho_w_star, m, sigma + q)
         # store current date and time
@@ -51,6 +54,7 @@ class StateEvolutionExperimentInformation:
 
 class ERMExperimentInformation:
     def __init__(self, experiment_id: str, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float):
+        self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
         self.experiment_id: str = experiment_id
         self.q: float= w_gd@w_gd / d
@@ -95,55 +99,56 @@ EXPERIMENTS_TABLE = "experiments"
 # How to change a column later:
 # cursor.execute('ALTER TABLE experiments ADD COLUMN new_column TEXT')
 
-class DataBaseHandler:
-    def __init__(self):
-        self.connection = sqlite3.connect(DB_NAME)
+class DatabaseHandler:
+    def __init__(self, logger, db_name=DB_NAME):
+        self.connection = sqlite3.connect(db_name,timeout=15)
         self.cursor = self.connection.cursor()
+        self.logger = logger
 
         # test if all tables exist and create them if not
         self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{STATE_EVOLUTION_TABLE}'")
         if self.cursor.fetchone() is None:
-            print("Creating table",STATE_EVOLUTION_TABLE,"...")
-            self.cursor.execute(f"CREATE TABLE {STATE_EVOLUTION_TABLE} (code_version TEXT, experiment_id TEXT, date TEXT, sigma REAL, q REAL, m REAL, initial_condition TEXT, alpha REAL, epsilon REAL, tau REAL, lam REAL, abs_tol REAL, min_iter INTEGER, max_iter INTEGER, blend_fpe REAL, int_lims REAL, generalization_error REAL)")
+            self.logger(f"Creating table {STATE_EVOLUTION_TABLE} ...")
+            self.cursor.execute(f"CREATE TABLE {STATE_EVOLUTION_TABLE} (id TEXT, code_version TEXT, experiment_id TEXT, date TEXT, sigma REAL, q REAL, m REAL, initial_condition TEXT, alpha REAL, epsilon REAL, tau REAL, lam REAL, abs_tol REAL, min_iter INTEGER, max_iter INTEGER, blend_fpe REAL, int_lims REAL, generalization_error REAL)")
             self.connection.commit()
 
         # For the experiments table
         self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{EXPERIMENTS_TABLE}'")
         if self.cursor.fetchone() is None:
-            print("Creating table",EXPERIMENTS_TABLE,"...")
-            self.cursor.execute(f"CREATE TABLE {EXPERIMENTS_TABLE} (experiment_id TEXT,code_version TEXT, date TEXT, alphas TEXT, epsilons TEXT, lambdas TEXT, tau REAL, d INTEGER, completed BOOLEAN)")
+            self.logger(f"Creating table {EXPERIMENTS_TABLE} ...")
+            self.cursor.execute(f"CREATE TABLE {EXPERIMENTS_TABLE} (experiment_id TEXT,code_version TEXT, state_evolution_repetitions INTEGER, erm_repetitions INTEGER, date TEXT, alphas TEXT, epsilons TEXT, lambdas TEXT, tau REAL, d INTEGER, completed BOOLEAN)")
             self.connection.commit()
 
         # For the erm table
         self.cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{ERM_TABLE}'")
         if self.cursor.fetchone() is None:
-            print("Creating table",ERM_TABLE,"...")
-            self.cursor.execute(f"CREATE TABLE {ERM_TABLE} (code_version TEXT, experimend_id TEXT, date TEXT, q REAL, m REAL, rho REAL, cosb REAL, epsilon REAL, lam REAL, generalization_error_erm REAL, generalization_error_overlap REAL, chosen_minimizer TEXT, training_error REAL, test_loss REAL, d INTEGER, tau REAL, alpha REAL)")
+            self.logger(f"Creating table {ERM_TABLE} ...")
+            self.cursor.execute(f"CREATE TABLE {ERM_TABLE} (id TEXT, code_version TEXT, experimend_id TEXT, date TEXT, q REAL, m REAL, rho REAL, cosb REAL, epsilon REAL, lam REAL, generalization_error_erm REAL, generalization_error_overlap REAL, chosen_minimizer TEXT, training_error REAL, test_loss REAL, d INTEGER, tau REAL, alpha REAL)")
             self.connection.commit()
 
-    def insertExperimentInformation(self, experiment_information: ExperimentInformation):
-        self.cursor.execute(f"INSERT INTO {EXPERIMENTS_TABLE} VALUES (?,?,?,?,?,?,?,?,?)", (experiment_information.experiment_id, experiment_information.code_version, experiment_information.date.isoformat(), json.dumps(experiment_information.alphas), json.dumps(experiment_information.epsilons), json.dumps(experiment_information.lambdas), experiment_information.tau, experiment_information.d, experiment_information.completed))
+    def insert_experiment(self, experiment_information: ExperimentInformation):
+        self.cursor.execute(f"INSERT INTO {EXPERIMENTS_TABLE} VALUES (?,?,?,?,?,?,?,?,?,?,?)", (experiment_information.experiment_id, experiment_information.code_version, experiment_information.date.isoformat(), experiment_information.state_evolution_repetitions, experiment_information.erm_repetitions, json.dumps(experiment_information.alphas,cls=NumpyEncoder), json.dumps(experiment_information.epsilons,cls=NumpyEncoder), json.dumps(experiment_information.lambdas,cls=NumpyEncoder), experiment_information.tau, experiment_information.d, experiment_information.completed))
         self.connection.commit()
 
-    def setExperimentToCompleted(self, experiment_id: str):
+    def set_experiment_completed(self, experiment_id: str):
         self.cursor.execute(f"UPDATE {EXPERIMENTS_TABLE} SET completed=1 WHERE experiment_id='{experiment_id}'")
         self.connection.commit()
 
-    def insertStateEvolutionExperimentInformation(self, experiment_information: StateEvolutionExperimentInformation):
-        self.cursor.execute(f"INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (experiment_information.code_version, experiment_information.experiment_id, experiment_information.date.isoformat(), experiment_information.sigma, experiment_information.q, experiment_information.m, json.dumps(experiment_information.initial_condition), experiment_information.alpha, experiment_information.epsilon, experiment_information.tau, experiment_information.lam, experiment_information.abs_tol, experiment_information.min_iter, experiment_information.max_iter, experiment_information.blend_fpe, experiment_information.int_lims, experiment_information.generalization_error))
+    def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
+        self.cursor.execute(f"INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (experiment_information.id,experiment_information.code_version, experiment_information.experiment_id, experiment_information.date.isoformat(), experiment_information.sigma, experiment_information.q, experiment_information.m, json.dumps(experiment_information.initial_condition,cls=NumpyEncoder), experiment_information.alpha, experiment_information.epsilon, experiment_information.tau, experiment_information.lam, experiment_information.abs_tol, experiment_information.min_iter, experiment_information.max_iter, experiment_information.blend_fpe, experiment_information.int_lims, experiment_information.generalization_error))
         self.connection.commit()
 
-    def insertERMEvolutionExperimentInformation(self, experiment_information: ERMExperimentInformation):
-        self.cursor.execute(f"INSERT INTO {ERM_TABLE} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (experiment_information.code_version, experiment_information.experiment_id, experiment_information.date.isoformat(), experiment_information.q, experiment_information.m, experiment_information.rho, experiment_information.cosb, experiment_information.epsilon, experiment_information.lam, experiment_information.generalization_error_erm, experiment_information.generalization_error_overlap, experiment_information.chosen_minimizer, experiment_information.training_error, experiment_information.test_loss, experiment_information.d, experiment_information.tau, experiment_information.alpha))
+    def insert_erm(self, experiment_information: ERMExperimentInformation):
+        self.cursor.execute(f"INSERT INTO {ERM_TABLE} VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (experiment_information.id,experiment_information.code_version, experiment_information.experiment_id, experiment_information.date.isoformat(), experiment_information.q, experiment_information.m, experiment_information.rho, experiment_information.cosb, experiment_information.epsilon, experiment_information.lam, experiment_information.generalization_error_erm, experiment_information.generalization_error_overlap, experiment_information.chosen_minimizer, experiment_information.training_error, experiment_information.test_loss, experiment_information.d, experiment_information.tau, experiment_information.alpha))
         self.connection.commit()
 
-    def getAllExperimentsAsDataFrame(self):
+    def get_experiments(self):
         return pd.read_sql_query(f"SELECT * FROM {EXPERIMENTS_TABLE}", self.connection)
 
-    def getAllStateEvolutionExperimentsAsDataFrame(self):
+    def get_state_evolutions(self):
         return pd.read_sql_query(f"SELECT * FROM {STATE_EVOLUTION_TABLE}", self.connection)
     
-    def getAllERMEvolutionExperimentsAsDataFrame(self):
+    def get_erms(self):
         return pd.read_sql_query(f"SELECT * FROM {ERM_TABLE}", self.connection)
 
     # how to implement a select
@@ -166,13 +171,13 @@ def create_experiment_id():
 if __name__ == "__main__":
     id = create_experiment_id()
     print(id)
-    with DataBaseHandler() as dbHandler:
+    with DatabaseHandler() as dbHandler:
         # create random experiment information
-        experiment_information = ExperimentInformation(id,__version__, [0.1,0.2,0.3], [0.1,0.2,0.3], [0.1,0.2,0.3], 0.1, 10)
-        dbHandler.insertExperimentInformation(experiment_information)
+        experiment_information = ExperimentInformation(id,10,10, [0.1,0.2,0.3], [0.1,0.2,0.3], [0.1,0.2,0.3], 0.1, 10)
+        dbHandler.insert_experiment(experiment_information)
         # create random state evolution experiment information
-        state_evolution_exp = StateEvolutionExperimentInformation(id, 0.1, 0.1, 0.1, [0.1,0.2,0.4],4,3,1,3,4,5,23,34,234)
-        dbHandler.insertStateEvolutionExperimentInformation(state_evolution_exp)
+        state_evolution_exp = StateEvolutionExperimentInformation(id,0.1, 0.1, 0.1, [0.1,0.2,0.4],4,3,1,3,4,5,23,34,234)
+        dbHandler.insert_state_evolution(state_evolution_exp)
 
         # create random erm experiment information
         # sample test data
@@ -181,8 +186,8 @@ if __name__ == "__main__":
         w2 = sample_weights(10)
         X2, y2 = sample_training_data(w2,10,100,2)
         erm_exp = ERMExperimentInformation(id,X,w,2,y,X2,w2,y2,10,"test",0.3,1e-4)
-        dbHandler.insertERMEvolutionExperimentInformation(erm_exp)
+        dbHandler.insert_erm(erm_exp)
 
         # set experiment to completed
-        dbHandler.setExperimentToCompleted(id)
+        dbHandler.set_experiment_completed(id)
     

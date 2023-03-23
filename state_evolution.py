@@ -8,7 +8,7 @@ from erm import *
 from util import *
 from data import *
 import warnings
-
+import logging
 
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
@@ -37,8 +37,6 @@ def function_fixed_point(y: float, z: float, Q: float, epsilon: float, V: float,
     return y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w
     
 def proximal_loss(y: float, z: float, epsilon: float, Q: float, V: float, w: float) -> float:
-    # print("proximal_loss:")
-    # print("y: ", y, type(y), "z: ", z, type(z), "epsilon: ", epsilon, "Q: ", Q, "V: ", V, "w: ", w)
     if type(z) == np.ndarray:
         z = z[0]
     return logsumexp([np.log(1),-y*z + epsilon * np.sqrt(Q)]) + V/2 * (z - w)**2
@@ -48,10 +46,9 @@ def proximal_loss(y: float, z: float, epsilon: float, Q: float, V: float, w: flo
 #https://web.stanford.edu/~boyd/papers/pdf/prox_algs.pdf
 # See chapter 6 on how to minimize the f(x) + (1/2) * V * (x - w)**2 (equation 6.1)
 # Just before Chapter 3.4 there is an approximation given by w - V * f'(w)
-def proximal(V: float, y: float, Q: float, epsilon: float, w:float, debug = False) -> float:
-    if debug:
-        print("proximal:")
-        print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)
+def proximal(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+    # logging.debug("proximal:")
+    # logging.debug("V: %s, y: %s, Q: %s, epsilon: %s, w: %s", V, y, Q, epsilon, w)
     z = 0.0
     # fixed_point(lambda z: function_fixed_point(y,z,Q,epsilon,V,w), z)
     
@@ -66,8 +63,7 @@ def proximal(V: float, y: float, Q: float, epsilon: float, w:float, debug = Fals
 
     # approximation:
     # z = w - V * first_derivative_loss(y,w,Q,epsilon)
-    if debug:
-        print("result: ", z)
+    # logging.debug("result: %s", z)
     return z
 
 def f_out(V: float, w: float, y: float, Q: float, epsilon: float) -> float:
@@ -79,8 +75,8 @@ def f_out_0(y: float, w: float, V: float, tau: float) -> float:
         try:
             return 2*y * gaussian(w*y,0,V+tau**2) / (erfc(-w*y/np.sqrt(2*(V+tau**2))))
         except Warning:
-            print("Warning in f_out_0")
-            print("y: ", y, "w: ", w, "V: ", V, "tau: ", tau)
+            logging.warning("Warning in f_out_0")
+            logging.warning("y: %s, w: %s, V: %s, tau: %s", y, w, V, tau)
             raise Exception("Warning in f_out_0")
 
 
@@ -102,9 +98,9 @@ def eta(m: float, q: float, rho_w_star: float) -> float:
 
 def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
     
-    print("m_hat_func")
+    logging.info("m_hat_func")
     # print parameters
-    print("m: ", m,"q: ", q,"sigma: ", sigma,"rho_w_star: ", rho_w_star,"alpha: ", alpha,"epsilon: ", epsilon,"tau: ", tau,"int_lims: ", int_lims)
+    logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
 
     def integrand(y, xi):
         e = eta(m,q,rho_w_star)
@@ -123,7 +119,7 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     return alpha * dblquad(integrand,-np.inf,np.inf,-int_lims,int_lims,epsabs=1e-10,epsrel=1e-10)[0]
 
 def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
-    print("q_hat_func")
+    logging.info("q_hat_func")
     def integrand(y, xi):
 
         e = eta(m,q,rho_w_star)
@@ -139,7 +135,7 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     return alpha * dblquad(integrand,-np.inf,np.inf,-int_lims,int_lims,epsabs=1e-10,epsrel=1e-10)[0]
 
 def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, int_lims: float = 20.0):
-    print("sigma_hat_func")
+    logging.info("sigma_hat_func")
     def integrand(y, xi):
         e = eta(m,q,rho_w_star)
         w_0 = np.sqrt(rho_w_star*e) * xi
@@ -156,9 +152,8 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 # m,q,sigma -> see application
 
 def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims):
-    print("var_hat_func")
-    # print parameters
-    print("m: ", m,"q: ", q,"sigma: ", sigma,"rho_w_star: ", rho_w_star,"alpha: ", alpha,"epsilon: ", epsilon,"tau: ", tau,"int_lims: ", int_lims)
+    logging.info("var_hat_func")
+    logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
     m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,int_lims)
     q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,int_lims)
     sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,tau,epsilon,int_lims)
@@ -177,6 +172,7 @@ def damped_update(new, old, damping):
 
 
 def fixed_point_finder(
+    logger,
     initial_condition: Tuple[float, float, float],
     rho_w_star: float,
     alpha: float,
@@ -193,20 +189,21 @@ def fixed_point_finder(
     err = 1.0
     iter_nb = 0
     while err > abs_tol or iter_nb < min_iter:
-        print("iter_nb", iter_nb, "err", err)
+        logger.info(f"iter_nb: {iter_nb}, err: {err}")
 
         m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
 
-        print("m_hat", m_hat, "q_hat", q_hat, "sigma_hat", sigma_hat)
+        # logging.info("m_hat: %s, q_hat: %s, sigma_hat: %s", m_hat, q_hat, sigma_hat)
 
         new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam)
 
-        print("new_m", new_m, "new_q", new_q, "new_sigma", new_sigma)
+        # logger.info(f"new_m: %s, new_q: %s, new_sigma: %s", new_m, new_q, new_sigma)
+        logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
 
         err = max([abs(new_m - m), abs(new_q - q), abs(new_sigma - sigma)])
 
-        if iter_nb % 100 == 0:
-            print("\t", err)
+        # if iter_nb % 100 == 0:
+        #     logging.info("iter_nb: %s, err: %s", iter_nb, err)
 
         m = damped_update(new_m, m, blend_fpe)
         q = damped_update(new_q, q, blend_fpe)
@@ -215,10 +212,14 @@ def fixed_point_finder(
         iter_nb += 1
         if iter_nb > max_iter:
             raise Exception("fixed_point_finder - reached max_iterations")
-
     return m, q, sigma
 
-
+BLEND_FPE = 0.75
+TOL_FPE = 1e-4
+MIN_ITER_FPE = 20
+MAX_ITER_FPE = 5000
+INT_LIMS = 20.0
+INITIAL_CONDITION = (0.5,0.5,0.5)
 
 if __name__ == "__main__":
     d = 300
@@ -230,11 +231,7 @@ if __name__ == "__main__":
     tau = 2
     lam = 1e-5
     epsilon = 0.04
-    BLEND_FPE = 0.75
-    TOL_FPE = 1e-4
-    MIN_ITER_FPE = 20
-    MAX_ITER_FPE = 5000
-    int_lims = 20.0
+    
     
 
     # V:  0.5 y:  -17.30126733377969 Q:  1.0 epsilon:  0 w:  4.764398807031843
@@ -270,7 +267,7 @@ if __name__ == "__main__":
     # print("argmin", argmin)
     # print("min", min)
 
-    m,q,sigma = fixed_point_finder((0.5,0.5,0.5),rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=int_lims)
+    m,q,sigma = fixed_point_finder(logging,INITIAL_CONDITION,rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS)
     print("m: ", m)
     print("q: ", q)
     print("sigma: ", sigma)
