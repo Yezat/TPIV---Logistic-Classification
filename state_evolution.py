@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Tuple
 from scipy.integrate import quad, dblquad
-from scipy.optimize import fixed_point, root, minimize_scalar, minimize
+from scipy.optimize import fixed_point, root, root_scalar, minimize_scalar, minimize
 from scipy.special import erfc,erf, logsumexp
 import matplotlib.pyplot as plt
 from erm import *
@@ -9,6 +9,7 @@ from util import *
 from data import *
 import warnings
 import logging
+import time
 
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
@@ -41,6 +42,14 @@ def proximal_loss(y: float, z: float, epsilon: float, Q: float, V: float, w: flo
         z = z[0]
     return logsumexp([np.log(1),-y*z + epsilon * np.sqrt(Q)]) + V/2 * (z - w)**2
 
+def fixed_point_iteration(y: float, z: float, Q: float, epsilon: float, V: float, w: float):
+    z0 = 0
+    z1 = function_fixed_point(y,z0,Q,epsilon,V,w)
+    while np.abs(z1 - z0) > 1e-6:
+        z0 = z1
+        z1 = function_fixed_point(y,z0,Q,epsilon,V,w)
+    return z1
+
 #https://en.wikipedia.org/wiki/Fixed-point_iteration
 #https://math.stackexchange.com/questions/1683654/proximal-operator-for-the-logistic-loss-function
 #https://web.stanford.edu/~boyd/papers/pdf/prox_algs.pdf
@@ -48,18 +57,29 @@ def proximal_loss(y: float, z: float, epsilon: float, Q: float, V: float, w: flo
 # Just before Chapter 3.4 there is an approximation given by w - V * f'(w)
 def proximal(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
     # logging.debug("proximal:")
-    # logging.debug("V: %s, y: %s, Q: %s, epsilon: %s, w: %s", V, y, Q, epsilon, w)
-    z = 0.0
-    # fixed_point(lambda z: function_fixed_point(y,z,Q,epsilon,V,w), z)
-    
+    # logging.info("V: %s, y: %s, Q: %s, epsilon: %s, w: %s", V, y, Q, epsilon, w)
+    z = -0.004
 
-    result = root(lambda z: function_fixed_point(y,z,Q,epsilon,V,w) - z, 0)
+    # start  = time.time()
+    # fixed_point(lambda z: function_fixed_point(y,z,Q,epsilon,V,w),z,maxiter=100000) #Failed to coverge after 500 iterations, we sometimes get unstable fixed points.
+    # end = time.time()
+    # logging.info("Fixed point iteration took %s seconds, result is %s", end - start, z)
+    
+    start = time.time()
+    result = root(lambda z: y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w -z ,0) # one full iteration 150 seconds (got 0.07)
+    z = result.x[0]
+    end = time.time()
+    # logging.info("Root finding took %s seconds", end - start)
+        
+    # result = root_scalar(lambda z: y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w - z, fprime= lambda z: (y**2)*V/(2 + 2*np.cosh(-y*z + epsilon * np.sqrt(Q))) - 1,x0=0,method="newton") # got a warning about the maximum number of subdivisions... Crazy slow, I stopped it
+    # z = result.root 
+    # z = fixed_point_iteration(y,z,Q,epsilon,V,w)  # insanely slow too, I stopped it
 
     # result = root(lambda z: proximal_loss(y,z,epsilon,Q,V,w), 0, method='hybr')
     # result = minimize_scalar(lambda z: proximal_loss(y,z,epsilon,Q,V,w),method="Brent")
 
     # result = minimize(lambda z: proximal_loss(y,z,epsilon,Q,V,w),0)
-    z = result.x
+    
 
     # approximation:
     # z = w - V * first_derivative_loss(y,w,Q,epsilon)
@@ -167,20 +187,26 @@ def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam):
 def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
 
+BLEND_FPE = 0.75
+TOL_FPE = 1e-4
+MIN_ITER_FPE = 20
+MAX_ITER_FPE = 5000
+INT_LIMS = 20.0
+INITIAL_CONDITION = (0.5,0.5,0.5)
 
 def fixed_point_finder(
     logger,
-    initial_condition: Tuple[float, float, float],
     rho_w_star: float,
     alpha: float,
     epsilon: float,
     tau: float,
     lam: float,
-    abs_tol: float,
-    min_iter: int,
-    max_iter: int,
-    blend_fpe: float,
-    int_lims: float,    
+    abs_tol: float = TOL_FPE,
+    min_iter: int = MIN_ITER_FPE,
+    max_iter: int = MAX_ITER_FPE,
+    blend_fpe: float = BLEND_FPE,
+    int_lims: float = INT_LIMS,    
+    initial_condition: Tuple[float, float, float] = INITIAL_CONDITION,
 ):
     m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
     err = 1.0
@@ -211,13 +237,6 @@ def fixed_point_finder(
             raise Exception("fixed_point_finder - reached max_iterations")
     return m, q, sigma
 
-BLEND_FPE = 0.75
-TOL_FPE = 1e-4
-MIN_ITER_FPE = 20
-MAX_ITER_FPE = 5000
-INT_LIMS = 20.0
-INITIAL_CONDITION = (0.5,0.5,0.5)
-
 if __name__ == "__main__":
     d = 300
     n = 600
@@ -228,7 +247,7 @@ if __name__ == "__main__":
     tau = 2
     lam = 1e-5
     epsilon = 0.04
-    
+    logging.basicConfig(level=logging.INFO)
     
 
     # V:  0.5 y:  -17.30126733377969 Q:  1.0 epsilon:  0 w:  4.764398807031843
@@ -264,13 +283,14 @@ if __name__ == "__main__":
     # print("argmin", argmin)
     # print("min", min)
 
-    m,q,sigma = fixed_point_finder(logging,INITIAL_CONDITION,rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS)
+    start = time.time()
+    m,q,sigma = fixed_point_finder(logging,rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
     print("m: ", m)
     print("q: ", q)
     print("sigma: ", sigma)
     print("Generalization error", generalization_error(1,m,sigma+q))
-    
-    
+    print("time", time.time() - start)
+
     
     # Xtrain, y = sample_training_data(w,d,n,tau)
     # Xtest = sample_test_data(d,n_test)  

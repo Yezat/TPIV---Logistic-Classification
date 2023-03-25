@@ -1,1 +1,27 @@
-{"alphas": [0.1, 0.6444444444444445, 1.188888888888889, 1.7333333333333336, 2.277777777777778, 2.8222222222222224, 3.366666666666667, 3.911111111111112, 4.455555555555556, 5.0], "epsilons": [0.0, 0.02], "lambdas": [0.001], "tau": 2, "d": 300, "state_evolution_repetitions": 3, "erm_repetitions": 5, "erm_method": "gd"}
+{
+    "experiment_id": "3962948f-2320-4564-b771-dd4e5bac9726",
+    "experiment_name": [
+        "gd"
+    ],
+    "duration": 0.0,
+    "code_version": "6",
+    "date": "2023-03-25 11:32:19",
+    "state_evolution_repetitions": "Default Experiment",
+    "erm_repetitions": 5,
+    "alphas": 2,
+    "epsilons": [
+        0.2,
+        2.0,
+        5.0
+    ],
+    "lambdas": [
+        0.0,
+        0.2
+    ],
+    "tau": [
+        0.0001
+    ],
+    "d": 2,
+    "erm_methods": 1000,
+    "completed": false
+}

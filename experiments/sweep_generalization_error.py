@@ -8,14 +8,17 @@ import os
 import queue
 import sys
 import inspect
+import json
+import uuid
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir) 
 from experiment_information import *
-from state_evolution import fixed_point_finder, MAX_ITER_FPE, MIN_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS, INITIAL_CONDITION
+from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
 from gradient_descent import gd, lbfgs
+from erm import get_logistic_regressor
 
-def run_erm(lock,logger, experiment_id: str, alpha: float, epsilon: float,lam: float,tau: float,d: int, method: str):
+def run_erm(lock,logger, experiment_id, method, alpha, epsilon, lam, tau, d):
     """
     Generate Data, run ERM and save the results to the database
     """
@@ -35,12 +38,18 @@ def run_erm(lock,logger, experiment_id: str, alpha: float, epsilon: float,lam: f
         w_gd = gd(Xtrain,y,lam,epsilon)
     elif method == "L-BFGS-B":
         w_gd = lbfgs(Xtrain,y,lam,epsilon)
+    elif method == "logistic":
+        clf = get_logistic_regressor(Xtrain,y,lam)
+        # reshape to 1d array
+        w_gd = clf.coef_.reshape(-1)
     else:
         raise Exception(f"Method {method} not implemented")
     
-    erm_information = ERMExperimentInformation(experiment_id,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
 
     end = time.time()
+    duration = end - start
+    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
+    
     logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d} in {end-start} seconds")
 
     # save results to database
@@ -54,22 +63,26 @@ def dummy_fixed_point_finder(INITIAL_CONDITION,rho_w_star=1,alpha=1,epsilon=1,ta
     # return three random numbers between 0 and 1 as a tuple
     return np.random.rand(3)
 
-def run_state_evolution(lock,logger, experiment_id: str, alpha: float,epsilon: float,lam: float,tau: float,d: int):
-       
+def run_state_evolution(lock,logger, experiment_id, alpha, epsilon, lam, tau, d):
+    """
+    Starts the state evolution and saves the results to the database
+    """
+
     logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
-    m,q,sigma = fixed_point_finder(logger, INITIAL_CONDITION,rho_w_star=1,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS)
+    m,q,sigma = fixed_point_finder(logger,rho_w_star=1,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
     gen_error = generalization_error(1,m,sigma+q)
     
     logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, gen_error={gen_error}")
     end = time.time()
+    experiment_duration = end-start
     logger.debug(f"State Evolution took {end-start} seconds")
 
     # save the results to the database
     with lock:
         start = time.time()
         with DatabaseHandler(logger) as db:
-            st_exp_info = StateEvolutionExperimentInformation(experiment_id,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS)
+            st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS)
             db.insert_state_evolution(st_exp_info)
             logger.info(f"Saved State Evolution to db with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, gen_error={gen_error}")
         end = time.time()
@@ -100,19 +113,18 @@ def start_work(procs, number_of_workers):
                     pbar.update(1)
     logging.info("Done with starting work")
 
-class SweepExperiment:
-    def __init__(self):
-        # WARNING: this does not affect the experiment outcome, one should use the sweep_experiment.json file to change the parameters. However, if sweep_experiment.json does not exist, the default values are used
-        # TODO: make sure all integration parameters from state_evolution are here and get stored in db
-        # experiment name parametrizable
-        self.alphas = np.linspace(0.1,5,10)
-        self.epsilons = np.array([0,0.02])
-        self.lambdas = np.array([1e-3]) # TODO try negative regularization
-        self.tau = 2
-        self.d = 300
-        self.state_evolution_repetitions = 3
-        self.erm_repetitions = 5
-        self.erm_method = "gd"
+def get_default_experiment():
+    state_evolution_repetitions: int = 0
+    erm_repetitions: int = 5
+    alphas: np.ndarray = np.array([0.2,2,5])
+    epsilons: np.ndarray = np.array([0])
+    lambdas: np.ndarray = np.array([1e-4])
+    tau:float = 2
+    d: int = 1000
+    erm_methods: list = ["gd","L-BFGS-B","logistic"]
+    experiment_name: str = "Default Experiment"
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,tau,d,erm_methods,experiment_name)
+    return experiment
 
 if __name__ == "__main__":
     logger = multiprocessing.log_to_stderr()
@@ -124,23 +136,25 @@ if __name__ == "__main__":
     else:
         filename = "sweep_experiment.json"
 
+    # create an experiment object and first define default values
+    experiment = get_default_experiment()
+    
     # load the experiment parameters from the json file
-    sweep_experiment = SweepExperiment()
     try:
         with open(filename) as f:
-            sweep_experiment.__dict__ = json.load(f)
+            experiment.__dict__ = json.load(f)
+            # create a new experiment id
+            experiment.experiment_id = str(uuid.uuid4())
     except FileNotFoundError:
         logging.error("Could not find file %s. Using the standard elements instead", filename)
         
-        
-    # get an experiment id
-    experiment_id = create_experiment_id()
-
-    logging.info("Starting Experiment with id %s", experiment_id)
     
-    experiment = ExperimentInformation(experiment_id,sweep_experiment.state_evolution_repetitions,sweep_experiment.erm_repetitions,sweep_experiment.alphas,sweep_experiment.epsilons,sweep_experiment.lambdas,sweep_experiment.tau,sweep_experiment.d)
     with DatabaseHandler(logger) as db:
         db.insert_experiment(experiment)
+
+    experiment_id = experiment.experiment_id
+    logging.info("Starting Experiment with id %s", experiment_id)
+
 
     # define the number of worker threads
     number_of_workers = 8
@@ -150,6 +164,9 @@ if __name__ == "__main__":
 
     # create a queue for the processes
     procs = queue.Queue()
+
+    # note starttime
+    start = time.time()
 
     # iterate all the parameters and create process objects for each parameter
     for alpha in experiment.alphas:
@@ -161,8 +178,9 @@ if __name__ == "__main__":
                     procs.put(proc)
                     
                 for _ in range(experiment.erm_repetitions):
-                    proc = Process(target=run_erm, args=(lock,logger,experiment_id,alpha,epsilon,lam,experiment.tau,experiment.d,sweep_experiment.erm_method))
-                    procs.put(proc)
+                    for method in experiment.erm_methods:
+                        proc = Process(target=run_erm, args=(lock,logger,experiment_id,method,alpha,epsilon,lam,experiment.tau,experiment.d))
+                        procs.put(proc)
 
     # start the processes
     logger.info("Starting all processes")
@@ -175,8 +193,11 @@ if __name__ == "__main__":
 
     # mark the experiment as finished
     logger.info("Marking experiment as finished")
+    end = time.time()
+    duration = end - start
+    logger.info("Experiment took %d seconds", duration)
     with DatabaseHandler(logger) as db:
-        db.set_experiment_completed(experiment_id)
+        db.complete_experiment(experiment_id, duration)
     logger.info("Done")
     
 

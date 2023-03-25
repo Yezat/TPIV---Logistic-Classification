@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import erfc
+import json
 
 def error(y, yhat):
     return 0.25*np.mean((y-yhat)**2)
@@ -21,5 +22,3 @@ def generalization_error(rho_w_star,m,Q):
     Returns the generalization error in terms of the overlaps
     """
     return np.arccos(m / np.sqrt( rho_w_star * Q ) )/np.pi
-
-

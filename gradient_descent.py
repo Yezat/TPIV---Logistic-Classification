@@ -23,7 +23,6 @@ rcParams.update({'figure.autolayout': True})
 from data import *
 import theoretical
 import math
-import calibration
 from scipy.optimize import basinhopping
 from scipy.optimize import minimize
 # from sklearn.linear_model import LinearModelLoss
