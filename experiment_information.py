@@ -89,6 +89,11 @@ class ERMExperimentInformation:
         self.alpha: float = n/d
         self.test_loss: float = loss_per_sample(ytest,Xtest@w_gd,epsilon=epsilon,w=w_gd).mean()
 
+    # overwrite the to string method to print all attributes and their type
+    def __str__(self):
+        # return for each attribute the content and the type
+        return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
+
 # How to change a column later:
 # cursor.execute('ALTER TABLE experiments ADD COLUMN new_column TEXT')
 
@@ -254,6 +259,7 @@ class DatabaseHandler:
         self.connection.commit()
 
     def insert_erm(self, experiment_information: ERMExperimentInformation):
+        self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
         INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
@@ -265,8 +271,8 @@ class DatabaseHandler:
             experiment_information.rho,
             experiment_information.m,
             experiment_information.cosb,
-            experiment_information.epsilon,
-            experiment_information.lam,
+            float(experiment_information.epsilon),
+            float(experiment_information.lam),
             experiment_information.generalization_error_erm,
             experiment_information.generalization_error_overlap,
             experiment_information.date,

@@ -30,7 +30,7 @@ def run_erm(lock,logger, experiment_id, method, alpha, epsilon, lam, tau, d):
 
     # generate data
     Xtrain, y = sample_training_data(w,d,int(alpha * d),tau)
-    n_test = 20000
+    n_test = 100000
     Xtest,ytest = sample_training_data(w,d,n_test,tau)
 
     w_gd = np.empty(w.shape,dtype=w.dtype)
@@ -116,10 +116,10 @@ def start_work(procs, number_of_workers):
 def get_default_experiment():
     state_evolution_repetitions: int = 0
     erm_repetitions: int = 5
-    alphas: np.ndarray = np.array([0.2,2,5])
+    alphas: np.ndarray = np.array([0.2,1,2,5])
     epsilons: np.ndarray = np.array([0])
-    lambdas: np.ndarray = np.array([1e-4])
-    tau:float = 2
+    lambdas: np.ndarray = np.array([1])
+    tau:float = 0
     d: int = 1000
     erm_methods: list = ["gd","L-BFGS-B","logistic"]
     experiment_name: str = "Default Experiment"

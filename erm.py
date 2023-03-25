@@ -1,4 +1,4 @@
-""" 
+"""
 This module does Logistic Regression using sklearn
 """
 
@@ -53,23 +53,33 @@ def predict_proba_on_logistic_regressor(clf, X):
 
 if __name__ == "__main__":
     d = 300
-    n = 3000
-    n_test = 100000
+    n = 30000
+    n_test = 1000000
     w = sample_weights(d)
     p = 0.75
     dp = 0.1
-    tau = 2
+    tau = 0
+    lam = 1
     Xtrain, y = sample_training_data(w,d,n,tau)
-    Xtest = sample_test_data(d,n_test)  
-    clf = get_logistic_regressor(Xtrain,y)
+    Xtest, ytest = sample_training_data(w,d,n_test,tau)
+    clf = get_logistic_regressor(Xtrain,y,lam)
 
     f_erm = predict_proba_on_logistic_regressor(clf,Xtest)
-    
-    fig,ax = plt.subplots()
-    plt_erm, = ax.plot(f_erm, label="$f_{erm}$")
-    ax.legend(handles=[plt_erm])
-    plt.title("$f_{erm}$")
-    plt.xlabel("Samples")
-    plt.ylabel("$f_{erm}$")
-    plt.show()
+
+    y_log = predict_on_logistic_regressor(clf,Xtest)
+    print("Accuracy: ", np.mean(y_log == ytest))
+    import theoretical
+    # get weithgs from clf and reshape them
+    w_gd = clf.coef_.reshape(-1)
+    yhat_gd = theoretical.predict_erm(Xtest,w_gd)
+    print("Accuracy: ", np.mean(yhat_gd == ytest))
+
+
+    # fig,ax = plt.subplots()
+    # plt_erm, = ax.plot(f_erm, label="$f_{erm}$")
+    # ax.legend(handles=[plt_erm])
+    # plt.title("$f_{erm}$")
+    # plt.xlabel("Samples")
+    # plt.ylabel("$f_{erm}$")
+    # plt.show()
 
