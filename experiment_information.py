@@ -50,6 +50,7 @@ class StateEvolutionExperimentInformation:
         self.sigma: float = sigma
         self.q: float = q
         self.m: float = m
+        self.cosb: float = self.m / np.sqrt((self.sigma + self.q)*rho_w_star)
         self.initial_condition: Tuple[float, float, float] = initial_condition
         self.rho_w_star: float = rho_w_star
         self.alpha: float = alpha
@@ -124,6 +125,7 @@ class DatabaseHandler:
                     sigma REAL,
                     q REAL,
                     m REAL,
+                    cosb REAL,
                     initial_condition BLOB,
                     rho_w_star REAL,
                     alpha REAL,
@@ -217,7 +219,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -227,12 +229,13 @@ class DatabaseHandler:
             experiment_information.sigma,
             experiment_information.q,
             experiment_information.m,
+            experiment_information.cosb,
             json.dumps(experiment_information.initial_condition),
             experiment_information.rho_w_star,
             experiment_information.alpha,
-            experiment_information.epsilon,
-            experiment_information.tau,
-            experiment_information.lam,
+            float(experiment_information.epsilon),
+            float(experiment_information.tau),
+            float(experiment_information.lam),
             experiment_information.abs_tol,
             experiment_information.min_iter,
             experiment_information.max_iter,

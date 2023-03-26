@@ -10,7 +10,10 @@ from data import *
 import warnings
 import logging
 import time
+from proximal import *
 
+def proximal(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+    return proximal_logistic_root(V,y,Q,epsilon,w)
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
@@ -24,8 +27,8 @@ def p_out(y: float, z: float, Q: float, epsilon: float = 0.0) -> float:
 def second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
     return y**2 / (4 * np.cosh(y*z/2 - epsilon/2 * np.sqrt(Q)))
     
-def first_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
-    return -y / (1 + np.exp(y*z - epsilon * np.sqrt(Q)))
+# def first_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
+#     return -y / (1 + np.exp(y*z - epsilon * np.sqrt(Q)))
 
 def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) -> float:
     return 1/(1 + V * second_derivative_loss(y,z,Q,epsilon))
@@ -34,57 +37,57 @@ def derivative_f_out(V: float, y: float, Q: float, epsilon: float, w: float) -> 
     z = proximal(V,y,Q,epsilon,w)
     return 1/V * (derivative_proximal(V,y,z,Q,epsilon) - 1)
 
-def function_fixed_point(y: float, z: float, Q: float, epsilon: float, V: float, w: float) -> float:
-    return y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w
+# def function_fixed_point(y: float, z: float, Q: float, epsilon: float, V: float, w: float) -> float:
+#     return y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w
     
-def proximal_loss(y: float, z: float, epsilon: float, Q: float, V: float, w: float) -> float:
-    if type(z) == np.ndarray:
-        z = z[0]
-    return logsumexp([np.log(1),-y*z + epsilon * np.sqrt(Q)]) + V/2 * (z - w)**2
+# def proximal_loss(y: float, z: float, epsilon: float, Q: float, V: float, w: float) -> float:
+#     if type(z) == np.ndarray:
+#         z = z[0]
+#     return logsumexp([np.log(1),-y*z + epsilon * np.sqrt(Q)]) + V/2 * (z - w)**2
 
-def fixed_point_iteration(y: float, z: float, Q: float, epsilon: float, V: float, w: float):
-    z0 = 0
-    z1 = function_fixed_point(y,z0,Q,epsilon,V,w)
-    while np.abs(z1 - z0) > 1e-6:
-        z0 = z1
-        z1 = function_fixed_point(y,z0,Q,epsilon,V,w)
-    return z1
+# def fixed_point_iteration(y: float, z: float, Q: float, epsilon: float, V: float, w: float):
+#     z0 = 0
+#     z1 = function_fixed_point(y,z0,Q,epsilon,V,w)
+#     while np.abs(z1 - z0) > 1e-6:
+#         z0 = z1
+#         z1 = function_fixed_point(y,z0,Q,epsilon,V,w)
+#     return z1
 
 #https://en.wikipedia.org/wiki/Fixed-point_iteration
 #https://math.stackexchange.com/questions/1683654/proximal-operator-for-the-logistic-loss-function
 #https://web.stanford.edu/~boyd/papers/pdf/prox_algs.pdf
 # See chapter 6 on how to minimize the f(x) + (1/2) * V * (x - w)**2 (equation 6.1)
 # Just before Chapter 3.4 there is an approximation given by w - V * f'(w)
-def proximal(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
-    # logging.debug("proximal:")
-    # logging.info("V: %s, y: %s, Q: %s, epsilon: %s, w: %s", V, y, Q, epsilon, w)
-    z = -0.004
+# def proximal(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+#     # logging.debug("proximal:")
+#     # logging.info("V: %s, y: %s, Q: %s, epsilon: %s, w: %s", V, y, Q, epsilon, w)
+#     z = -0.004
 
-    # start  = time.time()
-    # fixed_point(lambda z: function_fixed_point(y,z,Q,epsilon,V,w),z,maxiter=100000) #Failed to coverge after 500 iterations, we sometimes get unstable fixed points.
-    # end = time.time()
-    # logging.info("Fixed point iteration took %s seconds, result is %s", end - start, z)
+#     # start  = time.time()
+#     # z = fixed_point(lambda z: function_fixed_point(y,z,Q,epsilon,V,w),z,maxiter=100000) #Failed to coverge after 500 iterations, we sometimes get unstable fixed points.
+#     # end = time.time()
+#     # logging.info("Fixed point iteration took %s seconds, result is %s", end - start, z)
     
-    start = time.time()
-    result = root(lambda z: y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w -z ,0) # one full iteration 150 seconds (got 0.07)
-    z = result.x[0]
-    end = time.time()
-    # logging.info("Root finding took %s seconds", end - start)
+#     start = time.time()
+#     result = root(lambda z: y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w -z ,0) # one full iteration 150 seconds (got 0.07)
+#     z = result.x[0]
+#     end = time.time()
+#     # logging.info("Root finding took %s seconds", end - start)
         
-    # result = root_scalar(lambda z: y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w - z, fprime= lambda z: (y**2)*V/(2 + 2*np.cosh(-y*z + epsilon * np.sqrt(Q))) - 1,x0=0,method="newton") # got a warning about the maximum number of subdivisions... Crazy slow, I stopped it
-    # z = result.root 
-    # z = fixed_point_iteration(y,z,Q,epsilon,V,w)  # insanely slow too, I stopped it
+#     # result = root_scalar(lambda z: y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w - z, fprime= lambda z: (y**2)*V/(2 + 2*np.cosh(-y*z + epsilon * np.sqrt(Q))) - 1,x0=0,method="newton") # got a warning about the maximum number of subdivisions... Crazy slow, I stopped it
+#     # z = result.root 
+#     # z = fixed_point_iteration(y,z,Q,epsilon,V,w)  # insanely slow too, I stopped it
 
-    # result = root(lambda z: proximal_loss(y,z,epsilon,Q,V,w), 0, method='hybr')
-    # result = minimize_scalar(lambda z: proximal_loss(y,z,epsilon,Q,V,w),method="Brent")
+#     # result = root(lambda z: proximal_loss(y,z,epsilon,Q,V,w), 0, method='hybr')
+#     # result = minimize_scalar(lambda z: proximal_loss(y,z,epsilon,Q,V,w),method="Brent")
 
-    # result = minimize(lambda z: proximal_loss(y,z,epsilon,Q,V,w),0)
+#     # result = minimize(lambda z: proximal_loss(y,z,epsilon,Q,V,w),0)
     
 
-    # approximation:
-    # z = w - V * first_derivative_loss(y,w,Q,epsilon)
-    # logging.debug("result: %s", z)
-    return z
+#     # approximation:
+#     # z = w - V * first_derivative_loss(y,w,Q,epsilon)
+#     # logging.debug("result: %s", z)
+#     return z
 
 def f_out(V: float, w: float, y: float, Q: float, epsilon: float) -> float:
     return 1/V * ( proximal(V,y,Q,epsilon,w) - w ) # directly write root.
