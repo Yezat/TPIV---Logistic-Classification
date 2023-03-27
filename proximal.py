@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import minimize, root, fixed_point
+from scipy.optimize import minimize, root, fixed_point, root_scalar
 import time
 import math
 
@@ -134,6 +134,30 @@ def proximal_logistic_root(V: float, y: float, Q: float, epsilon: float, w:float
     return z + epsilon * np.sqrt(Q) / y
     
 
+"""
+Proximal from root scalar
+"""
+def proximal_root_scalar(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+    result = root_scalar(lambda z: y*V/(1+ np.exp(y*z - epsilon * np.sqrt(Q))) + w -z , bracket=[-5000,5000]) 
+    return result.root
+
+"""
+Proximal from root scalar logistic
+"""
+def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+    if y == 0:
+        return w
+    try:
+        w_prime = w - epsilon * np.sqrt(Q) / y
+        result = root_scalar(lambda z: y*V/(1+ np.exp(y*z)) + w_prime - z , bracket=[-5000,5000]) 
+        z = result.root
+        return z + epsilon * np.sqrt(Q) / y
+    except Exception as e:
+        # print all parameters
+        print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)        
+        raise e
+
+
 
 """
 Proximal from fixed_point
@@ -229,10 +253,13 @@ def compare_functions(functions, args=(), num_runs=1000):
         timing_results[func.__name__] = 0
 
     number_of_trials = 0
-    different_results = 0
+    # initialize a dictionary for each function name with zero as value
+    different_results = {}
+    for func in functions:
+        different_results[func.__name__] = 0
 
-    for y in range(-10,10):
-        for w in np.linspace(-10,10,5):
+    for y in range(-20,20):
+        for w in np.linspace(1,200,10):
             for V in np.linspace(0.01,2,5):
                 for Q in np.linspace(0.01,1,5):
                     for epsilon in np.array([0,0.1,0.2]):
@@ -256,9 +283,9 @@ def compare_functions(functions, args=(), num_runs=1000):
                                 print(f"Warning: Function {func.__name__} returned a different result. ")
                                 print(f"Expected {results['output']}, got {result}")
                                 print(f"V: {V}, y: {y}, Q: {Q}, epsilon: {epsilon}, w: {w}")
-                                different_results += 1
+                                different_results[func.__name__] += 1
                                 # run the function again 
-                                func(V,y,Q,epsilon,w, debug=True)
+                                # func(V,y,Q,epsilon,w, debug=True)
 
     # divide by the number of trials to get the average
     for func in functions:
@@ -312,6 +339,17 @@ if __name__ == "__main__":
     print("Proximal from paper", proximal_from_paper(V, y, Q, epsilon, w))
     print("Time", time.time() - start)
 
+    # computes the proximal using root_scalar
+    start = time.time()
+    print("Proximal root_scalar", proximal_root_scalar(V, y, Q, epsilon, w))
+    print("Time", time.time() - start)
+
+    # computes the proximal using root_scalar on the logistic proximal
+    start = time.time()
+    print("Proximal root_scalar on logistic", proximal_logistic_root_scalar(V, y, Q, epsilon, w))
+    print("Time", time.time() - start)
+
+
     # # computes the proximal from equation 58
     # start = time.time()
     # print("Proximal from equation 58", proximal_from_equation_58(V, y, Q, epsilon, w))
@@ -319,6 +357,6 @@ if __name__ == "__main__":
 
 
     # compare the runtime of all proximal implementations
-    all_functions = [lbfgs_proximal_solver, proximal_from_paper, proximal_root, proximal_logistic_root]
+    all_functions = [lbfgs_proximal_solver, proximal_root, proximal_logistic_root, proximal_root_scalar, proximal_logistic_root_scalar]
     results = compare_functions(all_functions, num_runs=1)
     print(results)

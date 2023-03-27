@@ -13,7 +13,8 @@ import time
 from proximal import *
 
 def proximal(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
-    return proximal_logistic_root(V,y,Q,epsilon,w)
+    # assert(w >= 0)
+    return proximal_logistic_root_scalar(V,y,Q,epsilon,w)
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
