@@ -17,8 +17,8 @@ def logistic_function(x):
     """
     return 1/(1+np.exp(-x))
 
-def generalization_error(rho_w_star,m,Q):
+def generalization_error(rho_w_star,m,Q, tau):
     """
     Returns the generalization error in terms of the overlaps
     """
-    return np.arccos(m / np.sqrt( rho_w_star * Q ) )/np.pi
+    return np.arccos(m / np.sqrt( (rho_w_star + tau**2 ) * Q ) )/np.pi

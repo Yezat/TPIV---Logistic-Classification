@@ -1,7 +1,11 @@
 import numpy as np
-from scipy.optimize import minimize, root, fixed_point, root_scalar
+from scipy.optimize import minimize, root, fixed_point, root_scalar, minimize_scalar
 import time
 import math
+
+#https://en.wikipedia.org/wiki/Fixed-point_iteration
+#https://math.stackexchange.com/questions/1683654/proximal-operator-for-the-logistic-loss-function
+#https://web.stanford.edu/~boyd/papers/pdf/prox_algs.pdf
 
 """
 Proximal from paper
@@ -133,6 +137,18 @@ def proximal_logistic_root(V: float, y: float, Q: float, epsilon: float, w:float
     z = result.x[0]
     return z + epsilon * np.sqrt(Q) / y
     
+"""
+Proximal from minimize scalar
+"""
+def proximal_minimize_scalar(V: float, y: float, Q: float, epsilon: float, w: float, debug = False) -> float:
+    return minimize_scalar(lambda z: (z-w)**2/(2*V) + np.log(1 + np.exp(-y*z + epsilon * np.sqrt(Q))))['x']
+
+def proximal_logistic_minimize_scalar(V: float, y: float, Q: float, epsilon: float, w: float, debug = False) -> float:
+    if y == 0:
+        return w
+    w_prime = w - epsilon * np.sqrt(Q) / y
+    return minimize_scalar(lambda z: (z-w_prime)**2/(2*V) + np.log(1 + np.exp(-y*z)))['x'] + epsilon * np.sqrt(Q) / y
+
 
 """
 Proximal from root scalar
@@ -182,31 +198,32 @@ Complete/ Full Proximal
 def full_proximal(z: float, V: float, y: float, Q: float, epsilon: float, w: float):
     return np.log(1 + np.exp(-y*z + epsilon * np.sqrt(Q))) + 1/(2*V) * (z - w)**2
 
-def logistic_proximal(z: float, V: float, y: float, w: float):
-    return np.log(1 + np.exp(-y*z)) + 1/(2*V) * (z - w)**2
+def full_proximal_gradient(z: float, V: float, y: float, Q: float, epsilon: float, w: float):
+    return -y / (1 + np.exp(y * z - epsilon * np.sqrt(Q))) + 1/V * (z - w)
 
 def complete_proximal(z: float, V: float, y: float, Q: float, epsilon: float, w: float):
     return full_proximal(z, V, y, Q, epsilon, w), full_proximal_gradient(z, V, y, Q, epsilon, w)
 
-def lbfgs_proximal_solver(V: float, y: float, Q: float, epsilon: float, w: float):
-    res = minimize(complete_proximal,0,args=(V, y, Q, epsilon,w),jac=True,method="L-BFGS-B",options={'maxiter':100}) 
-    # print("Minimized", "success:",res.success,"message",res.message)
-    # if not res.success:
-    #     print("Optimization of Loss failed " + str(res.message))
+def lbfgs_proximal_solver(V: float, y: float, Q: float, epsilon: float, w: float, debug = False):
+    res = minimize(complete_proximal,0,args=(V, y, Q, epsilon,w),jac=True,method="L-BFGS-B",options={'maxiter':500}) 
+    if debug:
+        print("Minimized", "success:",res.success,"message",res.message)
+        if not res.success:
+            print("Optimization of Loss failed " + str(res.message))
 
-    # delta = 5
-    # print("Delta", delta)
-    # # evaluate the full_proximal function at the solution and plus minus delta and print the results
-    # print("Proximal at solution", full_proximal(res.x, V, y, Q, epsilon, w))
-    # print("Proximal at solution + delta", full_proximal(res.x + delta, V, y, Q, epsilon, w))
-    # print("Proximal at solution - delta", full_proximal(res.x - delta, V, y, Q, epsilon, w))
+        delta = 5
+        print("Delta", delta)
+        # evaluate the full_proximal function at the solution and plus minus delta and print the results
+        print("Proximal at solution", full_proximal(res.x, V, y, Q, epsilon, w))
+        print("Proximal at solution + delta", full_proximal(res.x + delta, V, y, Q, epsilon, w))
+        print("Proximal at solution - delta", full_proximal(res.x - delta, V, y, Q, epsilon, w))
     return res.x[0]
 
 """
 Logistic Proximal
 """
-def full_proximal_gradient(z: float, V: float, y: float, Q: float, epsilon: float, w: float):
-    return -y / (1 + np.exp(y * z - epsilon * np.sqrt(Q))) + 1/V * (z - w)
+def logistic_proximal(z: float, V: float, y: float, w: float):
+    return np.log(1 + np.exp(-y*z)) + 1/(2*V) * (z - w)**2
 
 def logistic_proximal_gradient(z: float, V: float, y: float, w: float):
     return -y / (1 + np.exp(y * z)) + 1/V * (z - w)
@@ -214,21 +231,22 @@ def logistic_proximal_gradient(z: float, V: float, y: float, w: float):
 def complete_logistic_proximal(z: float, V: float, y: float, w: float):
     return logistic_proximal(z, V, y, w), logistic_proximal_gradient(z, V, y, w)
 
-def lbfgs_logistic_proximal_solver(V: float, y: float, w: float):
-    res = minimize(complete_logistic_proximal,0,args=(V, y, w),jac=True,method="L-BFGS-B",options={'maxiter':100}) 
-    # print("Minimized", "success:",res.success,"message",res.message)
-    # if not res.success:
-    #     print("Optimization of Loss failed " + str(res.message))
+def lbfgs_logistic_proximal_solver(V: float, y: float, w: float, debug = False):
+    res = minimize(complete_logistic_proximal,0,args=(V, y, w),jac=True,method="L-BFGS-B",options={'maxiter':500}) 
+    if debug:
+        print("Minimized", "success:",res.success,"message",res.message)
+        if not res.success:
+            print("Optimization of Loss failed " + str(res.message))
 
-    # delta = 5
-    # print("Delta", delta)
-    # # evaluate the full_proximal function at the solution and plus minus delta and print the results
-    # print("Proximal at solution", logistic_proximal(res.x, V, y, w))
-    # print("Proximal at solution + delta", logistic_proximal(res.x + delta, V, y, w))
-    # print("Proximal at solution - delta", logistic_proximal(res.x - delta, V, y, w))
+        delta = 5
+        print("Delta", delta)
+        # evaluate the full_proximal function at the solution and plus minus delta and print the results
+        print("Proximal at solution", logistic_proximal(res.x, V, y, w))
+        print("Proximal at solution + delta", logistic_proximal(res.x + delta, V, y, w))
+        print("Proximal at solution - delta", logistic_proximal(res.x - delta, V, y, w))
     return res.x[0]
 
-def proximal_from_logistic(V: float, y: float, Q: float, epsilon: float, w: float):
+def proximal_from_logistic(V: float, y: float, Q: float, epsilon: float, w: float, debug = False):
     if y == 0:
         return w
 
@@ -258,7 +276,7 @@ def compare_functions(functions, args=(), num_runs=1000):
     for func in functions:
         different_results[func.__name__] = 0
 
-    for y in range(-20,20):
+    for y in range(-1,1):
         for w in np.linspace(1,200,10):
             for V in np.linspace(0.01,2,5):
                 for Q in np.linspace(0.01,1,5):
@@ -285,7 +303,7 @@ def compare_functions(functions, args=(), num_runs=1000):
                                 print(f"V: {V}, y: {y}, Q: {Q}, epsilon: {epsilon}, w: {w}")
                                 different_results[func.__name__] += 1
                                 # run the function again 
-                                # func(V,y,Q,epsilon,w, debug=True)
+                                func(V,y,Q,epsilon,w, debug=True)
 
     # divide by the number of trials to get the average
     for func in functions:
@@ -349,6 +367,16 @@ if __name__ == "__main__":
     print("Proximal root_scalar on logistic", proximal_logistic_root_scalar(V, y, Q, epsilon, w))
     print("Time", time.time() - start)
 
+    # computes the proximal using minimize_scalar
+    start = time.time()
+    print("Proximal minimize_scalar", proximal_minimize_scalar(V, y, Q, epsilon, w))
+    print("Time", time.time() - start)
+
+    # computes the proximal using minimize_scalar on the logistic proximal
+    start = time.time()
+    print("Proximal minimize_scalar on logistic", proximal_logistic_minimize_scalar(V, y, Q, epsilon, w))
+    print("Time", time.time() - start)
+
 
     # # computes the proximal from equation 58
     # start = time.time()
@@ -357,6 +385,7 @@ if __name__ == "__main__":
 
 
     # compare the runtime of all proximal implementations
-    all_functions = [lbfgs_proximal_solver, proximal_root, proximal_logistic_root, proximal_root_scalar, proximal_logistic_root_scalar]
+    all_functions = [proximal_root, lbfgs_proximal_solver,proximal_from_logistic, proximal_logistic_root, proximal_root_scalar, proximal_logistic_root_scalar, proximal_minimize_scalar, proximal_logistic_minimize_scalar]
     results = compare_functions(all_functions, num_runs=1)
     print(results)
+    # the lbfgs solver has sometimes trouble finding the correct minima. The root and root_scalar methods find the better minima...

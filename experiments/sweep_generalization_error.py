@@ -71,7 +71,7 @@ def run_state_evolution(lock,logger, experiment_id, alpha, epsilon, lam, tau, d)
     logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
     m,q,sigma = fixed_point_finder(logger,rho_w_star=1,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
-    gen_error = generalization_error(1,m,sigma+q)
+    gen_error = generalization_error(1,m,sigma+q, tau)
     
     logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, gen_error={gen_error}")
     end = time.time()
@@ -114,12 +114,12 @@ def start_work(procs, number_of_workers):
     logging.info("Done with starting work")
 
 def get_default_experiment():
-    state_evolution_repetitions: int = 5
-    erm_repetitions: int = 5
+    state_evolution_repetitions: int = 10
+    erm_repetitions: int = 10
     alphas: np.ndarray = np.array([0.2,1,2,5])
-    epsilons: np.ndarray = np.array([0])
+    epsilons: np.ndarray = np.array([0,0.01,0.2,1])
     lambdas: np.ndarray = np.array([1])
-    tau:float = 0
+    tau:float = 2
     d: int = 1000
     erm_methods: list = ["gd"]
     experiment_name: str = "Default Experiment"

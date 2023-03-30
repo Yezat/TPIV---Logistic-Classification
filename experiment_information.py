@@ -25,7 +25,7 @@ class ExperimentInformation:
         self.alphas: np.ndarray = alphas
         self.epsilons: np.ndarray = epsilons
         self.lambdas: np.ndarray = lambdas
-        self.tau: float = tau
+        self.tau: float = tau # TODO: allow sweep over tau
         self.d: int = d
         self.erm_methods: list = erm_methods
         self.completed: bool = False
@@ -44,7 +44,7 @@ class StateEvolutionExperimentInformation:
         self.duration: float = duration
         self.experiment_id: str = experiment_id
         rho_w_star = 1.0
-        self.generalization_error: float = generalization_error(rho_w_star, m, sigma + q)
+        self.generalization_error: float = generalization_error(rho_w_star, m, sigma + q, tau)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
@@ -79,7 +79,7 @@ class ERMExperimentInformation:
         n: int = Xtrain.shape[0]
         yhat_gd = theoretical.predict_erm(Xtest,w_gd)
         self.generalization_error_erm: float = error(ytest,yhat_gd)
-        self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q)
+        self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
         yhat_gd_train = theoretical.predict_erm(Xtrain,w_gd)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
