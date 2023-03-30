@@ -114,14 +114,14 @@ def start_work(procs, number_of_workers):
     logging.info("Done with starting work")
 
 def get_default_experiment():
-    state_evolution_repetitions: int = 10
-    erm_repetitions: int = 10
+    state_evolution_repetitions: int = 1
+    erm_repetitions: int = 3
     alphas: np.ndarray = np.array([0.2,1,2,5])
-    epsilons: np.ndarray = np.array([0,0.1,0.2,0.5,1])
+    epsilons: np.ndarray = np.array([0,0.01,0.02,0.03,0.04])
     lambdas: np.ndarray = np.array([1])
     tau:float = 0
     d: int = 1000
-    erm_methods: list = ["gd"]
+    erm_methods: list = ["gd","L-BFGS-B"]
     experiment_name: str = "Default Experiment"
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,tau,d,erm_methods,experiment_name)
     return experiment

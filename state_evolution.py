@@ -194,7 +194,7 @@ if __name__ == "__main__":
     w = sample_weights(d)
     tau = 0
     lam = 1
-    epsilon = 0
+    epsilon = 0.5
     logging.basicConfig(level=logging.INFO)
     
 

@@ -50,7 +50,7 @@ class StateEvolutionExperimentInformation:
         self.sigma: float = sigma
         self.q: float = q
         self.m: float = m
-        self.cosb: float = self.m / np.sqrt((self.sigma + self.q)*rho_w_star)
+        self.cosb: float = self.m / np.sqrt((self.q)*rho_w_star)
         self.initial_condition: Tuple[float, float, float] = initial_condition
         self.rho_w_star: float = rho_w_star
         self.alpha: float = alpha
