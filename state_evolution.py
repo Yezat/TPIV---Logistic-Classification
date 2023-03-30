@@ -28,9 +28,9 @@ def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) 
 
 def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
     
-    logging.info("m_hat_func")
+    # logging.info("m_hat_func")
     # print parameters
-    logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
+    # logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
 
     def integrand_plus(xi):
         e = m * m / (rho_w_star * q)
@@ -61,7 +61,7 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     return alpha / sigma * (Iplus - Iminus)
 
 def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
-    logging.info("q_hat_func")
+    # logging.info("q_hat_func")
     def integrand_plus(xi):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
@@ -93,7 +93,7 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     return alpha / (sigma ** 2)  * 0.5 * (Iplus + Iminus)
 
 def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, int_lims: float = 20.0):
-    logging.info("sigma_hat_func")
+    # logging.info("sigma_hat_func")
     def integrand_plus(xi):
         # todo: simplify
         
@@ -125,95 +125,13 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
     return -alpha * 0.5 * (Iplus + Iminus)
 
-"""
-Clarté
-"""
-
-# def gaussian(x, mean=0, var=1):
-#     return np.exp(-.5 * (x-mean)**2/var) / np.sqrt(2*np.pi*var)
-
-def loss(z):
-    return np.log(1 + np.exp(-z))
-
-def moreau_loss(x, y, omega,V):
-    return (x-omega)**2/(2*V) + loss(y*x)
-
-def f_mhat_plus(ξ, M, Q, V, Vstar):
-    ω = np.sqrt(Q)*ξ
-    ωstar = (M/np.sqrt(Q))*ξ
-    λstar_plus = minimize_scalar(lambda x: moreau_loss(x, 1, ω, V))['x']
-    return np.exp(-ωstar**2/(2*Vstar))*(λstar_plus - ω)
-
-def f_mhat_minus(ξ, M, Q, V, Vstar):
-    ω = np.sqrt(Q)*ξ
-    ωstar = (M/np.sqrt(Q))*ξ
-    λstar_minus = minimize_scalar(lambda x: moreau_loss(x, -1, ω, V))['x']
-    return np.exp(-ωstar**2/(2*Vstar))*(λstar_minus - ω)
-
-def integrate_for_mhat(M, Q, V, Vstar):
-    I1 = quad(lambda ξ: f_mhat_plus(ξ, M, Q, V, Vstar) * gaussian(ξ), -10, 10, limit=500)[0]
-    I2 = quad(lambda ξ: f_mhat_minus(ξ, M, Q, V, Vstar) * gaussian(ξ), -10, 10, limit=500)[0]
-    return (I1 - I2)*(1/np.sqrt(2*np.pi*Vstar))
-
-# Vhat_x #
-def f_Vhat_plus(ξ, M, Q, V, Vstar):
-    ω = np.sqrt(Q)*ξ
-    ωstar = (M/np.sqrt(Q))*ξ
-    λstar_plus = minimize_scalar(lambda x: moreau_loss(x, 1, ω, V))['x']
-    return (1/(1/V + (1/4) * (1/np.cosh(λstar_plus/2)**2))) * (1 + erf(ωstar/np.sqrt(2*Vstar)))
-
-def f_Vhat_minus(ξ, M, Q, V, Vstar):
-    ω = np.sqrt(Q)*ξ
-    ωstar = (M/np.sqrt(Q))*ξ
-    λstar_minus = minimize_scalar(lambda x: moreau_loss(x, -1, ω, V))['x']
-    return (1/(1/V + (1/4) * (1/np.cosh(-λstar_minus/2)**2))) * (1 - erf(ωstar/np.sqrt(2*Vstar)))
-    
-def integrate_for_Vhat(M, Q, V, Vstar):
-    I1 = quad(lambda ξ: f_Vhat_plus(ξ, M, Q, V, Vstar) * gaussian(ξ), -10, 10, limit=500)[0]
-    I2 = quad(lambda ξ: f_Vhat_minus(ξ, M, Q, V, Vstar) * gaussian(ξ), -10, 10, limit=500)[0]
-    return (1/2) * (I1 + I2)
-
-# Qhat_x#
-def f_qhat_plus(ξ, M, Q, V, Vstar):
-    ω = np.sqrt(Q)*ξ
-    ωstar = (M/np.sqrt(Q))*ξ
-    λstar_plus = minimize_scalar(lambda x: moreau_loss(x, 1, ω, V))['x']
-    return (1 + erf(ωstar/np.sqrt(2*Vstar))) * (λstar_plus - ω)**2
-
-def f_qhat_minus(ξ, M, Q, V, Vstar):
-    ω = np.sqrt(Q)*ξ
-    ωstar = (M/np.sqrt(Q))*ξ
-    λstar_minus = minimize_scalar(lambda x: moreau_loss(x, -1, ω, V))['x']
-    return (1 - erf(ωstar/np.sqrt(2*Vstar))) * (λstar_minus - ω)**2
-
-def integrate_for_Qhat(M, Q, V, Vstar):
-    I1 = quad(lambda ξ: f_qhat_plus(ξ, M, Q, V, Vstar) * gaussian(ξ), -10, 10, limit=500)[0]
-    I2 = quad(lambda ξ: f_qhat_minus(ξ, M, Q, V, Vstar)* gaussian(ξ), -10, 10, limit=500)[0]
-    return (1/2) * (I1 + I2)
-
-# from clarté
-def update_clart(m,q,sigma,rho_w_star,alpha,epsilon,tau,int_lims):
-    Vstar = rho_w_star - m**2/q
-
-    Delta = tau**2
-
-    Im = integrate_for_mhat(m, q, sigma, Vstar + Delta)
-    Iv = integrate_for_Vhat(m, q, sigma, Vstar + Delta)
-    Iq = integrate_for_Qhat(m, q, sigma, Vstar + Delta)
-
-    mhat = alpha * Im/sigma
-    Vhat = alpha * ((1/sigma) - (1/sigma**2) * Iv)
-    qhat = alpha * Iq/sigma**2
-    return mhat,qhat,Vhat
-
 # m,q,sigma -> see application
 def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims):
-    logging.info("var_hat_func")
-    logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
+    # logging.info("var_hat_func")
+    # logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
     m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,int_lims)
     q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,int_lims)
     sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,tau,epsilon,int_lims)
-    # m_hat, q_hat, sigma_hat = update_clart(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
     return m_hat, q_hat, sigma_hat
 
 def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam):
@@ -276,7 +194,7 @@ if __name__ == "__main__":
     w = sample_weights(d)
     tau = 0
     lam = 1
-    epsilon = 0.0
+    epsilon = 0
     logging.basicConfig(level=logging.INFO)
     
 
@@ -318,7 +236,7 @@ if __name__ == "__main__":
     print("m: ", m)
     print("q: ", q)
     print("sigma: ", sigma)
-    print("Generalization error", generalization_error(1,m,sigma+q,tau))
+    print("Generalization error", generalization_error(1,m,q,tau))
     print("time", time.time() - start)
 
     

@@ -44,7 +44,7 @@ class StateEvolutionExperimentInformation:
         self.duration: float = duration
         self.experiment_id: str = experiment_id
         rho_w_star = 1.0
-        self.generalization_error: float = generalization_error(rho_w_star, m, sigma + q, tau)
+        self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
