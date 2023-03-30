@@ -117,9 +117,9 @@ def get_default_experiment():
     state_evolution_repetitions: int = 10
     erm_repetitions: int = 10
     alphas: np.ndarray = np.array([0.2,1,2,5])
-    epsilons: np.ndarray = np.array([0,0.01,0.2,1])
+    epsilons: np.ndarray = np.array([0])
     lambdas: np.ndarray = np.array([1])
-    tau:float = 2
+    tau:float = 0
     d: int = 1000
     erm_methods: list = ["gd"]
     experiment_name: str = "Default Experiment"
