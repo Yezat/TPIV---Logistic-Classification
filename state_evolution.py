@@ -21,7 +21,7 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     return np.exp(-.5 * (x-mean)**2 / var)/np.sqrt(2*np.pi*var)
 
 def second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
-    return y**2 / (4 * np.cosh(0.5*y*z - 0.5*epsilon * np.sqrt(Q)))
+    return y**2 / (2 * np.cosh(0.5*y*z - 0.5*epsilon * np.sqrt(Q)))**2
     
 def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) -> float:
     return 1/(1 + V * second_derivative_loss(y,z,Q,epsilon))
@@ -35,26 +35,26 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     def integrand_plus(xi):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
-        V_0 = rho_w_star + (1-e)
+        V_0 = rho_w_star * (1-e)
 
         # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
         w = np.sqrt(q) * xi
 
         partial_prox =  proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w) - w 
 
-        return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi) * 1/np.sqrt( 2*np.pi*( V_0+tau**2))
+        return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
     
     def integrand_minus(xi):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
-        V_0 = rho_w_star + (1-e)
+        V_0 = rho_w_star * (1-e)
 
         # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
         w = np.sqrt(q) * xi
 
         partial_prox =  proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w) - w 
 
-        return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi) * 1/np.sqrt( 2*np.pi*( V_0+tau**2))
+        return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
@@ -65,7 +65,7 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     def integrand_plus(xi):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
-        V_0 = rho_w_star + (1-e)
+        V_0 = rho_w_star * (1-e)
 
         
         z_0 = erfc(- (w_0) / np.sqrt(2*(tau**2 + V_0)))
@@ -78,7 +78,7 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     def integrand_minus(xi):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
-        V_0 = rho_w_star + (1-e)
+        V_0 = rho_w_star * (1-e)
 
         z_0 = erfc((w_0) / np.sqrt(2*(tau**2 + V_0)))
 
@@ -97,7 +97,7 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
     def integrand_plus(xi):
         # todo: simplify
         
-        z_0 = erfc( - ( m * np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+        z_0 = erfc( - ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
 
         w = np.sqrt(q) * xi
         proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
@@ -109,14 +109,13 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         return z_0 * ( derivative_f_out + epsilon * (1/np.sqrt(sigma+q) - w )  ) * gaussian(xi)
     
     def integrand_minus(xi):
-        z_0 = erfc(  ( m * np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+        z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
 
         w = np.sqrt(q) * xi
         proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
 
         derivative_proximal = 1/(1 + sigma * second_derivative_loss(-1,proximal,sigma+q,epsilon))
 
-        # derivative_f_out =  1/sigma * (derivative_proximal - 1)
         derivative_f_out =  1/sigma * (derivative_proximal -1)
 
         return z_0 * ( derivative_f_out + epsilon * (1/np.sqrt(sigma+q) - w )  ) * gaussian(xi)
@@ -124,7 +123,7 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
     Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
 
-    return alpha * 0.5 * (Iplus + Iminus)
+    return -alpha * 0.5 * (Iplus + Iminus)
 
 """
 Clarté
@@ -211,10 +210,10 @@ def update_clart(m,q,sigma,rho_w_star,alpha,epsilon,tau,int_lims):
 def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims):
     logging.info("var_hat_func")
     logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
-    # m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,int_lims)
-    # q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,int_lims)
-    # sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,tau,epsilon,int_lims)
-    m_hat, q_hat, sigma_hat = update_clart(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
+    m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,int_lims)
+    q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,int_lims)
+    sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,tau,epsilon,int_lims)
+    # m_hat, q_hat, sigma_hat = update_clart(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
     return m_hat, q_hat, sigma_hat
 
 def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam):
@@ -230,7 +229,7 @@ BLEND_FPE = 0.75
 TOL_FPE = 1e-6
 MIN_ITER_FPE = 10
 MAX_ITER_FPE = 5000
-INT_LIMS = 20.0
+INT_LIMS = 10.0
 INITIAL_CONDITION = (0.1,0.1,0.9)
 
 def fixed_point_finder(
