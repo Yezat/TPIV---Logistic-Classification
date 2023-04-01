@@ -168,13 +168,13 @@ def fixed_point_finder(
     err = 1.0
     iter_nb = 0
     while err > abs_tol or iter_nb < min_iter:
-        logger.info(f"iter_nb: {iter_nb}, err: {err}")
+        if iter_nb % 10 == 0:
+            logger.info(f"iter_nb: {iter_nb}, err: {err}")
+            logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
 
         m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
 
         new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam)
-
-        logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
 
         err = max([abs(new_m - m), abs(new_q - q), abs(new_sigma - sigma)])
 

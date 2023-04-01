@@ -193,7 +193,7 @@ class DatabaseHandler:
             self.connection.commit()
 
     def insert_experiment(self, experiment_information: ExperimentInformation):
-        self.logger.info(str(experiment_information))
+        # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
         INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
@@ -262,7 +262,7 @@ class DatabaseHandler:
         self.connection.commit()
 
     def insert_erm(self, experiment_information: ERMExperimentInformation):
-        self.logger.info(str(experiment_information))
+        # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
         INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (

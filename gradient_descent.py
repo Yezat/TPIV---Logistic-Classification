@@ -46,14 +46,10 @@ def total_loss(w,X,y,lam,epsilon):
 
 def loss_per_sample(y,raw_prediction, epsilon, w):
     raw_prediction = -y*raw_prediction + epsilon * np.linalg.norm(w,2)
-    raw_prediction[raw_prediction > 20] = 20
-    raw_prediction[raw_prediction < -20] = -20
-    return np.log(1+np.exp(raw_prediction))
-    # raw_prediction = -y*raw_prediction + epsilon * np.linalg.norm(w,2)
-    # # create a vector of np.log(1) of the same size as raw_prediction
-    # log1 = np.empty_like(raw_prediction, dtype=raw_prediction.dtype)
-    # log1.fill(np.log(1))
-    # return logsumexp(np.array([log1,raw_prediction]),axis=1)
+    # create a vector of np.log(1) of the same size as raw_prediction
+    log1 = np.empty_like(raw_prediction, dtype=raw_prediction.dtype)
+    log1.fill(np.log(1))
+    return logsumexp(np.array([log1,raw_prediction]),axis=1)
 
 def total_gradient(w,X,y,lam,epsilon):
     grad = np.empty_like(w, dtype=w.dtype)
@@ -65,8 +61,6 @@ def total_gradient(w,X,y,lam,epsilon):
 
 def gradient_per_sample(w,X,y,epsilon):
     p = y*(X@w) - epsilon * np.linalg.norm(w,2)
-    p[p > 20] = 20
-    p[p < -20] = -20
     b = 1/(1+np.exp(p))
     c = epsilon*w/np.linalg.norm(w,2)
     d = np.outer(b,c).sum(axis=0)
@@ -143,3 +137,6 @@ def print_loss(w0,loss_fct,gradient,learning_rate,lam,X,y,epsilon):
     plt.ylabel("loss")
     plt.show()
 
+
+if __name__ == "__main__":
+    pass

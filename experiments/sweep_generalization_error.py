@@ -22,7 +22,7 @@ def run_erm(lock,logger, experiment_id, method, alpha, epsilon, lam, tau, d):
     """
     Generate Data, run ERM and save the results to the database
     """
-    logger.info(f"Starting ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
+    logger.info(f"Starting ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method}")
     start = time.time()
 
     # generate ground truth
@@ -50,13 +50,13 @@ def run_erm(lock,logger, experiment_id, method, alpha, epsilon, lam, tau, d):
     duration = end - start
     erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
     
-    logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d} in {end-start} seconds")
+    logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")
 
     # save results to database
     with lock:
         with DatabaseHandler(logger) as db:
             db.insert_erm(erm_information)
-            logger.info(f"Saved ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d} to database")
+            logger.info(f"Saved ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} to database")
     
 
 def dummy_fixed_point_finder(INITIAL_CONDITION,rho_w_star=1,alpha=1,epsilon=1,tau=1,lam=1,abs_tol=1,min_iter=1,max_iter=1,blend_fpe=1,int_lims=1):
@@ -117,11 +117,11 @@ def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 3
     alphas: np.ndarray = np.array([0.2,1,2,5])
-    epsilons: np.ndarray = np.array([0,0.01,0.02,0.03,0.04])
+    epsilons: np.ndarray = np.array([0,0.001,0.01,0.1])
     lambdas: np.ndarray = np.array([1])
     tau:float = 0
-    d: int = 1000
-    erm_methods: list = ["gd","L-BFGS-B"]
+    d: int = 30
+    erm_methods: list = ["gd","L-BFGS-B","logistic"]
     experiment_name: str = "Default Experiment"
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,tau,d,erm_methods,experiment_name)
     return experiment
@@ -192,7 +192,7 @@ if __name__ == "__main__":
         proc.join()
 
     # mark the experiment as finished
-    logger.info("Marking experiment as finished")
+    logger.info(f"Marking experiment {experiment_id} as finished")
     end = time.time()
     duration = end - start
     logger.info("Experiment took %d seconds", duration)
