@@ -15,7 +15,7 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir) 
 from experiment_information import *
 from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
-from gradient_descent import gd, lbfgs
+from gradient_descent import gd, lbfgs, sklearn_optimize
 from erm import get_logistic_regressor
 
 def run_erm(lock,logger, experiment_id, method, alpha, epsilon, lam, tau, d):
@@ -35,13 +35,15 @@ def run_erm(lock,logger, experiment_id, method, alpha, epsilon, lam, tau, d):
 
     w_gd = np.empty(w.shape,dtype=w.dtype)
     if method == "gd":
-        w_gd = gd(Xtrain,y,lam,epsilon)
+        w_gd = gd(Xtrain,y,lam,epsilon,logger)
     elif method == "L-BFGS-B":
-        w_gd = lbfgs(Xtrain,y,lam,epsilon)
+        w_gd = lbfgs(Xtrain,y,lam,epsilon,logger)
     elif method == "logistic":
         clf = get_logistic_regressor(Xtrain,y,lam)
         # reshape to 1d array
         w_gd = clf.coef_.reshape(-1)
+    elif method == "sklearn":
+        w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
     else:
         raise Exception(f"Method {method} not implemented")
     
@@ -116,12 +118,12 @@ def start_work(procs, number_of_workers):
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 3
-    alphas: np.ndarray = np.array([0.2,1,2,5])
-    epsilons: np.ndarray = np.array([0,0.001,0.01,0.1])
-    lambdas: np.ndarray = np.array([1])
+    alphas: np.ndarray = np.array([0.2,2,5])
+    epsilons: np.ndarray = np.array([0])
+    lambdas: np.ndarray = np.array([1e-3,1])
     tau:float = 0
-    d: int = 30
-    erm_methods: list = ["gd","L-BFGS-B","logistic"]
+    d: int = 500
+    erm_methods: list = ["logistic","sklearn"]
     experiment_name: str = "Default Experiment"
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,tau,d,erm_methods,experiment_name)
     return experiment
