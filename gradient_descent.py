@@ -36,7 +36,7 @@ from sklearn.linear_model._logistic import _logistic_regression_path
 import inspect as i
 from scipy.special import logit
 from scipy.linalg import norm
-import sklearn_loss as skloss
+import xyz as skloss
 
 """
 sklearn
@@ -70,10 +70,10 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
 
     target = y_bin
 
-    # loss = LinearModelLoss(
-    #             base_loss=HalfBinomialLoss(), fit_intercept=fit_intercept
-    #         )
-    # func = loss.loss_gradient
+    loss = LinearModelLoss(
+                base_loss=HalfBinomialLoss(), fit_intercept=fit_intercept
+            )
+    func = loss.loss_gradient
     func = c_inspired_loss_gradient # TODO, for 
 
     sample_weight = None
@@ -88,8 +88,16 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
                 w0,
                 method="L-BFGS-B",
                 jac=True,
-                args=(X, target, sample_weight, l2_reg_strength, n_threads)
+                args=(X, target, epsilon, sample_weight, l2_reg_strength, n_threads)
             )
+    # opt_res = minimize(
+    #             func,
+    #             w0,
+    #             method="L-BFGS-B",
+    #             jac=True,
+    #             args=(X, target, sample_weight, l2_reg_strength, n_threads)
+    #         )
+
     w0, loss = opt_res.x, opt_res.fun
     return w0
 
@@ -163,7 +171,7 @@ def _w_intercept_raw(coef, X):
 
     return weights, intercept, raw_prediction
 
-def c_inspired_loss_gradient(coef, X, y, sample_weight=None, l2_reg_strength=0.0, n_threads=1):
+def c_inspired_loss_gradient(coef, X, y, epsilon, sample_weight=None, l2_reg_strength=0.0, n_threads=1):
     n_features, n_classes = X.shape[1], 1
     fit_intercept = False
     n_dof = n_features + int(fit_intercept)
@@ -177,6 +185,7 @@ def c_inspired_loss_gradient(coef, X, y, sample_weight=None, l2_reg_strength=0.0
 
     loss_out = None
     gradient_out = None
+    adversarial_gradient_out = None
     if loss_out is None:
         if gradient_out is None:
             loss_out = np.empty_like(y)
@@ -185,29 +194,42 @@ def c_inspired_loss_gradient(coef, X, y, sample_weight=None, l2_reg_strength=0.0
             loss_out = np.empty_like(y, dtype=gradient_out.dtype)
     elif gradient_out is None:
         gradient_out = np.empty_like(raw_prediction, dtype=loss_out.dtype)
+    if adversarial_gradient_out is None:
+        adversarial_gradient_out = np.empty_like(raw_prediction, dtype=gradient_out.dtype)
 
     # Be graceful to shape (n_samples, 1) -> (n_samples,)
     if raw_prediction.ndim == 2 and raw_prediction.shape[1] == 1:
         raw_prediction = raw_prediction.squeeze(1)
     if gradient_out.ndim == 2 and gradient_out.shape[1] == 1:
         gradient_out = gradient_out.squeeze(1)
+    if adversarial_gradient_out.ndim == 2 and adversarial_gradient_out.shape[1] == 1:
+        adversarial_gradient_out = adversarial_gradient_out.squeeze(1)
 
-    half.loss_gradient(             y_true=y,
+    half.loss_gradient( y_true=y,
         raw_prediction=raw_prediction,
+        adversarial_norm = epsilon * np.sqrt(weights @ weights),
         sample_weight=sample_weight,
         loss_out=loss_out,
         gradient_out=gradient_out,
+        adversarial_gradient_out = adversarial_gradient_out,   
         n_threads=n_threads,
     )
-    loss,grad_per_sample = loss_out,gradient_out
+    loss,grad_per_sample, adv_grad_per_sample = loss_out,gradient_out, adversarial_gradient_out
 
 
     loss = loss.sum()
 
-    
+    adv_correction_factor = epsilon * weights / np.sqrt(weights @ weights)
+    adv_grad_summand = np.outer(adv_grad_per_sample, adv_correction_factor).sum(axis=0)
+
+
+    # if epsilon is zero, assert that the norm of adv_grad_summand is zero
+    if epsilon == 0:
+        assert np.linalg.norm(adv_grad_summand) == 0
+
     loss += 0.5 * l2_reg_strength * (weights @ weights)
     grad = np.empty_like(coef, dtype=weights.dtype)
-    grad[:n_features] = X.T @ grad_per_sample + l2_reg_strength * weights
+    grad[:n_features] = X.T @ grad_per_sample + l2_reg_strength * weights + adv_grad_summand
     if fit_intercept:
         grad[-1] = grad_per_sample.sum()
 
@@ -406,15 +428,15 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG)
 
-    alpha = 0.2
+    alpha = 5
     d = 1000
     w = sample_weights(d)
     # method = "L-BFGS-B"
     method = "sklearn"
     # method = "gd"
-    tau = 2 # stuff works fine with high enough noise level?
+    tau = 0 # stuff works fine with high enough noise level?
     epsilon = 0
-    lam = 1e-4
+    lam = 1
 
     #TODO: for alpha 0.2, d 1000, tau 2, epsilon 0, lam 1e-4 things don't work quite as well...
     # maybe it's worth coding stuff up in c anyway...

@@ -50,6 +50,12 @@ ctypedef struct double_pair:
    double val1
    double val2
 
+# Struct to return 3 doubles
+ctypedef struct double_triplet:
+   double val1
+   double val2
+   double val3
+
 # -------------------------------------
 # Helper functions
 # -------------------------------------
@@ -106,26 +112,39 @@ cdef inline double cgradient_half_binomial(
     return ((1 - y_true) - y_true * exp_tmp) / (1 + exp_tmp)
 
 
-cdef inline double_pair closs_grad_half_binomial(
+cdef inline double_triplet closs_grad_half_binomial(
     double y_true,
-    double raw_prediction
+    double raw_prediction,
+    double adversarial_norm
 ) noexcept nogil:
-    cdef double_pair lg
-    if raw_prediction <= 0:
-        lg.val2 = exp(raw_prediction)  # used as temporary
-        if raw_prediction <= -37:
-            lg.val1 = lg.val2 - y_true * raw_prediction              # loss
+    cdef double_triplet lg
+    cdef double adversarial_plus = raw_prediction + adversarial_norm
+    cdef double adversarial_minus = raw_prediction - adversarial_norm
+    cdef double plus_term
+    cdef double minus_term
+    if adversarial_minus <= 0:
+        lg.val2 = exp(adversarial_minus)  # used as temporary
+        if adversarial_minus <= -37:
+            lg.val1 = lg.val2 - y_true * adversarial_minus              # loss
         else:
-            lg.val1 = log1p(lg.val2) - y_true * raw_prediction       # loss
-        lg.val2 = ((1 - y_true) * lg.val2 - y_true) / (1 + lg.val2)  # gradient
+            lg.val1 = log1p(lg.val2) - y_true * adversarial_minus       # loss
+        minus_term = (y_true) / (1 + exp(-adversarial_minus))
     else:
-        lg.val2 = exp(-raw_prediction)  # used as temporary
-        if raw_prediction <= 18:
+        lg.val2 = exp(-adversarial_minus)  # used as temporary
+        if adversarial_minus <= 18:
             # log1p(exp(x)) = log(1 + exp(x)) = x + log1p(exp(-x))
-            lg.val1 = log1p(lg.val2) + (1 - y_true) * raw_prediction  # loss
+            lg.val1 = log1p(lg.val2) + adversarial_minus - y_true * adversarial_minus  # loss
         else:
-            lg.val1 = lg.val2 + (1 - y_true) * raw_prediction         # loss
-        lg.val2 = ((1 - y_true) - y_true * lg.val2) / (1 + lg.val2)   # gradient
+            lg.val1 = lg.val2 + adversarial_minus - y_true * adversarial_minus         # loss
+        minus_term = (y_true) * exp(adversarial_minus) / (1 + exp(adversarial_minus))
+    # compute additive term for loss
+    lg.val1 += y_true * log1pexp(adversarial_minus) - y_true * log1pexp(adversarial_plus)
+    if adversarial_plus <= 0:
+        plus_term = (1-y_true) / (1 + exp(-adversarial_plus))
+    else:
+        plus_term = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus))
+    lg.val2 = -y_true + plus_term + minus_term
+    lg.val3 = y_true + plus_term - minus_term
     return lg
 
 
@@ -316,32 +335,36 @@ cdef class CyHalfBinomialLoss(CyLossFunction):
         self,
         const Y_DTYPE_C[::1] y_true,          # IN
         const Y_DTYPE_C[::1] raw_prediction,  # IN
+        const double adversarial_norm,        # IN
         const Y_DTYPE_C[::1] sample_weight,   # IN
         G_DTYPE_C[::1] loss_out,              # OUT
         G_DTYPE_C[::1] gradient_out,          # OUT
+        G_DTYPE_C[::1] adversarial_gradient_out,          # OUT
         int n_threads=1
     ):
         cdef:
             int i
             int n_samples = y_true.shape[0]
-            double_pair dbl2
+            double_triplet dbl3
 
         if sample_weight is None:
             for i in prange(
                 n_samples, schedule='static', nogil=True, num_threads=n_threads
             ):
-                dbl2 = closs_grad_half_binomial(y_true[i], raw_prediction[i])
-                loss_out[i] = dbl2.val1
-                gradient_out[i] = dbl2.val2
+                dbl3 = closs_grad_half_binomial(y_true[i], raw_prediction[i], adversarial_norm)
+                loss_out[i] = dbl3.val1
+                gradient_out[i] = dbl3.val2
+                adversarial_gradient_out[i] = dbl3.val3
         else:
             for i in prange(
                 n_samples, schedule='static', nogil=True, num_threads=n_threads
             ):
-                dbl2 = closs_grad_half_binomial(y_true[i], raw_prediction[i])
-                loss_out[i] = sample_weight[i] * dbl2.val1
-                gradient_out[i] = sample_weight[i] * dbl2.val2
+                dbl3 = closs_grad_half_binomial(y_true[i], raw_prediction[i], adversarial_norm)
+                loss_out[i] = sample_weight[i] * dbl3.val1
+                gradient_out[i] = sample_weight[i] * dbl3.val2
+                adversarial_gradient_out[i] = sample_weight[i] * dbl3.val3
 
-        return np.asarray(loss_out), np.asarray(gradient_out)
+        return np.asarray(loss_out), np.asarray(gradient_out), np.asarray(adversarial_gradient_out)
 
     def gradient(
         self,
