@@ -1,4 +1,4 @@
-from gradient_descent import loss_per_sample
+from gradient_descent import loss_gradient, preprocessing
 import theoretical
 from util import error
 import numpy as np
@@ -88,7 +88,7 @@ class ERMExperimentInformation:
         self.d: int = d
         self.tau: float = tau
         self.alpha: float = n/d
-        self.test_loss: float = loss_per_sample(ytest,Xtest@w_gd,epsilon=epsilon,w=w_gd).mean()
+        self.test_loss: float = loss_gradient(*preprocessing(w_gd,Xtest,ytest,lam,epsilon))[0]/n
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):

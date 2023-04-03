@@ -41,7 +41,8 @@ import xyz as skloss
 """
 sklearn
 """
-def sklearn_optimize(coef,X,y,lam,epsilon):
+def preprocessing(coef, X, y, lam, epsilon):
+    # heavily inspired by the sklearn code, with hopefully all the relevant bits copied over to make it work using lbfgs
     solver = "lbfgs"
     X = check_array(
             X,
@@ -58,7 +59,6 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
     w0 = np.zeros(n_features + int(fit_intercept), dtype=X.dtype)
     mask = y == 1
     y_bin = np.ones(y.shape, dtype=X.dtype)
-    mask_classes = np.array([0, 1])
     y_bin[~mask] = 0.0
 
     if coef.size not in (n_features, w0.size):
@@ -69,26 +69,28 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
     w0[: coef.size] = coef
 
     target = y_bin
+    return w0, X, target, lam, epsilon
 
-    loss = LinearModelLoss(
-                base_loss=HalfBinomialLoss(), fit_intercept=fit_intercept
-            )
-    func = loss.loss_gradient
-    func = c_inspired_loss_gradient # TODO, for 
+def sklearn_optimize(coef,X,y,lam,epsilon):
+    w0, X,target, lam, epsilon = preprocessing(coef, X, y, lam, epsilon)
+
+    # loss = LinearModelLoss(
+    #             base_loss=HalfBinomialLoss(), fit_intercept=fit_intercept
+    #         )
+    # func = loss.loss_gradient
+    func = loss_gradient # TODO, for 
 
     sample_weight = None
     sample_weight = _check_sample_weight(sample_weight, X, dtype=X.dtype, copy=True)
     l2_reg_strength = lam
     n_threads = 1
 
-    warm_start_sag = {"coef": np.expand_dims(w0, axis=1)}
-
     opt_res = minimize(
                 func,
                 w0,
                 method="L-BFGS-B",
                 jac=True,
-                args=(X, target, epsilon, sample_weight, l2_reg_strength, n_threads)
+                args=(X, target, l2_reg_strength, epsilon, sample_weight, n_threads)
             )
     # opt_res = minimize(
     #             func,
@@ -100,49 +102,6 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
 
     w0, loss = opt_res.x, opt_res.fun
     return w0
-
-# Numerically stable version of log(1 + exp(x)) for double precision, see Eq. (10) of
-# https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
-# Note: The only important cutoff is at x = 18. All others are to save computation
-# time. Compared to the reference, we add the additional case distinction x <= -2 in
-# order to use log instead of log1p for improved performance. As with the other
-# cutoffs, this is accurate within machine precision of double.
-def log1pexp(x: float) -> float:
-    # test if x is a numpy array
-    if isinstance(x, np.ndarray):
-        # create an empty array of size x to fill
-        r = np.empty_like(x)
-        # create a mask for all entries where x <= -37
-        less_than_minus_37 = x <= -37
-        # replace entries with np.exp(x) where the mask is true
-        np.putmask(r, less_than_minus_37, np.exp(x))
-        # create a mask for all entries where x <= -2
-        less_than_minus_2 = x <= -2
-        # replace entries with np.log1p(np.exp(x)) where the mask is true
-        np.putmask(r, less_than_minus_2, np.log1p(np.exp(x)))
-        # create a mask for all entries where x <= 18
-        less_than_18 = x <= 18
-        # replace entries with np.log(1. + np.exp(x)) where the mask is true
-        np.putmask(r, less_than_18, np.log(1. + np.exp(x)))
-        # create a mask for all entries where x <= 33.3
-        less_than_33_3 = x <= 33.3
-        # replace entries with x + np.exp(-x) where the mask is true
-        np.putmask(r, less_than_33_3, x + np.exp(-x))
-        # replace all other entries with x
-        np.putmask(r, ~less_than_minus_37 & ~less_than_minus_2 & ~less_than_18 & ~less_than_33_3, x)
-        return r
-    else:
-        if x <= -37:
-            return np.exp(x)
-        elif x <= -2:
-            return np.log1p(np.exp(x)) # according to the above paper, log1p is part of the c language standard.
-        elif x <= 18:
-            return np.log(1. + np.exp(x))
-        elif x <= 33.3:
-            return x + np.exp(-x)
-        else:
-            return x
-
 
 def _w_intercept_raw(coef, X):
     fit_intercept = False
@@ -171,10 +130,9 @@ def _w_intercept_raw(coef, X):
 
     return weights, intercept, raw_prediction
 
-def c_inspired_loss_gradient(coef, X, y, epsilon, sample_weight=None, l2_reg_strength=0.0, n_threads=1):
+def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_threads=1):
     n_features, n_classes = X.shape[1], 1
     fit_intercept = False
-    n_dof = n_features + int(fit_intercept)
     weights, intercept, raw_prediction = _w_intercept_raw(coef, X)
 
     # loss, grad_per_sample = just_loss_gradient(
@@ -235,117 +193,14 @@ def c_inspired_loss_gradient(coef, X, y, epsilon, sample_weight=None, l2_reg_str
 
     return loss, grad
 
-def just_loss_gradient(y_true, raw_prediction):
-    return half_binomial_loss(y_true, raw_prediction), half_binomial_loss_gradient(y_true, raw_prediction)
-
-def half_binomial_loss(y_true, raw_predictions):
-    return log1pexp(raw_predictions) - y_true * raw_predictions
-
-def half_binomial_loss_gradient(y_true, raw_predictions):
-    exp_tmp = np.exp(-raw_predictions)
-    return ((1 - y_true) - y_true * exp_tmp) / (1 + exp_tmp)
-
-
-
-def loss_gradient(w,X,y,lam,epsilon):
-    # print("loss_gradient")
-    d = w.shape[0]
-    loss = total_loss(w,X,y,lam,epsilon,d)
-    gradient = total_gradient(w,X,y,lam,epsilon,d)
-    # print("loss",loss, "gradient", norm(gradient,2))
-    return loss, gradient
-
-def total_loss(w, X, y, lam, epsilon, d):
-    # loss(x_i) = log(1 + exp(raw_pred_i)) - y_true_i * raw_pred_i from sklearn document
-    raw_predictions = X@w
-    loss = np.log(1 + np.exp(raw_predictions)) - y * raw_predictions
-    n = X.shape[0]
-    loss = loss.sum() /n
-    loss += 0.5 * lam * (w @ w) / np.sqrt(d)
-    return loss
-
-    # raw_predictions = X@w
-    # l2_norm_w = norm(w,2)
-    # loss = -y*raw_predictions + y * epsilon * l2_norm_w 
-    # log1 = np.empty_like(raw_predictions, dtype=raw_predictions.dtype)
-    # log1.fill(np.log(1))
-    # loss += (1-y) * logsumexp(np.array([log1,raw_predictions + epsilon * l2_norm_w]),axis=0)
-    # loss += y * logsumexp(np.array([log1,raw_predictions - epsilon * l2_norm_w]),axis=0)
-    # loss = loss.sum()
-    # loss += 0.5 * lam * (w @ w)    
-    # return loss
-
-def total_gradient(w, X, y, lam, epsilon, d):
-    raw_predictions = X@w
-    gradient = 1/(1+np.exp(-raw_predictions))*X.T - y*X.T
-    return gradient.sum(axis=1)/X.shape[0] + lam * w/np.sqrt(d)
-
-    # pointwise_gradient = gradient_pointwise(w,X,y,epsilon,d)
-    # epsilon_pointwise = gradient_epsilon_pointwise(w,X,y,epsilon,d)
-    # total_gradient = X.T @ pointwise_gradient
-    # eps_factor =  epsilon
-    # eps_factor *= w / norm(w,2)
-    # epsilon_part = np.outer(eps_factor, epsilon_pointwise)
-    # epsilon_part = epsilon_part.sum(axis=1)
-    # n = X.shape[0]
-    # return (total_gradient + epsilon_part) /n + lam * w
-
-def gradient_pointwise(w, X, y, epsilon, d):
-    result = -y
-    raw_predictions = X@w
-    l2_norm_w = norm(w,2)
-    result += (1-y) * (1/(1+np.exp(-raw_predictions - epsilon * l2_norm_w)))
-    result += y * (1/(1+np.exp(-raw_predictions + epsilon * l2_norm_w)))
-    return result
-
-def gradient_epsilon_pointwise(w, X, y, epsilon, d):
-    result = y
-    raw_predictions = X@w
-    l2_norm_w = norm(w,2)
-    result += (1-y) * (1/(1+np.exp(-raw_predictions - epsilon * l2_norm_w)))
-    result -= y * (1/(1+np.exp(-raw_predictions + epsilon * l2_norm_w)))
-    return result
-
-# def total_loss(w,X,y,lam,epsilon):
-#     d = X.shape[1]
-#     loss = loss_per_sample(y,X@w,epsilon,w)
-#     loss = loss.sum()
-#     d = X.shape[1]
-#     loss += 0.5 * lam * (w @ w) / np.sqrt(d)
-#     return loss
-
-def loss_per_sample(y,raw_prediction, epsilon, w): # TODO is bein used in ERMInformation... fix thids..
-    d = w.shape[0]
-    raw_prediction = -y*raw_prediction + epsilon * norm(w,2)
-    # create a vector of np.log(1) of the same size as raw_prediction
-    log1 = np.empty_like(raw_prediction, dtype=raw_prediction.dtype)
-    log1.fill(np.log(1))
-    return logsumexp(np.array([log1,raw_prediction]),axis=1)
-
-# def total_gradient(w,X,y,lam,epsilon):
-#     grad = np.empty_like(w, dtype=w.dtype)
-#     grad_per_sample,epsilon_part = gradient_per_sample(w,X,y,epsilon)
-#     grad = grad_per_sample.T @ X  
-#     d = X.shape[1]
-#     grad += epsilon_part    
-#     grad += lam * w / np.sqrt(d)
-#     return grad
-
-# def gradient_per_sample(w,X,y,epsilon):
-#     d = X.shape[1]
-#     p = y*(X@w) - epsilon * norm(w,2) / (d**0.25)
-#     b = 1/(1+np.exp(p))
-#     c = epsilon*w/(norm(w,2) * (d**0.25))
-#     d = np.outer(b,c).sum(axis=0)
-#     return -y*b, d
-
 
 def lbfgs(X,y,lam,epsilon,logger, method="L-BFGS-B"):
     # change y to be in {0,1}
-    y = (y+1)/2
+    w0 = sample_weights(X.shape[1])
+    w0, X, y, lam, epsilon = preprocessing(w0, X, y, lam, epsilon)
 
     n,d = X.shape
-    res = minimize(loss_gradient,sample_weights(d),args=(X, y, lam, epsilon),jac=True,method=method,options={'maxiter':100}) 
+    res = minimize(loss_gradient,w0,args=(X, y, lam, epsilon),jac=True,method=method,options={'maxiter':100}) 
     logger.info(f"Minimized {res.success} {res.message}")
     if not res.success:
         logger.info(f"OPTIMIZATION FAILED: {res.message} {res.status}")
@@ -353,11 +208,14 @@ def lbfgs(X,y,lam,epsilon,logger, method="L-BFGS-B"):
     return w
 
 def gd(X,y,lam,epsilon, logger, debug = False):
-    # change y to be in {0,1}
-    y = (y+1)/2
-
+    # do not use gd. Does not seem stable.
     n,d = X.shape
+
     w0 = sample_weights(d)
+    w0, X, y, lam, epsilon = preprocessing(w0, X, y, lam, epsilon)
+
+    
+    
     wt = sample_weights(d)
 
     n_iter = 0 
@@ -366,24 +224,24 @@ def gd(X,y,lam,epsilon, logger, debug = False):
     training_error = 1
     learning_rate = 1000000
 
-    last_loss = total_loss(w0,X,y,lam,epsilon,d)
+    last_loss, _ = loss_gradient(w0,X,y,lam,epsilon)
 
     while gradient_norm > 10**-9 and loss_difference > 10**-9 and training_error != 0 and n_iter < 10000:
         if debug:
             print("iteration: ",n_iter," loss: ",last_loss,"gradient_norm",gradient_norm,"learning_rate",learning_rate,"epsilon",epsilon,"lam",lam)
 
         
-        g = total_gradient(w0,X,y,lam,epsilon,d)
+        _, g = loss_gradient(w0,X,y,lam,epsilon)
         wt = w0 - learning_rate *g
         wp = w0 + learning_rate *g
         gradient_norm = norm(g,2)
 
         if debug:
-            print_loss(w0,total_loss,g,learning_rate,lam,X,y,epsilon)
+            print_loss(w0,loss_gradient,g,learning_rate,lam,X,y,epsilon)
 
 
-        new_loss = total_loss(wt,X,y,lam,epsilon,d)
-        new_loss_p = total_loss(wp,X,y,lam,epsilon,d)
+        new_loss,_ = loss_gradient(wt,X,y,lam,epsilon)
+        new_loss_p,_ = loss_gradient(wp,X,y,lam,epsilon)
         if new_loss > last_loss:
             if new_loss_p > last_loss:
                 learning_rate *= 0.4
@@ -411,7 +269,7 @@ def print_loss(w0,loss_fct,gradient,learning_rate,lam,X,y,epsilon):
     d = X.shape[1]
     
     for t in ts:
-        loss_gradient.append(loss_fct(w0+t*gradient,X,y,lam,epsilon,d))
+        loss_gradient.append(loss_fct(w0+t*gradient,X,y,lam,epsilon)[0])
     
     fig,ax = plt.subplots()
     plt_loss_over_time, = ax.plot(ts,loss_gradient,label="loss")
@@ -424,22 +282,17 @@ def print_loss(w0,loss_fct,gradient,learning_rate,lam,X,y,epsilon):
 
 
 if __name__ == "__main__":
-    # TODO: try coding this stuff in torch
-
     logging.basicConfig(level=logging.DEBUG)
 
     alpha = 5
     d = 1000
     w = sample_weights(d)
-    # method = "L-BFGS-B"
+    method = "L-BFGS-B"
     method = "sklearn"
     # method = "gd"
-    tau = 0 # stuff works fine with high enough noise level?
+    tau = 0 
     epsilon = 0
     lam = 1
-
-    #TODO: for alpha 0.2, d 1000, tau 2, epsilon 0, lam 1e-4 things don't work quite as well...
-    # maybe it's worth coding stuff up in c anyway...
 
     start = time.time()
     print("Starting experiment with alpha = ",alpha," d = ",d," method = ",method," tau = ",tau," lam = ",lam," epsilon = ",epsilon)
@@ -471,11 +324,11 @@ if __name__ == "__main__":
     # evaluate the difference between the coefficients both ways
     print("norm(w_gd-w_lr,2)",norm(w_gd-w_lr,2))
     # evaluate total loss both ways
-    print("total_loss(w_gd,Xtrain,y,lam,epsilon)",total_loss(w_gd,Xtrain,y,lam,epsilon,d))
-    print("total_loss(w_lr,Xtrain,y,lam,epsilon)",total_loss(w_lr,Xtrain,y,lam,epsilon,d))
+    print("total_loss(w_gd,Xtrain,y,lam,epsilon)",loss_gradient(w_gd,Xtrain,y,lam,epsilon)[0])
+    print("total_loss(w_lr,Xtrain,y,lam,epsilon)",loss_gradient(w_lr,Xtrain,y,lam,epsilon)[0])
     # evaluate the gradient norm both ways
-    print("norm(total_gradient(w_gd,Xtrain,y,lam,epsilon),2)",norm(total_gradient(w_gd,Xtrain,y,lam,epsilon,d),2))
-    print("norm(total_gradient(w_lr,Xtrain,y,lam,epsilon),2)",norm(total_gradient(w_lr,Xtrain,y,lam,epsilon,d),2))
+    print("norm(total_gradient(w_gd,Xtrain,y,lam,epsilon),2)",norm(loss_gradient(w_gd,Xtrain,y,lam,epsilon)[1],2))
+    print("norm(total_gradient(w_lr,Xtrain,y,lam,epsilon),2)",norm(loss_gradient(w_lr,Xtrain,y,lam,epsilon)[1],2))
 
     end = time.time()
     duration = end - start
@@ -495,46 +348,3 @@ if __name__ == "__main__":
     print("w_lr.dtype",w_lr.dtype)
     print("Xtrain.dtype",Xtrain.dtype)
     print("y.dtype",y.dtype)
-
-    """
-    # they change the labels to if solver in ["lbfgs", "newton-cg", "newton-cholesky"]:
-            # HalfBinomialLoss, used for those solvers, represents y in [0, 1] instead
-            # of in [-1, 1].
-            mask_classes = np.array([0, 1])
-            y_bin[~mask] = 0.0
-    
-    # they use different weight matrix
-    if n_classes == 1:
-                w0[0, : coef.shape[1]] = -coef
-                w0[1, : coef.shape[1]] = coef
-                (1,d)
-
-    # they use different loss function
-    loss = LinearModelLoss(
-                base_loss=HalfBinomialLoss(), fit_intercept=fit_intercept
-            )
-            func = loss.loss_gradient
-    
-    # check out the half binomial loss
-    # and how this changes the linermodelloss
-    # and how this results in the loss.loss_gradient function
-
-    warm_start_sag = {"coef": np.expand_dims(w0, axis=1)} # is this important?
-
-    opt_res = optimize.minimize(
-                func,
-                w0,
-                method="L-BFGS-B",
-                jac=True,
-                args=(X, target, sample_weight, l2_reg_strength, n_threads),
-                options={"iprint": iprint, "gtol": tol, "maxiter": max_iter},
-            )
-    
-    # what exactly is this doing?
-    n_iter_i = _check_optimize_result(
-                solver,
-                opt_res,
-                max_iter,
-                extra_warning_msg=_LOGISTIC_SOLVER_CONVERGENCE_MSG,
-            )
-    """
