@@ -14,7 +14,7 @@ import pandas as pd
 import logging
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray,tau: float, d: int, erm_methods: list, experiment_name: str = ""):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, experiment_name: str = ""):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -25,7 +25,7 @@ class ExperimentInformation:
         self.alphas: np.ndarray = alphas
         self.epsilons: np.ndarray = epsilons
         self.lambdas: np.ndarray = lambdas
-        self.tau: float = tau # TODO: allow sweep over tau
+        self.taus: np.ndarray = taus
         self.d: int = d
         self.erm_methods: list = erm_methods
         self.completed: bool = False
@@ -156,7 +156,7 @@ class DatabaseHandler:
                 alphas BLOB,
                 epsilons BLOB,
                 lambdas BLOB,
-                tau REAL,
+                taus BLOB,
                 d INTEGER,
                 erm_methods BLOB,
                 completed BOOLEAN
@@ -206,7 +206,7 @@ class DatabaseHandler:
             json.dumps(experiment_information.alphas, cls=NumpyEncoder),
             json.dumps(experiment_information.epsilons, cls=NumpyEncoder),
             json.dumps(experiment_information.lambdas, cls=NumpyEncoder),
-            experiment_information.tau,
+            json.dumps(experiment_information.taus, cls=NumpyEncoder),
             experiment_information.d,
             json.dumps(experiment_information.erm_methods),
             experiment_information.completed
@@ -282,7 +282,7 @@ class DatabaseHandler:
             experiment_information.chosen_minimizer,
             experiment_information.training_error,
             experiment_information.d,
-            experiment_information.tau,
+            float(experiment_information.tau),
             experiment_information.alpha,
             experiment_information.test_loss
         ))

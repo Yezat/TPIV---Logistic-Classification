@@ -119,13 +119,13 @@ def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 3
     alphas: np.ndarray = np.array([0.2,0.5,1,1.5,2,5])
-    epsilons: np.ndarray = np.array([0,0.01,0.02,0.03,0.04])
+    epsilons: np.ndarray = np.array([0,0.001,0.002,0.003,0.004])
     lambdas: np.ndarray = np.array([1e-3])
-    tau:float = 2
-    d: int = 300
+    taus: np.ndarray = np.array([2])
+    d: int = 1000
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,tau,d,erm_methods,experiment_name)
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,experiment_name)
     return experiment
 
 if __name__ == "__main__":
@@ -174,15 +174,16 @@ if __name__ == "__main__":
     for alpha in experiment.alphas:
         for epsilon in experiment.epsilons:
             for lam in experiment.lambdas:
+                for tau in experiment.taus:
                 
-                for _ in range(experiment.state_evolution_repetitions):
-                    proc = Process(target=run_state_evolution, args=(lock,logger,experiment_id,alpha,epsilon,lam,experiment.tau,experiment.d))
-                    procs.put(proc)
-                    
-                for _ in range(experiment.erm_repetitions):
-                    for method in experiment.erm_methods:
-                        proc = Process(target=run_erm, args=(lock,logger,experiment_id,method,alpha,epsilon,lam,experiment.tau,experiment.d))
+                    for _ in range(experiment.state_evolution_repetitions):
+                        proc = Process(target=run_state_evolution, args=(lock,logger,experiment_id,alpha,epsilon,lam,tau,experiment.d))
                         procs.put(proc)
+                        
+                    for _ in range(experiment.erm_repetitions):
+                        for method in experiment.erm_methods:
+                            proc = Process(target=run_erm, args=(lock,logger,experiment_id,method,alpha,epsilon,lam,tau,experiment.d))
+                            procs.put(proc)
 
     # start the processes
     logger.info("Starting all processes")
