@@ -165,7 +165,7 @@ def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, 
         return w
     try:
         w_prime = w - epsilon * np.sqrt(Q) / y
-        result = root_scalar(lambda z: y*V/(1+ np.exp(y*z)) + w_prime - z , bracket=[-5000,5000]) 
+        result = root_scalar(lambda z: y*V/(1+ np.exp(y*z)) + w_prime - z , bracket=[-500000,500000]) 
         z = result.root
         return z + epsilon * np.sqrt(Q) / y
     except Exception as e:

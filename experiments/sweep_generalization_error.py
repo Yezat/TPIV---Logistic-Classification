@@ -75,7 +75,7 @@ def run_state_evolution(lock,logger, experiment_id, alpha, epsilon, lam, tau, d)
     m,q,sigma = fixed_point_finder(logger,rho_w_star=1,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
     gen_error = generalization_error(1,m,q, tau)
     
-    logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, gen_error={gen_error}")
+    logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, gen_error={gen_error}") # TODO: print also the training error
     end = time.time()
     experiment_duration = end-start
     logger.debug(f"State Evolution took {end-start} seconds")
@@ -118,11 +118,11 @@ def start_work(procs, number_of_workers):
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 3
-    alphas: np.ndarray = np.array([0.2,0.5,1,1.5,2,5])
-    epsilons: np.ndarray = np.array([0,0.001,0.002,0.003,0.004])
-    lambdas: np.ndarray = np.array([1e-3])
+    alphas: np.ndarray = np.array([0.2,0.8,1.3,1.7,2.,2.5])
+    epsilons: np.ndarray = np.array([0,0.01,0.02,0.03])
+    lambdas: np.ndarray = np.array([1e-5])
     taus: np.ndarray = np.array([2])
-    d: int = 1000
+    d: int = 100
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,experiment_name)

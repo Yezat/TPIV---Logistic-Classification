@@ -1,5 +1,6 @@
 from gradient_descent import loss_gradient, preprocessing
 import theoretical
+from state_evolution import training_error_logistic
 from util import error
 import numpy as np
 from _version import __version__
@@ -45,6 +46,7 @@ class StateEvolutionExperimentInformation:
         self.experiment_id: str = experiment_id
         rho_w_star = 1.0
         self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
+        self.training_error: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
@@ -121,6 +123,7 @@ class DatabaseHandler:
                     duration REAL,
                     experiment_id TEXT,
                     generalization_error REAL,
+                    training_error REAL,
                     date TEXT,
                     sigma REAL,
                     q REAL,
@@ -219,12 +222,13 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
             experiment_information.experiment_id,
             experiment_information.generalization_error,
+            experiment_information.training_error,
             experiment_information.date,
             experiment_information.sigma,
             experiment_information.q,

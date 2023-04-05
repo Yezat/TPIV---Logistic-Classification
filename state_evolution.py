@@ -13,6 +13,11 @@ import logging
 import time
 from proximal import proximal_logistic_root_scalar
 
+def loss(z):
+    return np.log(1 + np.exp(-z))
+
+def adversarial_loss(z, epsilon, Q):
+    return np.log(1 + np.exp(-z + epsilon * np.sqrt(Q))) 
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
@@ -106,7 +111,11 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         derivative_f_out =  1/sigma * (derivative_proximal - 1)
 
-        return z_0 * ( derivative_f_out + epsilon * (1/np.sqrt(sigma+q) - w )  ) * gaussian(xi)
+        Q = sigma + q
+        y = 1
+        derivative_z_out = epsilon * (1/np.sqrt(Q)) * np.exp( epsilon * np.sqrt(Q) -(w**2)/(2*sigma) - (sigma/2)*(w/sigma - y)**2) * ( w -y*sigma )
+
+        return z_0 * ( derivative_f_out + derivative_z_out ) * gaussian(xi)
     
     def integrand_minus(xi):
         z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
@@ -118,12 +127,52 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         derivative_f_out =  1/sigma * (derivative_proximal -1)
 
-        return z_0 * ( derivative_f_out + epsilon * (1/np.sqrt(sigma+q) - w )  ) * gaussian(xi)
+        Q = sigma + q
+        y = -1
+        derivative_z_out = epsilon * (1/np.sqrt(Q)) * np.exp( epsilon * np.sqrt(Q) -(w**2)/(2*sigma) - (sigma/2)*(w/sigma - y)**2) * ( w - y*sigma )
+
+        return z_0 * ( derivative_f_out + derivative_z_out  ) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
 
     return -alpha * 0.5 * (Iplus + Iminus)
+
+
+
+def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
+    def Integrand_training_error_plus_logistic(xi):
+        w = np.sqrt(q) * xi
+        
+        z_0 = erfc( - ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+
+        #     λstar_plus = np.float(mpmath.findroot(lambda λstar_plus: λstar_plus - ω - V/(1 + np.exp(np.float(λstar_plus))), 10e-10))
+        # λstar_plus = minimize_scalar(lambda x: moreau_loss(x, 1, ω, V))['x']
+        proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
+        
+        # l_plus = loss(proximal) # TODO: check if this is correct, what exactly does the proximal minimize?
+        l_plus = adversarial_loss(proximal, epsilon, sigma+q)
+        
+        return z_0 * l_plus * gaussian(xi)
+
+    def Integrand_training_error_minus_logistic(xi):
+        w = np.sqrt(q) * xi
+        z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+        #   λstar_minus = np.float(mpmath.findroot(lambda λstar_minus: λstar_minus - ω + V/(1 + np.exp(-np.float(λstar_minus))), 10e-10))
+        # λstar_minus = minimize_scalar(lambda x: moreau_loss(x, -1, ω, V))['x']
+        proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
+        
+        # l_minus = loss(-proximal)
+        l_minus = adversarial_loss(-proximal, epsilon, sigma+q)
+
+        return z_0 * l_minus * gaussian(xi)
+
+
+    I1 = quad(lambda ξ: Integrand_training_error_plus_logistic(ξ) , -int_lims, int_lims, limit=500)[0]
+    I2 = quad(lambda ξ: Integrand_training_error_minus_logistic(ξ) , -int_lims, int_lims, limit=500)[0]
+    return (I1 + I2) + (lam / (2 * alpha)) * rho_w_star
+
+
 
 # m,q,sigma -> see application
 def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims):
@@ -144,7 +193,7 @@ def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
 
 BLEND_FPE = 0.75
-TOL_FPE = 1e-6
+TOL_FPE = 1e-4
 MIN_ITER_FPE = 10
 MAX_ITER_FPE = 5000
 INT_LIMS = 10.0
@@ -189,12 +238,12 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    n = 5*1000
+    n = 2.5*1000
     n_test = 100000
     w = sample_weights(d)
-    tau = 0
-    lam = 1
-    epsilon = 0.5
+    tau = 2
+    lam = 1e-3
+    epsilon = 0.03
     logging.basicConfig(level=logging.INFO)
     
 
@@ -237,6 +286,7 @@ if __name__ == "__main__":
     print("q: ", q)
     print("sigma: ", sigma)
     print("Generalization error", generalization_error(1,m,q,tau))
+    print("Training error",training_error_logistic(m,q,sigma,1,n/d,tau,epsilon, lam) )
     print("time", time.time() - start)
 
     
