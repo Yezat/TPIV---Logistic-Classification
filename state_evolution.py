@@ -113,9 +113,9 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         Q = sigma + q
         y = 1
-        derivative_z_out = epsilon * (1/np.sqrt(Q)) * np.exp( epsilon * np.sqrt(Q) -(w**2)/(2*sigma) - (sigma/2)*(w/sigma - y)**2) * ( w -y*sigma )
+        z_out_thing = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ** 2 ), -int_lims,int_lims, limit=500)[0]
 
-        return z_0 * ( derivative_f_out + derivative_z_out ) * gaussian(xi)
+        return z_0 * ( derivative_f_out + epsilon/(2 * np.sqrt(Q)) * ( z_out_thing - 1 ) ) * gaussian(xi)
     
     def integrand_minus(xi):
         z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
@@ -129,9 +129,9 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         Q = sigma + q
         y = -1
-        derivative_z_out = epsilon * (1/np.sqrt(Q)) * np.exp( epsilon * np.sqrt(Q) -(w**2)/(2*sigma) - (sigma/2)*(w/sigma - y)**2) * ( w - y*sigma )
+        z_out_thing = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ** 2 ), -int_lims,int_lims, limit=500)[0]
 
-        return z_0 * ( derivative_f_out + derivative_z_out  ) * gaussian(xi)
+        return z_0 * ( derivative_f_out + epsilon/(2 * np.sqrt(Q)) * ( z_out_thing - 1 )  ) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
