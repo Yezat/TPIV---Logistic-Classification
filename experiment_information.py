@@ -236,7 +236,7 @@ class DatabaseHandler:
             experiment_information.cosb,
             json.dumps(experiment_information.initial_condition),
             experiment_information.rho_w_star,
-            experiment_information.alpha,
+            float(experiment_information.alpha),
             float(experiment_information.epsilon),
             float(experiment_information.tau),
             float(experiment_information.lam),
@@ -287,7 +287,7 @@ class DatabaseHandler:
             experiment_information.training_error,
             experiment_information.d,
             float(experiment_information.tau),
-            experiment_information.alpha,
+            float(experiment_information.alpha),
             experiment_information.test_loss
         ))
         self.connection.commit()

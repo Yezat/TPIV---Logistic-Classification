@@ -11,7 +11,7 @@ from data import *
 import warnings
 import logging
 import time
-from proximal import proximal_logistic_root_scalar
+from proximal import proximal_logistic_root_scalar, proximal_pure_root_scalar
 
 def loss(z):
     return np.log(1 + np.exp(-z))
@@ -148,10 +148,11 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
 
         #     λstar_plus = np.float(mpmath.findroot(lambda λstar_plus: λstar_plus - ω - V/(1 + np.exp(np.float(λstar_plus))), 10e-10))
         # λstar_plus = minimize_scalar(lambda x: moreau_loss(x, 1, ω, V))['x']
-        proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
+        # proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
+        proximal = proximal_pure_root_scalar(sigma, 1, w)
         
-        # l_plus = loss(proximal) # TODO: check if this is correct, what exactly does the proximal minimize?
-        l_plus = adversarial_loss(proximal, epsilon, sigma+q)
+        l_plus = loss(proximal) # TODO: check if this is correct, what exactly does the proximal minimize?
+        # l_plus = adversarial_loss(proximal, epsilon, sigma+q)
         
         return z_0 * l_plus * gaussian(xi)
 
@@ -160,17 +161,18 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
         z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
         #   λstar_minus = np.float(mpmath.findroot(lambda λstar_minus: λstar_minus - ω + V/(1 + np.exp(-np.float(λstar_minus))), 10e-10))
         # λstar_minus = minimize_scalar(lambda x: moreau_loss(x, -1, ω, V))['x']
-        proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
+        # proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
+        proximal = proximal_pure_root_scalar(sigma, -1, w)
         
-        # l_minus = loss(-proximal)
-        l_minus = adversarial_loss(-proximal, epsilon, sigma+q)
+        l_minus = loss(-proximal)
+        # l_minus = adversarial_loss(-proximal, epsilon, sigma+q)
 
         return z_0 * l_minus * gaussian(xi)
 
 
     I1 = quad(lambda ξ: Integrand_training_error_plus_logistic(ξ) , -int_lims, int_lims, limit=500)[0]
     I2 = quad(lambda ξ: Integrand_training_error_minus_logistic(ξ) , -int_lims, int_lims, limit=500)[0]
-    return (I1 + I2) + (lam / (2 * alpha)) * rho_w_star
+    return (I1 + I2)/2
 
 
 

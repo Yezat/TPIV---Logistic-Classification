@@ -173,6 +173,9 @@ def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, 
         print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)        
         raise e
 
+def proximal_pure_root_scalar(V: float, y: float, w: float) -> float:
+    result = root_scalar(lambda z: y*V/(1+ np.exp(y*z )) + w -z , bracket=[-500000,500000]) 
+    return result.root
 
 
 """

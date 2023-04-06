@@ -2,6 +2,7 @@
 *.pyc
 data/
 assets/
+Assets/
 __pycache__/
 *.db
 .DS_Store
