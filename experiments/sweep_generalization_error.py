@@ -116,13 +116,13 @@ def start_work(procs, number_of_workers):
     logging.info("Done with starting work")
 
 def get_default_experiment():
-    state_evolution_repetitions: int = 1
-    erm_repetitions: int = 10
+    state_evolution_repetitions: int = 0
+    erm_repetitions: int = 5
     alphas: np.ndarray = np.array([0.2,0.8,1.3,1.7,2.,2.5])
-    epsilons: np.ndarray = np.array([0,0.1,0.2,0.3])
+    epsilons: np.ndarray = np.array([0,0.2])
     lambdas: np.ndarray = np.array([1e-5])
     taus: np.ndarray = np.array([2])
-    d: int = 500
+    d: int = 50
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,experiment_name)
