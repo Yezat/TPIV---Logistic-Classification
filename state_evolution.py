@@ -78,6 +78,8 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         w = np.sqrt(q) * xi
         partial_proximal = ( proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w) - w ) ** 2
 
+        
+
         return z_0 * partial_proximal * gaussian(xi)
     
     def integrand_minus(xi):
@@ -114,6 +116,8 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         Q = sigma + q
         y = 1
         z_out_thing = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ** 2 ), -int_lims,int_lims, limit=500)[0]
+        z_out = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q)))), -int_lims,int_lims, limit=500)[0]
+        z_out_thing /= z_out
 
         return z_0 * ( derivative_f_out + epsilon/(2 * np.sqrt(Q)) * ( z_out_thing - 1 ) ) * gaussian(xi)
     
@@ -130,6 +134,8 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         Q = sigma + q
         y = -1
         z_out_thing = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ** 2 ), -int_lims,int_lims, limit=500)[0]
+        z_out = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ), -int_lims,int_lims, limit=500)[0]
+        z_out_thing /= z_out
 
         return z_0 * ( derivative_f_out + epsilon/(2 * np.sqrt(Q)) * ( z_out_thing - 1 )  ) * gaussian(xi)
 
@@ -148,11 +154,11 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
 
         #     λstar_plus = np.float(mpmath.findroot(lambda λstar_plus: λstar_plus - ω - V/(1 + np.exp(np.float(λstar_plus))), 10e-10))
         # λstar_plus = minimize_scalar(lambda x: moreau_loss(x, 1, ω, V))['x']
-        # proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
-        proximal = proximal_pure_root_scalar(sigma, 1, w)
+        proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
+        # proximal = proximal_pure_root_scalar(sigma, 1, w)
         
-        l_plus = loss(proximal) # TODO: check if this is correct, what exactly does the proximal minimize?
-        # l_plus = adversarial_loss(proximal, epsilon, sigma+q)
+        # l_plus = loss(proximal) # TODO: check if this is correct, what exactly does the proximal minimize?
+        l_plus = adversarial_loss(proximal, epsilon, sigma+q)
         
         return z_0 * l_plus * gaussian(xi)
 
@@ -161,11 +167,11 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
         z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
         #   λstar_minus = np.float(mpmath.findroot(lambda λstar_minus: λstar_minus - ω + V/(1 + np.exp(-np.float(λstar_minus))), 10e-10))
         # λstar_minus = minimize_scalar(lambda x: moreau_loss(x, -1, ω, V))['x']
-        # proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
-        proximal = proximal_pure_root_scalar(sigma, -1, w)
+        proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
+        # proximal = proximal_pure_root_scalar(sigma, -1, w)
         
-        l_minus = loss(-proximal)
-        # l_minus = adversarial_loss(-proximal, epsilon, sigma+q)
+        # l_minus = loss(-proximal)
+        l_minus = adversarial_loss(-proximal, epsilon, sigma+q)
 
         return z_0 * l_minus * gaussian(xi)
 

@@ -8,7 +8,7 @@ if __name__ == "__main__":
     rho_w_star = 1
     int_lims = 10
     alpha = 5
-    epsilon = 0
+    epsilon = 0.5
     tau = 0
     Vstar = rho_w_star - m**2/q + tau**2
     e = m * m / (rho_w_star * q)
@@ -141,12 +141,12 @@ if __name__ == "__main__":
     q = 0.032955
 
 
-    Vstar = 1 - m**2/q + tau **2
-    clarte_error_logistic = traning_error_logistic(m, q, sigma, Vstar)
-    print("clarte_error_logistic: ", clarte_error_logistic)
-    my_error_logistic = training_error_logistic(m, q, sigma, rho_w_star, alpha, tau, epsilon,lam, int_lims)
-    print("my_error_logistic: ", my_error_logistic)
-    assert np.isclose(clarte_error_logistic, my_error_logistic, atol=1e-3), f"Training error not equal for sigma: {sigma}, m: {m}, q: {q}"
+    # Vstar = 1 - m**2/q + tau **2
+    # clarte_error_logistic = traning_error_logistic(m, q, sigma, Vstar)
+    # print("clarte_error_logistic: ", clarte_error_logistic)
+    # my_error_logistic = training_error_logistic(m, q, sigma, rho_w_star, alpha, tau, epsilon,lam, int_lims)
+    # print("my_error_logistic: ", my_error_logistic)
+    # assert np.isclose(clarte_error_logistic, my_error_logistic, atol=1e-3), f"Training error not equal for sigma: {sigma}, m: {m}, q: {q}"
 
     # def Integrand_plus(xi):
     #     w = np.sqrt(q) * xi
@@ -180,3 +180,20 @@ if __name__ == "__main__":
     # clart_minus = Integrand_training_error_minus_logistic(0, m, q, sigma, Vstar)
     # my_minus = Integrand_minus(0)
     # print("clart_minus: ", clart_minus, "my_minus: ", my_minus)
+
+
+    Q = sigma + q
+    for xi in range(-10,10):
+        w = np.sqrt(q) * xi
+        for y in np.array([-1,1]):
+            z_out_thing = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ** 2 ), -int_lims,int_lims, limit=500)[0]
+            z_out = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ), -int_lims,int_lims, limit=500)[0]
+            z_out_thing /= z_out
+
+            print("z_out_thing", z_out_thing)
+
+            print("z_out", z_out)
+
+            alternative = quad(lambda z: 1/(1 + np.exp(-y*z + epsilon*np.sqrt(Q)))  ,-int_lims,int_lims,limit=500 )[0]
+
+            print("alternative", alternative)

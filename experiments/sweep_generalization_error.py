@@ -117,14 +117,14 @@ def start_work(procs, number_of_workers):
 
 def get_default_experiment():
     state_evolution_repetitions: int = 1
-    erm_repetitions: int = 10
+    erm_repetitions: int = 5
     # alphas: np.ndarray = np.array([0.2,0.8,1.3,1.7,2.,2.5])
     # alphas: np.ndarray = np.array([3,4,5,6,7])
-    alphas: np.ndarray = np.linspace(0.1,7,10)
-    epsilons: np.ndarray = np.array([0,0.1,0.2,0.3])
-    lambdas: np.ndarray = np.array([0])
-    taus: np.ndarray = np.array([0])
-    d: int = 1000
+    alphas: np.ndarray = np.linspace(0.1,2.5,5)
+    epsilons: np.ndarray = np.array([0,1,5,8])
+    lambdas: np.ndarray = np.array([1e-5])
+    taus: np.ndarray = np.array([2])
+    d: int = 500
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,experiment_name)
