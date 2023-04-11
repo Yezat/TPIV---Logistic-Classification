@@ -165,7 +165,7 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
 
     half.loss_gradient( y_true=y,
         raw_prediction=raw_prediction,
-        adversarial_norm = epsilon * np.sqrt(weights @ weights),
+        adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),
         sample_weight=sample_weight,
         loss_out=loss_out,
         gradient_out=gradient_out,
@@ -177,7 +177,7 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
 
     loss = loss.sum()
 
-    adv_correction_factor = epsilon * weights / ( np.sqrt(weights @ weights))
+    adv_correction_factor = epsilon * weights / ( np.sqrt(weights @ weights) * np.sqrt(n_features))
     adv_grad_summand = np.outer(adv_grad_per_sample, adv_correction_factor).sum(axis=0)
 
 
