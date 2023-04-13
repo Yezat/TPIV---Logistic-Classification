@@ -283,7 +283,7 @@ def print_loss(w0,loss_fct,gradient,learning_rate,lam,X,y,epsilon):
 def pure_training_loss(w,X,y,lam,epsilon):
     from state_evolution import adversarial_loss
     z = X@w
-    return (adversarial_loss(y,z,epsilon,np.sqrt(w@w)).sum() + 0.5 * lam * (w@w))/X.shape[0]
+    return (adversarial_loss(y,z,epsilon,np.sqrt(w@w)/np.sqrt(X.shape[1])).sum() + 0.5 * lam * (w@w))/X.shape[0]
 
 
 if __name__ == "__main__":

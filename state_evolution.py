@@ -33,11 +33,7 @@ def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) 
 
 def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
     
-    # logging.info("m_hat_func")
-    # print parameters
-    # logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
-
-    def integrand_plus(xi):
+    def integrand(xi, y):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
         V_0 = rho_w_star * (1-e)
@@ -45,146 +41,96 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
         w = np.sqrt(q) * xi
 
-        partial_prox =  proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w) - w 
-
-        return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
-    
-    def integrand_minus(xi):
-        e = m * m / (rho_w_star * q)
-        w_0 = np.sqrt(rho_w_star*e) * xi
-        V_0 = rho_w_star * (1-e)
-
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(q) * xi
-
-        partial_prox =  proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w) - w 
+        partial_prox =  proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w) - w 
 
         return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
 
-    Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
     return alpha / sigma * (Iplus - Iminus)
 
 def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
-    # logging.info("q_hat_func")
-    def integrand_plus(xi):
+
+    def integrand(xi, y):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
         V_0 = rho_w_star * (1-e)
 
-        
-        z_0 = erfc(- (w_0) / np.sqrt(2*(tau**2 + V_0)))
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
 
         w = np.sqrt(q) * xi
-        partial_proximal = ( proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w) - w ) ** 2
-
-        
-
-        return z_0 * partial_proximal * gaussian(xi)
-    
-    def integrand_minus(xi):
-        e = m * m / (rho_w_star * q)
-        w_0 = np.sqrt(rho_w_star*e) * xi
-        V_0 = rho_w_star * (1-e)
-
-        z_0 = erfc((w_0) / np.sqrt(2*(tau**2 + V_0)))
-
-        w = np.sqrt(q) * xi
-        partial_proximal = ( proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w) - w ) ** 2
+        partial_proximal = ( proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w) - w ) ** 2
 
         return z_0 * partial_proximal * gaussian(xi)
 
-    Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
 
     return alpha / (sigma ** 2)  * 0.5 * (Iplus + Iminus)
 
 def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, int_lims: float = 20.0):
-    # logging.info("sigma_hat_func")
-    def integrand_plus(xi):
-        # todo: simplify
-        
-        z_0 = erfc( - ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+   
+    def integrand(xi, y):
+        z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
 
         w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w)
 
-        derivative_proximal = 1/(1 + sigma * second_derivative_loss(1,proximal,sigma+q,epsilon))
-
-        derivative_f_out =  1/sigma * (derivative_proximal - 1)
-
-        Q = sigma + q
-        y = 1
-        proximal_2 = proximal_2_logistic_root_scalar(sigma,y,Q,epsilon,w)
-        numerator = np.exp(- ( ( (proximal_2-w)**2)/(2*sigma) + 2 * adversarial_loss(y,proximal_2,epsilon,Q) )) / np.sqrt(1 + 2*sigma* second_derivative_loss(y,proximal_2,Q,epsilon)  )
-        denominator = np.exp(- ( ( (proximal-w)**2)/(2*sigma) + adversarial_loss(y,proximal,epsilon,Q) )) / np.sqrt(1 + sigma* second_derivative_loss(y,proximal,Q,epsilon)  )
-        z_out_thing = numerator / denominator
-
-        epsilon_term = ( z_out_thing - 1 )/ (2 * np.sqrt(Q))
-        epsilon_term *= epsilon
-
-        return z_0 * ( derivative_f_out + epsilon_term) * gaussian(xi)
-    
-    def integrand_minus(xi):
-        z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
-
-        w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
-
-        derivative_proximal = 1/(1 + sigma * second_derivative_loss(-1,proximal,sigma+q,epsilon))
+        derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,sigma+q,epsilon))
 
         derivative_f_out =  1/sigma * (derivative_proximal -1)
 
         Q = sigma + q
-        y = -1
-        proximal_2 = proximal_2_logistic_root_scalar(sigma,y,Q,epsilon,w)
-        numerator = np.exp(- ( ( (proximal_2-w)**2)/(2*sigma) + 2 * adversarial_loss(y,proximal_2,epsilon,Q) )) / np.sqrt(1 + 2*sigma* second_derivative_loss(y,proximal_2,Q,epsilon)  )
-        denominator = np.exp(- ( ( (proximal-w)**2)/(2*sigma) + adversarial_loss(y,proximal,epsilon,Q) )) / np.sqrt(1 + sigma* second_derivative_loss(y,proximal,Q,epsilon)  )
+
+
+        # proximal_2 = proximal_2_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        # denominator =  np.sqrt(1 + 2*sigma* second_derivative_loss(y,proximal_2,Q,epsilon)  )
+        # numerator = np.sqrt(1 + sigma* second_derivative_loss(y,proximal,Q,epsilon))        
+        # arg_g = - ( ( (proximal_2-w)**2)/(2*sigma) + 2 * adversarial_loss(y,proximal_2,epsilon,Q) )
+        # arg_f = ( ( (proximal-w)**2)/(2*sigma) + adversarial_loss(y,proximal,epsilon,Q) )
+        # arg = arg_g + arg_f
+        # z_out_thing = np.exp(arg) * numerator / denominator
+
+        x, herm = np.polynomial.hermite.hermgauss(50)
+        const = np.pi**-0.5
+        translated_argument = np.sqrt(2 * sigma) * x + w
+
+        numerator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -2)
+        denominator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -1)
+
+        if numerator == 0.0:
+            denominator = 1
+        else:
+            assert denominator != 0, f"denominator is zero, numerator = {numerator}, sigma = {sigma}, y = {y}, Q = {Q}, epsilon = {epsilon}, w = {w}, xi = {xi}"
+
         z_out_thing = numerator / denominator
 
         epsilon_term = ( z_out_thing - 1 ) / (2 * np.sqrt(Q))
         epsilon_term *= epsilon
         return z_0 * ( derivative_f_out + epsilon_term  ) * gaussian(xi)
 
-    Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
 
     return -alpha * 0.5 * (Iplus + Iminus)
 
 
 
 def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
-    def Integrand_training_error_plus_logistic(xi):
+    
+    def integrand(xi,y):
         w = np.sqrt(q) * xi
+        z_0 = erfc( -y * ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
         
-        z_0 = erfc( - ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
-
-        #     λstar_plus = np.float(mpmath.findroot(lambda λstar_plus: λstar_plus - ω - V/(1 + np.exp(np.float(λstar_plus))), 10e-10))
-        # λstar_plus = minimize_scalar(lambda x: moreau_loss(x, 1, ω, V))['x']
-        proximal = proximal_logistic_root_scalar(sigma,1,sigma+q,epsilon,w)
-        # proximal = proximal_pure_root_scalar(sigma, 1, w)
+        proximal = proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w)
         
-        # l_plus = loss(proximal) # TODO: check if this is correct, what exactly does the proximal minimize?
-        l_plus = adversarial_loss(1,proximal, epsilon, sigma+q)
-        
-        return z_0 * l_plus * gaussian(xi)
+        l = adversarial_loss(y,proximal, epsilon, sigma+q)
 
-    def Integrand_training_error_minus_logistic(xi):
-        w = np.sqrt(q) * xi
-        z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
-        #   λstar_minus = np.float(mpmath.findroot(lambda λstar_minus: λstar_minus - ω + V/(1 + np.exp(-np.float(λstar_minus))), 10e-10))
-        # λstar_minus = minimize_scalar(lambda x: moreau_loss(x, -1, ω, V))['x']
-        proximal = proximal_logistic_root_scalar(sigma,-1,sigma+q,epsilon,w)
-        # proximal = proximal_pure_root_scalar(sigma, -1, w)
-        
-        # l_minus = loss(-proximal)
-        l_minus = adversarial_loss(-1,proximal, epsilon, sigma+q)
-
-        return z_0 * l_minus * gaussian(xi)
+        return z_0 * l * gaussian(xi)
 
 
-    I1 = quad(lambda ξ: Integrand_training_error_plus_logistic(ξ) , -int_lims, int_lims, limit=500)[0]
-    I2 = quad(lambda ξ: Integrand_training_error_minus_logistic(ξ) , -int_lims, int_lims, limit=500)[0]
+    I1 = quad(lambda ξ: integrand(ξ,1) , -int_lims, int_lims, limit=500)[0]
+    I2 = quad(lambda ξ: integrand(ξ,-1) , -int_lims, int_lims, limit=500)[0]
     return (I1 + I2)/2
 
 
@@ -256,11 +202,10 @@ if __name__ == "__main__":
     n = 2.0*1000
     n_test = 100000
     w = sample_weights(d)
-    tau = 2
+    tau = 0
     lam = 1e-5
-    epsilon = 0.12
+    epsilon = 0.07
     logging.basicConfig(level=logging.INFO)
-
 
     # alpha=1.0, epsilon=0.0, lambda=1e-05, tau=2, d=1000, gen_error=nan
     
