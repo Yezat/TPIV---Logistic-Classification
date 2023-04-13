@@ -172,6 +172,19 @@ def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, 
         # print all parameters
         print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)        
         raise e
+    
+def proximal_2_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+    if y == 0:
+        return w
+    try:
+        w_prime = w - epsilon * np.sqrt(Q) / y
+        result = root_scalar(lambda z: 2*y*V/(1+ np.exp(y*z)) + w_prime - z , bracket=[-50000000,50000000]) 
+        z = result.root
+        return z + epsilon * np.sqrt(Q) / y
+    except Exception as e:
+        # print all parameters
+        print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)        
+        raise e
 
 def proximal_pure_root_scalar(V: float, y: float, w: float) -> float:
     result = root_scalar(lambda z: y*V/(1+ np.exp(y*z )) + w -z , bracket=[-500000,500000]) 

@@ -1,4 +1,4 @@
-from gradient_descent import loss_gradient, preprocessing
+from gradient_descent import pure_training_loss
 import theoretical
 from state_evolution import training_error_logistic
 from util import error
@@ -46,7 +46,7 @@ class StateEvolutionExperimentInformation:
         self.experiment_id: str = experiment_id
         rho_w_star = 1.0
         self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
-        self.training_error: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
+        self.training_loss: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
@@ -86,11 +86,11 @@ class ERMExperimentInformation:
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
         self.training_error: float = error(y,yhat_gd_train)        
-
+        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,lam,epsilon)
         self.d: int = d
         self.tau: float = tau
         self.alpha: float = n/d
-        self.test_loss: float = loss_gradient(*preprocessing(w_gd,Xtest,ytest,lam,epsilon))[0]/n
+        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,lam,epsilon)
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
@@ -123,7 +123,7 @@ class DatabaseHandler:
                     duration REAL,
                     experiment_id TEXT,
                     generalization_error REAL,
-                    training_error REAL,
+                    training_loss REAL,
                     date TEXT,
                     sigma REAL,
                     q REAL,
@@ -187,6 +187,7 @@ class DatabaseHandler:
                     date TEXT,
                     chosen_minimizer TEXT,
                     training_error REAL,
+                    training_loss REAL,
                     d INTEGER,
                     tau REAL,
                     alpha REAL,
@@ -228,7 +229,7 @@ class DatabaseHandler:
             experiment_information.duration,
             experiment_information.experiment_id,
             experiment_information.generalization_error,
-            experiment_information.training_error,
+            experiment_information.training_loss,
             experiment_information.date,
             experiment_information.sigma,
             experiment_information.q,
@@ -268,7 +269,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -285,6 +286,7 @@ class DatabaseHandler:
             experiment_information.date,
             experiment_information.chosen_minimizer,
             experiment_information.training_error,
+            experiment_information.training_loss,
             experiment_information.d,
             float(experiment_information.tau),
             float(experiment_information.alpha),

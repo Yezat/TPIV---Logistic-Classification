@@ -11,13 +11,13 @@ from data import *
 import warnings
 import logging
 import time
-from proximal import proximal_logistic_root_scalar, proximal_pure_root_scalar
+from proximal import proximal_logistic_root_scalar, proximal_2_logistic_root_scalar
 
 def loss(z):
     return np.log(1 + np.exp(-z))
 
-def adversarial_loss(z, epsilon, Q):
-    return np.log(1 + np.exp(-z + epsilon * np.sqrt(Q))) 
+def adversarial_loss(y,z, epsilon, Q):
+    return np.log(1 + np.exp(-y*z + epsilon * np.sqrt(Q))) 
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
@@ -115,11 +115,15 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         Q = sigma + q
         y = 1
-        z_out_thing = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ** 2 ), -int_lims,int_lims, limit=500)[0]
-        z_out = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q)))), -int_lims,int_lims, limit=500)[0]
-        z_out_thing /= z_out
+        proximal_2 = proximal_2_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        numerator = np.exp(- ( ( (proximal_2-w)**2)/(2*sigma) + 2 * adversarial_loss(y,proximal_2,epsilon,Q) )) / np.sqrt(1 + 2*sigma* second_derivative_loss(y,proximal_2,Q,epsilon)  )
+        denominator = np.exp(- ( ( (proximal-w)**2)/(2*sigma) + adversarial_loss(y,proximal,epsilon,Q) )) / np.sqrt(1 + sigma* second_derivative_loss(y,proximal,Q,epsilon)  )
+        z_out_thing = numerator / denominator
 
-        return z_0 * ( derivative_f_out + epsilon/(2 * np.sqrt(Q)) * ( z_out_thing - 1 ) ) * gaussian(xi)
+        epsilon_term = ( z_out_thing - 1 )/ (2 * np.sqrt(Q))
+        epsilon_term *= epsilon
+
+        return z_0 * ( derivative_f_out + epsilon_term) * gaussian(xi)
     
     def integrand_minus(xi):
         z_0 = erfc(  ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
@@ -133,11 +137,14 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         Q = sigma + q
         y = -1
-        z_out_thing = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ** 2 ), -int_lims,int_lims, limit=500)[0]
-        z_out = quad(lambda z: gaussian(z,w,sigma) / ( (1 + np.exp(-y*z + epsilon*np.sqrt(Q))) ), -int_lims,int_lims, limit=500)[0]
-        z_out_thing /= z_out
+        proximal_2 = proximal_2_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        numerator = np.exp(- ( ( (proximal_2-w)**2)/(2*sigma) + 2 * adversarial_loss(y,proximal_2,epsilon,Q) )) / np.sqrt(1 + 2*sigma* second_derivative_loss(y,proximal_2,Q,epsilon)  )
+        denominator = np.exp(- ( ( (proximal-w)**2)/(2*sigma) + adversarial_loss(y,proximal,epsilon,Q) )) / np.sqrt(1 + sigma* second_derivative_loss(y,proximal,Q,epsilon)  )
+        z_out_thing = numerator / denominator
 
-        return z_0 * ( derivative_f_out + epsilon/(2 * np.sqrt(Q)) * ( z_out_thing - 1 )  ) * gaussian(xi)
+        epsilon_term = ( z_out_thing - 1 ) / (2 * np.sqrt(Q))
+        epsilon_term *= epsilon
+        return z_0 * ( derivative_f_out + epsilon_term  ) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand_plus(xi),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand_minus(xi),-int_lims,int_lims,limit=500)[0]
@@ -158,7 +165,7 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
         # proximal = proximal_pure_root_scalar(sigma, 1, w)
         
         # l_plus = loss(proximal) # TODO: check if this is correct, what exactly does the proximal minimize?
-        l_plus = adversarial_loss(proximal, epsilon, sigma+q)
+        l_plus = adversarial_loss(1,proximal, epsilon, sigma+q)
         
         return z_0 * l_plus * gaussian(xi)
 
@@ -171,7 +178,7 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
         # proximal = proximal_pure_root_scalar(sigma, -1, w)
         
         # l_minus = loss(-proximal)
-        l_minus = adversarial_loss(-proximal, epsilon, sigma+q)
+        l_minus = adversarial_loss(-1,proximal, epsilon, sigma+q)
 
         return z_0 * l_minus * gaussian(xi)
 
@@ -246,13 +253,16 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    n = 2.5*1000
+    n = 2.0*1000
     n_test = 100000
     w = sample_weights(d)
     tau = 2
-    lam = 1e-3
-    epsilon = 0.03
+    lam = 1e-5
+    epsilon = 0.12
     logging.basicConfig(level=logging.INFO)
+
+
+    # alpha=1.0, epsilon=0.0, lambda=1e-05, tau=2, d=1000, gen_error=nan
     
 
     # V:  0.5 y:  -17.30126733377969 Q:  1.0 epsilon:  0 w:  4.764398807031843

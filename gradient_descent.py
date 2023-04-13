@@ -280,19 +280,24 @@ def print_loss(w0,loss_fct,gradient,learning_rate,lam,X,y,epsilon):
     plt.ylabel("loss")
     plt.show()
 
+def pure_training_loss(w,X,y,lam,epsilon):
+    from state_evolution import adversarial_loss
+    z = X@w
+    return (adversarial_loss(y,z,epsilon,np.sqrt(w@w)).sum() + 0.5 * lam * (w@w))/X.shape[0]
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    alpha = 5
+    alpha = 1
     d = 1000
     w = sample_weights(d)
     method = "L-BFGS-B"
     method = "sklearn"
     # method = "gd"
-    tau = 0 
+    tau = 2
     epsilon = 0
-    lam = 1
+    lam = 1e-5
 
     start = time.time()
     print("Starting experiment with alpha = ",alpha," d = ",d," method = ",method," tau = ",tau," lam = ",lam," epsilon = ",epsilon)
@@ -342,6 +347,10 @@ if __name__ == "__main__":
     erm_information_lr = ERMExperimentInformation("my_erm_minimizer_tests",duration,Xtest,w_lr,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
     print("erm_information_lr.generalization_error_erm, ", erm_information_lr.generalization_error_erm)
     print("erm_information_lr.generalization_error_overlap, ", erm_information_lr.generalization_error_erm)
+
+    # let's compute the training loss for both
+    print("training_loss(w_gd,Xtrain,y,lam,epsilon)",pure_training_loss(w_gd,Xtrain,y,lam,epsilon))
+    print("training_loss(w_lr,Xtrain,y,lam,epsilon)",pure_training_loss(w_lr,Xtrain,y,lam,epsilon))
 
     # print dtypes of the weights, Xtrain, y
     print("w_gd.dtype",w_gd.dtype)
