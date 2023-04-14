@@ -122,29 +122,51 @@ cdef inline double_triplet closs_grad_half_binomial(
     cdef double adversarial_minus = raw_prediction - adversarial_norm
     cdef double plus_term
     cdef double minus_term
-    if adversarial_minus <= 0:
-        lg.val2 = exp(adversarial_minus)  # used as temporary
-        if adversarial_minus <= -37:
+    if adversarial_plus <= 0:
+        lg.val2 = exp(adversarial_plus)  # used as temporary
+        if adversarial_plus <= -37:
             lg.val1 = lg.val2 - y_true * adversarial_minus              # loss
         else:
             lg.val1 = log1p(lg.val2) - y_true * adversarial_minus       # loss
-        minus_term = (y_true) / (1 + exp(-adversarial_minus))
-    else:
-        lg.val2 = exp(-adversarial_minus)  # used as temporary
-        if adversarial_minus <= 18:
-            # log1p(exp(x)) = log(1 + exp(x)) = x + log1p(exp(-x))
-            lg.val1 = log1p(lg.val2) + adversarial_minus - y_true * adversarial_minus  # loss
+
+        # compute additive term for loss
+        # here exp(adversarial_plus) will not overflow
+        # if adversarial_minus <= 0:
+        # exp(adversarial_minus) will not overflow  
+        # else:
+        # exp(adversarial_minus) will overflow
+        # however, adversarial_minus is always smaller than adversarial_plus, so id adversarial_plus will not overflow, adversarial_minus will not overflow either
+        lg.val1 += y_true * log( (1 + exp(adversarial_minus)) / (1 + exp(adversarial_plus)) )
+
+        # compute x_mu_j term for gradient
+        # adversarial_plus will not overflow
+        if adversarial_minus <= 0:
+            lg.val2 = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus)) - y_true / (1 + exp(adversarial_minus)) 
         else:
-            lg.val1 = lg.val2 + adversarial_minus - y_true * adversarial_minus         # loss
-        minus_term = (y_true) * exp(adversarial_minus) / (1 + exp(adversarial_minus))
-    # compute additive term for loss
-    lg.val1 += y_true * log1pexp(adversarial_minus) - y_true * log1pexp(adversarial_plus)
-    if adversarial_plus <= 0:
-        plus_term = (1-y_true) / (1 + exp(-adversarial_plus))
+            lg.val2 = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus)) - y_true * ( exp(-adversarial_minus) / (1 + exp(-adversarial_minus)) )
+
     else:
-        plus_term = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus))
-    lg.val2 = -y_true + plus_term + minus_term
-    lg.val3 = y_true + plus_term - minus_term
+        lg.val2 = exp(-adversarial_plus)  # used as temporary
+        if adversarial_plus <= 18:
+            # log1p(exp(x)) = log(1 + exp(x)) = x + log1p(exp(-x))
+            lg.val1 = log1p(lg.val2) + (1 - y_true) * adversarial_minus  # loss
+        else:
+            lg.val1 = lg.val2 + (1 - y_true) * adversarial_minus         # loss
+    
+        # compute additive term for loss
+        # here exp(adversarial_plus) can overflow, hence we use -adversarial_plus 
+
+        # adversarial_norm is always positive, hence the exp(negative adversarial_norm) cannot overflow
+        lg.val1 += y_true * log( (exp(-adversarial_plus) + exp(-2*adversarial_norm)) / (1 + exp(-adversarial_plus)) )
+        # as you can see, adversarial_minus no longer shows up, so there is no second case distinction
+
+        # compute x_mu_j term for gradient
+        # adversarial_plus will overflow
+        if adversarial_minus <= 0:
+            lg.val2 = (1-y_true) / (1 + exp(-adversarial_plus)) - y_true * ( 1 / (1 + exp(adversarial_minus)) )
+        else:
+            lg.val2 = (1-y_true) / (1 + exp(-adversarial_plus)) - y_true * ( exp(-adversarial_minus) / (1 + exp(-adversarial_minus)) )
+
     return lg
 
 

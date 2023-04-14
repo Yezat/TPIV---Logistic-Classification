@@ -160,12 +160,19 @@ def proximal_root_scalar(V: float, y: float, Q: float, epsilon: float, w:float) 
 """
 Proximal from root scalar logistic
 """
+def optim(z,y,V,w_prime):
+    a = y*z
+    if a <= 0:
+        return y*V/(1+ np.exp(y*z)) + w_prime - z
+    else:
+        return y*V*np.exp(-y*z)/(1+ np.exp(-y*z)) + w_prime - z
+
 def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
     if y == 0:
         return w
     try:
         w_prime = w - epsilon * np.sqrt(Q) / y
-        result = root_scalar(lambda z: y*V/(1+ np.exp(y*z)) + w_prime - z , bracket=[-50000000,50000000]) 
+        result = root_scalar(lambda z: optim(z,y,V,w_prime) , bracket=[-50000000,50000000]) 
         z = result.root
         return z + epsilon * np.sqrt(Q) / y
     except Exception as e:

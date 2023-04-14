@@ -13,11 +13,28 @@ import logging
 import time
 from proximal import proximal_logistic_root_scalar, proximal_2_logistic_root_scalar
 
+def log1pexp(x):
+    """Compute log(1+exp(x)) componentwise."""
+    # inspired from sklearn and https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
+    # and http://fa.bianp.net/blog/2019/evaluate_logistic/
+    out = np.zeros_like(x)
+    idx0 = x <= -37
+    out[idx0] = np.exp(x[idx0])
+    idx1 = (x > -37) & (x <= -2)
+    out[idx1] = np.log1p(np.exp(x[idx1]))
+    idx2 = (x > -2) & (x <= 18)
+    out[idx2] = np.log(1. + np.exp(x[idx2]))
+    idx3 = (x > 18) & (x <= 33.3)
+    out[idx3] = np.exp(-x[idx3]) + x[idx3]
+    idx4 = x > 33.3
+    out[idx4] = x[idx4]
+    return out
+
 def loss(z):
-    return np.log(1 + np.exp(-z))
+    return log1pexp(-z)
 
 def adversarial_loss(y,z, epsilon, Q):
-    return np.log(1 + np.exp(-y*z + epsilon * np.sqrt(Q))) 
+    return log1pexp(-y*z + epsilon * np.sqrt(Q))
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
@@ -32,7 +49,7 @@ def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) 
     return 1/(1 + V * second_derivative_loss(y,z,Q,epsilon))
 
 def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
-    
+    Q = q
     def integrand(xi, y):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
@@ -41,7 +58,7 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
         w = np.sqrt(q) * xi
 
-        partial_prox =  proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w) - w 
+        partial_prox =  proximal_logistic_root_scalar(sigma,y,Q,epsilon,w) - w 
 
         return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
 
@@ -50,7 +67,7 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     return alpha / sigma * (Iplus - Iminus)
 
 def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
-
+    Q = q
     def integrand(xi, y):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
@@ -59,9 +76,37 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
 
         w = np.sqrt(q) * xi
-        partial_proximal = ( proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w) - w ) ** 2
+        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        partial_proximal = ( proximal - w ) ** 2
 
-        return z_0 * partial_proximal * gaussian(xi)
+
+        # approximating gaussian integrals with hermite polynomials ( does not work in q)
+        # x, herm = np.polynomial.hermite.hermgauss(50)
+        # const = np.pi**-0.5
+        # translated_argument = np.sqrt(2 * sigma) * x + w
+
+        # numerator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -2)
+        # denominator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -1)
+
+        # if numerator == 0.0:
+        #     denominator = 1
+        # else:
+        #     assert denominator != 0, f"denominator is zero, numerator = {numerator}, sigma = {sigma}, y = {y}, Q = {Q}, epsilon = {epsilon}, w = {w}, xi = {xi}"
+
+        # z_out_thing = numerator / denominator
+
+        # epsilon_term = ( z_out_thing - 1 ) / (2 * np.sqrt(Q))
+        # epsilon_term *= epsilon
+
+
+        # the thing with the derivative of the moreau-yosida regularization
+        z_star = proximal
+        numerator = z_star - w - y/(1 + np.exp(y*z_star - epsilon * np.sqrt(Q)))
+        denominator = 4 + 2 * np.cosh(y*z_star - epsilon * np.sqrt(Q))
+        epsilon_term = numerator / denominator
+        epsilon_term *= -y * epsilon / np.sqrt(Q)
+
+        return z_0 * (partial_proximal + epsilon_term) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
@@ -69,20 +114,20 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     return alpha / (sigma ** 2)  * 0.5 * (Iplus + Iminus)
 
 def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, int_lims: float = 20.0):
-   
+    Q = q
     def integrand(xi, y):
         z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
 
         w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
 
-        derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,sigma+q,epsilon))
+        derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,Q,epsilon))
 
         derivative_f_out =  1/sigma * (derivative_proximal -1)
 
-        Q = sigma + q
+        
 
-
+        # this is the saddle_point approximation
         # proximal_2 = proximal_2_logistic_root_scalar(sigma,y,Q,epsilon,w)
         # denominator =  np.sqrt(1 + 2*sigma* second_derivative_loss(y,proximal_2,Q,epsilon)  )
         # numerator = np.sqrt(1 + sigma* second_derivative_loss(y,proximal,Q,epsilon))        
@@ -91,23 +136,9 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         # arg = arg_g + arg_f
         # z_out_thing = np.exp(arg) * numerator / denominator
 
-        x, herm = np.polynomial.hermite.hermgauss(50)
-        const = np.pi**-0.5
-        translated_argument = np.sqrt(2 * sigma) * x + w
-
-        numerator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -2)
-        denominator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -1)
-
-        if numerator == 0.0:
-            denominator = 1
-        else:
-            assert denominator != 0, f"denominator is zero, numerator = {numerator}, sigma = {sigma}, y = {y}, Q = {Q}, epsilon = {epsilon}, w = {w}, xi = {xi}"
-
-        z_out_thing = numerator / denominator
-
-        epsilon_term = ( z_out_thing - 1 ) / (2 * np.sqrt(Q))
-        epsilon_term *= epsilon
-        return z_0 * ( derivative_f_out + epsilon_term  ) * gaussian(xi)
+        
+        
+        return z_0 * ( derivative_f_out ) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
@@ -117,14 +148,14 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
 
 def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
-    
+    Q = q
     def integrand(xi,y):
         w = np.sqrt(q) * xi
         z_0 = erfc( -y * ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
         
-        proximal = proximal_logistic_root_scalar(sigma,y,sigma+q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
         
-        l = adversarial_loss(y,proximal, epsilon, sigma+q)
+        l = adversarial_loss(y,proximal, epsilon, Q)
 
         return z_0 * l * gaussian(xi)
 
