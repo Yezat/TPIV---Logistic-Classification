@@ -13,6 +13,7 @@ import uuid
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
+from _version import __version__
 from experiment_information import *
 from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
 from gradient_descent import gd, lbfgs, sklearn_optimize
@@ -151,6 +152,8 @@ if __name__ == "__main__":
             experiment.__dict__ = json.load(f)
             # create a new experiment id
             experiment.experiment_id = str(uuid.uuid4())
+            # overwrite the code version
+            experiment.code_version = __version__
     except FileNotFoundError:
         logging.error("Could not find file %s. Using the standard elements instead", filename)
 

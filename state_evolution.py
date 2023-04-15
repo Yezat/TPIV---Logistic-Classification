@@ -162,7 +162,7 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
 
     I1 = quad(lambda ξ: integrand(ξ,1) , -int_lims, int_lims, limit=500)[0]
     I2 = quad(lambda ξ: integrand(ξ,-1) , -int_lims, int_lims, limit=500)[0]
-    return (I1 + I2)/2
+    return (I1 + I2)/2 + (lam/(2*alpha)) * q
 
 
 
