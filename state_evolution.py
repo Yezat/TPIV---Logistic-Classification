@@ -48,7 +48,7 @@ def second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> floa
 def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) -> float:
     return 1/(1 + V * second_derivative_loss(y,z,Q,epsilon))
 
-def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
+def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
     Q = q
     def integrand(xi, y):
         e = m * m / (rho_w_star * q)
@@ -66,7 +66,7 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
     return alpha / sigma * (Iplus - Iminus)
 
-def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
+def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
     Q = q
     def integrand(xi, y):
         e = m * m / (rho_w_star * q)
@@ -99,21 +99,51 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         # epsilon_term *= epsilon
 
 
-        # the thing with the derivative of the moreau-yosida regularization
-        z_star = proximal
-        numerator = z_star - w - y/(1 + np.exp(y*z_star - epsilon * np.sqrt(Q)))
-        denominator = 4 + 2 * np.cosh(y*z_star - epsilon * np.sqrt(Q))
-        epsilon_term = numerator / denominator
-        epsilon_term *= -y * epsilon / np.sqrt(Q)
+        # the thing with the derivative of the moreau-yosida regularization ( a bit unstable apparently... but seems correct for high tau and lam...)
+        # z_star = proximal
+        # arg = y*z_star - epsilon * np.sqrt(Q)
+        # if arg <= 0:
+        #     numerator = z_star - w - y/(1 + np.exp(arg))
+        # else:
+        #     numerator = z_star - w - (y * np.exp(-arg))/(1 + np.exp(-arg))
+        # denominator = 4 + 2 * np.cosh(y*z_star - epsilon * np.sqrt(Q))
+        # epsilon_term = numerator / denominator
+        # epsilon_term *= y * epsilon / np.sqrt(Q)
 
-        return z_0 * (partial_proximal + epsilon_term) * gaussian(xi)
+        z_star = proximal
+        arg = y*z_star - epsilon * np.sqrt(Q)
+        cosh = 4 + 2 *np.cosh(arg)
+        first = y*(w - z_star) / cosh
+        if arg <= 0:
+            second = sigma / ((1 + np.exp(arg)) * cosh)
+        else:
+            second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
+        epsilon_term = (first + second) * epsilon / np.sqrt(Q)
+       
+        # # taking zero temperature limit after derivative
+        # z_star = proximal
+        # arg = y*z_star - epsilon * np.sqrt(Q)
+        # if arg <= 0:
+        #     epsilon_term = -1 / (1 + np.exp(arg))
+        # else:
+        #     epsilon_term = -np.exp(-arg) / (1 + np.exp(-arg))
+        # epsilon_term *= epsilon / (2 * np.sqrt(Q))     
+
+        # the thing with the derivative of the moreau-yosida regularization (maybe this guy is wrong)
+        # z_star = proximal
+        # arg = y*z_star - epsilon * np.sqrt(Q)
+        # easy = y*(z_star - w) / (4 + 2 * np.cosh(arg))
+        # hard = 1 / ( 5 + 5*np.exp(arg) + np.exp(2*arg) + np.exp(-arg))
+        # epsilon_term = (epsilon / np.sqrt(Q)) * (easy + hard)
+
+        return z_0 * (partial_proximal/ (sigma ** 2) + epsilon_term ) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
 
-    return alpha / (sigma ** 2)  * 0.5 * (Iplus + Iminus)
+    return alpha * 0.5 * (Iplus + Iminus)
 
-def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, int_lims: float = 20.0):
+def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0):
     Q = q
     def integrand(xi, y):
         z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
@@ -137,7 +167,8 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         # z_out_thing = np.exp(arg) * numerator / denominator
 
         
-        
+
+
         return z_0 * ( derivative_f_out ) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
@@ -151,7 +182,7 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
     Q = q
     def integrand(xi,y):
         w = np.sqrt(q) * xi
-        z_0 = erfc( -y * ( m / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+        z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
         
         proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
         
@@ -167,12 +198,12 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
 
 
 # m,q,sigma -> see application
-def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims):
+def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims):
     # logging.info("var_hat_func")
     # logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
-    m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,int_lims)
-    q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,int_lims)
-    sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,tau,epsilon,int_lims)
+    m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
+    q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,lam,int_lims)
+    sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
     return m_hat, q_hat, sigma_hat
 
 def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam):
@@ -213,15 +244,18 @@ def fixed_point_finder(
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
 
-        m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
+        m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims)
 
         new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam)
 
-        err = max([abs(new_m - m), abs(new_q - q), abs(new_sigma - sigma)])
+        
+        n_m = damped_update(new_m, m, blend_fpe)
+        n_q = damped_update(new_q, q, blend_fpe)
+        n_sigma = damped_update(new_sigma, sigma, blend_fpe)
+        
 
-        m = damped_update(new_m, m, blend_fpe)
-        q = damped_update(new_q, q, blend_fpe)
-        sigma = damped_update(new_sigma, sigma, blend_fpe)
+        err = max([abs(n_m - m), abs(n_q - q), abs(n_sigma - sigma)])        
+        m, q, sigma = n_m, n_q, n_sigma
 
         iter_nb += 1
         if iter_nb > max_iter:
@@ -230,12 +264,12 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    n = 2.0*1000
+    n = 1.0*1000
     n_test = 100000
     w = sample_weights(d)
-    tau = 0
-    lam = 1e-5
-    epsilon = 0.07
+    tau = 2
+    lam = 0.01
+    epsilon = 0.7
     logging.basicConfig(level=logging.INFO)
 
     # alpha=1.0, epsilon=0.0, lambda=1e-05, tau=2, d=1000, gen_error=nan
