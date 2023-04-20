@@ -166,6 +166,7 @@ def master(num_processes, logger):
             experiment.experiment_id = str(uuid.uuid4())
             # overwrite the code version
             experiment.code_version = __version__
+            experiment.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     except FileNotFoundError:
         logger.error("Could not find file %s. Using the standard elements instead", filename)
 
