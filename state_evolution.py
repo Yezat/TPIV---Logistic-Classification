@@ -112,8 +112,8 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
 
         z_star = proximal
         arg = y*z_star - epsilon * np.sqrt(Q)
-        cosh = 4 + 4 *np.cosh(arg) # TODO: double check if there is a 4 in front of the cosh
-        first = y*(w - z_star) / cosh
+        cosh = 4 + 4 *np.cosh(arg) 
+        first = y*(w - z_star) * sigma / ( 2 * sigma + cosh)
         if arg <= 0:
             second = sigma / ((1 + np.exp(arg)) * cosh)
         else:
