@@ -61,11 +61,6 @@ def run_erm(lock,logger, experiment_id, method, alpha, epsilon, lam, tau, d):
             db.insert_erm(erm_information)
             logger.info(f"Saved ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} to database")
 
-
-def dummy_fixed_point_finder(INITIAL_CONDITION,rho_w_star=1,alpha=1,epsilon=1,tau=1,lam=1,abs_tol=1,min_iter=1,max_iter=1,blend_fpe=1,int_lims=1):
-    # return three random numbers between 0 and 1 as a tuple
-    return np.random.rand(3)
-
 def run_state_evolution(lock,logger, experiment_id, alpha, epsilon, lam, tau, d):
     """
     Starts the state evolution and saves the results to the database
@@ -118,15 +113,15 @@ def start_work(procs, number_of_workers):
 
 def get_default_experiment():
     state_evolution_repetitions: int = 1
-    erm_repetitions: int = 10
+    erm_repetitions: int = 8
     # alphas: np.ndarray = np.array([0.2,0.8,1.3,1.7,2.,2.5])
     # alphas: np.ndarray = np.array([3,4,5,6,7])
     alphas: np.ndarray = np.linspace(1,3,5)
     # epsilons: np.ndarray = np.array([0,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09])
     # epsilons: np.ndarray = np.array([0,0.02,0.05,0.07,0.09,0.12])
-    epsilons: np.ndarray = np.array([0,0.3,0.7])
-    lambdas: np.ndarray = np.array([0.01,1])
-    taus: np.ndarray = np.array([0,2])
+    epsilons: np.ndarray = np.array([0.2,0.4,0.6,0.7])
+    lambdas: np.ndarray = np.array([1e-2,1])
+    taus: np.ndarray = np.array([2])
     d: int = 1000
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"

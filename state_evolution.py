@@ -112,7 +112,7 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
 
         z_star = proximal
         arg = y*z_star - epsilon * np.sqrt(Q)
-        cosh = 4 + 2 *np.cosh(arg)
+        cosh = 4 + 4 *np.cosh(arg) # TODO: double check if there is a 4 in front of the cosh
         first = y*(w - z_star) / cosh
         if arg <= 0:
             second = sigma / ((1 + np.exp(arg)) * cosh)
@@ -120,6 +120,18 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
             second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
         epsilon_term = (first + second) * epsilon / np.sqrt(Q)
        
+
+        # Taking the zero temperature limit and then computing the derivative
+        # z_star = proximal
+        # arg = y*z_star - epsilon * np.sqrt(Q)
+        # if arg <= 0:
+        #     epsilon_term = -1 / (1 + np.exp(arg))
+        # else:
+        #     epsilon_term = -np.exp(-arg) / (1 + np.exp(-arg))
+        # epsilon_term *= epsilon / (2 * np.sqrt(Q))
+        # epsilon_term -= ( (z_star - w)**2 )/( 2 * sigma**2)
+        # epsilon_term += xi * (z_star-w) / ( 2 * sigma * np.sqrt(Q) )
+
         # # taking zero temperature limit after derivative
         # z_star = proximal
         # arg = y*z_star - epsilon * np.sqrt(Q)
@@ -182,7 +194,7 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
     Q = q
     def integrand(xi,y):
         w = np.sqrt(q) * xi
-        z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+        z_0 = erfc(  ( (-y * m * xi) / np.sqrt(q) ) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
         
         proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
         
@@ -263,12 +275,13 @@ def fixed_point_finder(
     return m, q, sigma
 
 if __name__ == "__main__":
-    d = 1000
-    n = 1.0*1000
+    d = 1500
+    alpha = 3.0
+    n = 1000
     n_test = 100000
     w = sample_weights(d)
     tau = 2
-    lam = 0.01
+    lam = 1
     epsilon = 0.7
     logging.basicConfig(level=logging.INFO)
 
@@ -318,6 +331,32 @@ if __name__ == "__main__":
     print("time", time.time() - start)
 
     
+
+    # start = time.time()
+
+    # # generate ground truth
+    # w = sample_weights(d)
+
+    # # generate data
+    # Xtrain, y = sample_training_data(w,d,int(alpha * d),tau)
+    # n_test = 100000
+    # Xtest,ytest = sample_training_data(w,d,n_test,tau)
+
+    # w_gd = np.empty(w.shape,dtype=w.dtype)
+
+    # from experiment_information import *
+    # from gradient_descent import gd, lbfgs, sklearn_optimize
+    # w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
+
+
+    # end = time.time()
+    # duration = end - start
+    # erm_information = ERMExperimentInformation("blabla",duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,"sklearn",epsilon,lam)
+    # print("erm m", erm_information.m)
+    # print("erm q", erm_information.Q)    
+    # print("erm generalization error", erm_information.generalization_error_erm)
+    # print("erm training error", erm_information.training_loss)
+
     # Xtrain, y = sample_training_data(w,d,n,tau)
     # Xtest = sample_test_data(d,n_test)  
     # clf = get_logistic_regressor(Xtrain,y,0)
