@@ -1,7 +1,5 @@
 # usage: mpiexec -n 5 python sweep.py
 
-
-
 from mpi4py import MPI
 from tqdm import tqdm
 import time
@@ -14,8 +12,7 @@ sys.path.insert(0, parentdir)
 from _version import __version__
 from experiment_information import *
 from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
-from gradient_descent import gd, lbfgs, sklearn_optimize
-from erm import get_logistic_regressor
+from gradient_descent import sklearn_optimize
 
 class Task:
     def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d):
@@ -45,15 +42,8 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d):
     Xtest,ytest = sample_training_data(w,d,n_test,tau)
 
     w_gd = np.empty(w.shape,dtype=w.dtype)
-    if method == "gd":
-        w_gd = gd(Xtrain,y,lam,epsilon,logger)
-    elif method == "L-BFGS-B":
-        w_gd = lbfgs(Xtrain,y,lam,epsilon,logger)
-    elif method == "logistic":
-        clf = get_logistic_regressor(Xtrain,y,lam)
-        # reshape to 1d array
-        w_gd = clf.coef_.reshape(-1)
-    elif method == "sklearn":
+
+    if method == "sklearn":
         w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
     else:
         raise Exception(f"Method {method} not implemented")
