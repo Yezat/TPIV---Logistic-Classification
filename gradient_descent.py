@@ -1,42 +1,16 @@
 """
 This module contains code for custom gradient descent
 """
-from logging import exception
-from scipy.special import erfc, logsumexp
 import numpy as np
 import logging
 import time
-import traceback
-# plot imports
-from matplotlib import collections
-import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.image as mpimg
-import matplotlib.colors as colors
-from matplotlib import rcParams
-import json
-from mpl_toolkits.mplot3d import Axes3D
-from zmq import XPUB
-
 from erm import *
-rcParams.update({'figure.autolayout': True})
-
 from data import *
-import theoretical
-import math
-from scipy.optimize import basinhopping
 from scipy.optimize import minimize
-# from sklearn.linear_model import LinearModelLoss
-# from sklearn._loss import LinearModelLoss
-from sklearn.linear_model._linear_loss import LinearModelLoss
-from sklearn.utils.validation import _num_samples, check_array, check_consistent_length, _check_sample_weight
-import sklearn.utils.validation as sk_validation
-from sklearn._loss import HalfBinomialLoss
-from sklearn.linear_model._logistic import _logistic_regression_path
-import inspect as i
-from scipy.special import logit
+from sklearn.utils.validation import check_array, check_consistent_length, _check_sample_weight
 from scipy.linalg import norm
-import xyz as skloss
+import adversarial_loss_gradient as skloss
 
 """
 sklearn
@@ -74,11 +48,7 @@ def preprocessing(coef, X, y, lam, epsilon):
 def sklearn_optimize(coef,X,y,lam,epsilon):
     w0, X,target, lam, epsilon = preprocessing(coef, X, y, lam, epsilon)
 
-    # loss = LinearModelLoss(
-    #             base_loss=HalfBinomialLoss(), fit_intercept=fit_intercept
-    #         )
-    # func = loss.loss_gradient
-    func = loss_gradient # TODO, for 
+    func = loss_gradient 
 
     sample_weight = None
     sample_weight = _check_sample_weight(sample_weight, X, dtype=X.dtype, copy=True)
@@ -92,14 +62,7 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
                 jac=True,
                 args=(X, target, l2_reg_strength, epsilon, sample_weight, n_threads)
             )
-    # opt_res = minimize(
-    #             func,
-    #             w0,
-    #             method="L-BFGS-B",
-    #             jac=True,
-    #             args=(X, target, sample_weight, l2_reg_strength, n_threads)
-    #         )
-
+    
     w0, loss = opt_res.x, opt_res.fun
     return w0
 
@@ -135,15 +98,10 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
     fit_intercept = False
     weights, intercept, raw_prediction = _w_intercept_raw(coef, X)
 
-    # loss, grad_per_sample = just_loss_gradient(
-    #     y_true=y,
-    #     raw_prediction=raw_prediction
-    # )
     half = skloss.CyHalfBinomialLoss()
 
     loss_out = None
     gradient_out = None
-    adversarial_gradient_out = None
     if loss_out is None:
         if gradient_out is None:
             loss_out = np.empty_like(y)
@@ -152,27 +110,22 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
             loss_out = np.empty_like(y, dtype=gradient_out.dtype)
     elif gradient_out is None:
         gradient_out = np.empty_like(raw_prediction, dtype=loss_out.dtype)
-    if adversarial_gradient_out is None:
-        adversarial_gradient_out = np.empty_like(raw_prediction, dtype=gradient_out.dtype)
+    
 
     # Be graceful to shape (n_samples, 1) -> (n_samples,)
     if raw_prediction.ndim == 2 and raw_prediction.shape[1] == 1:
         raw_prediction = raw_prediction.squeeze(1)
     if gradient_out.ndim == 2 and gradient_out.shape[1] == 1:
         gradient_out = gradient_out.squeeze(1)
-    if adversarial_gradient_out.ndim == 2 and adversarial_gradient_out.shape[1] == 1:
-        adversarial_gradient_out = adversarial_gradient_out.squeeze(1)
 
     half.loss_gradient( y_true=y,
         raw_prediction=raw_prediction,
         adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),
-        sample_weight=sample_weight,
         loss_out=loss_out,
         gradient_out=gradient_out,
-        adversarial_gradient_out = adversarial_gradient_out,   
         n_threads=n_threads,
     )
-    loss,grad_per_sample, adv_grad_per_sample = loss_out,gradient_out, adversarial_gradient_out
+    loss,grad_per_sample = loss_out,gradient_out
 
 
     loss = loss.sum()
@@ -193,92 +146,6 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
 
     return loss, grad
 
-
-def lbfgs(X,y,lam,epsilon,logger, method="L-BFGS-B"):
-    # change y to be in {0,1}
-    w0 = sample_weights(X.shape[1])
-    w0, X, y, lam, epsilon = preprocessing(w0, X, y, lam, epsilon)
-
-    n,d = X.shape
-    res = minimize(loss_gradient,w0,args=(X, y, lam, epsilon),jac=True,method=method,options={'maxiter':100}) 
-    logger.info(f"Minimized {res.success} {res.message}")
-    if not res.success:
-        logger.info(f"OPTIMIZATION FAILED: {res.message} {res.status}")
-    w = res.x
-    return w
-
-def gd(X,y,lam,epsilon, logger, debug = False):
-    # do not use gd. Does not seem stable.
-    n,d = X.shape
-
-    w0 = sample_weights(d)
-    w0, X, y, lam, epsilon = preprocessing(w0, X, y, lam, epsilon)
-
-    
-    
-    wt = sample_weights(d)
-
-    n_iter = 0 
-    gradient_norm = 1
-    loss_difference = 1
-    training_error = 1
-    learning_rate = 1000000
-
-    last_loss, _ = loss_gradient(w0,X,y,lam,epsilon)
-
-    while gradient_norm > 10**-9 and loss_difference > 10**-9 and training_error != 0 and n_iter < 10000:
-        if debug:
-            print("iteration: ",n_iter," loss: ",last_loss,"gradient_norm",gradient_norm,"learning_rate",learning_rate,"epsilon",epsilon,"lam",lam)
-
-        
-        _, g = loss_gradient(w0,X,y,lam,epsilon)
-        wt = w0 - learning_rate *g
-        wp = w0 + learning_rate *g
-        gradient_norm = norm(g,2)
-
-        if debug:
-            print_loss(w0,loss_gradient,g,learning_rate,lam,X,y,epsilon)
-
-
-        new_loss,_ = loss_gradient(wt,X,y,lam,epsilon)
-        new_loss_p,_ = loss_gradient(wp,X,y,lam,epsilon)
-        if new_loss > last_loss:
-            if new_loss_p > last_loss:
-                learning_rate *= 0.4
-                continue
-            else:
-                wt = wp
-                new_loss = new_loss_p
-        loss_difference = last_loss - new_loss
-        last_loss = new_loss
-        
-
-        w0 = wt
-        training_error = 0.25*np.mean((y-np.sign(X@wt))**2)
-        n_iter += 1
-
-    logger.debug(f"GD converged after {n_iter} iterations loss: {last_loss} gradient_norm {gradient_norm} learning_rate {learning_rate} epsilon {epsilon} lam {lam} alpha {n/d}")
-    return wt
-
-
-
-def print_loss(w0,loss_fct,gradient,learning_rate,lam,X,y,epsilon):
-    ts = np.linspace(-learning_rate,learning_rate,100)
-
-    loss_gradient = []
-    d = X.shape[1]
-    
-    for t in ts:
-        loss_gradient.append(loss_fct(w0+t*gradient,X,y,lam,epsilon)[0])
-    
-    fig,ax = plt.subplots()
-    plt_loss_over_time, = ax.plot(ts,loss_gradient,label="loss")
-    # ax.scatter(0,loss(wt,X,y,lam,epsilon),label="loss at solution")
-    ax.legend(handles=[plt_loss_over_time])
-    plt.title("loss")
-    plt.xlabel("gradient_direction")
-    plt.ylabel("loss")
-    plt.show()
 
 def pure_training_loss(w,X,y,lam,epsilon):
     from state_evolution import adversarial_loss
@@ -310,13 +177,9 @@ if __name__ == "__main__":
 
 
     w_gd = np.empty(w.shape,dtype=w.dtype)
-    if method == "gd":
-        w_gd = gd(Xtrain,y,lam,epsilon,logging, debug=False)
-    elif method == "sklearn":
-        w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
-        print(w_gd.shape)
-    elif method == "L-BFGS-B":
-        w_gd = lbfgs(Xtrain,y,lam,epsilon,logging)
+    w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
+    print(w_gd.shape)
+
 
     # compare to LogisticRegression
     clf = LogisticRegression(random_state=0, solver='lbfgs',max_iter=1000,C=1/lam).fit(Xtrain, y)

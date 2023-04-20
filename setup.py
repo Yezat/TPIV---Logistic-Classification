@@ -4,11 +4,11 @@ import numpy
 
 print(numpy.get_include())
 setup(
-    name='sklearn_loss',
+    name='adversarial_loss_gradient',
     ext_modules=cythonize(
         Extension(
-            "xyz",
-            sources=["sklearn_loss.pyx"],
+            "adversarial_loss_gradient",
+            sources=["adversarial_loss_gradient.pyx"],
             include_dirs=[numpy.get_include()]
         )
     ),

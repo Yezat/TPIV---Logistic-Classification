@@ -2,7 +2,7 @@
 #SBATCH --chdir=/home/ktanner/TPIV---Logistic-Classification
 #SBATCH --job-name=TPIV-Adversarial
 #SBATCH --nodes=1
-#SBATCH --ntasks=20
+#SBATCH --ntasks=50
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=200G
 #SBATCH --output=out.txt
@@ -13,7 +13,6 @@ module purge
 module load gcc openmpi python/3.10.4
 source /home/ktanner/venvs/adv/bin/activate
 
-# srun --mpi=pmi2 python3 ./experiments/sweep_generalization_error.py
-srun python3 ./experiments/sweep_generalization_error.py
+srun --mpi=pmi2 python3 ./sweep.py
 
 deactivate

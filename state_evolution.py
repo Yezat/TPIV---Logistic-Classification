@@ -1,17 +1,36 @@
 import numpy as np
 from typing import Tuple
-from scipy.integrate import quad, dblquad, tplquad
-from scipy.optimize import fixed_point, root, root_scalar, minimize_scalar, minimize
-from scipy.special import erfc,erf, logsumexp
-from scipy.stats import multivariate_normal
-import matplotlib.pyplot as plt
+from scipy.integrate import quad
+from scipy.special import erfc
 from erm import *
 from util import *
 from data import *
-import warnings
 import logging
+from scipy.optimize import root_scalar
 import time
-from proximal import proximal_logistic_root_scalar, proximal_2_logistic_root_scalar
+
+"""
+Proximal from root scalar logistic
+"""
+def optim(z,y,V,w_prime):
+    a = y*z
+    if a <= 0:
+        return y*V/(1+ np.exp(y*z)) + w_prime - z
+    else:
+        return y*V*np.exp(-y*z)/(1+ np.exp(-y*z)) + w_prime - z
+
+def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+    if y == 0:
+        return w
+    try:
+        w_prime = w - epsilon * np.sqrt(Q) / y
+        result = root_scalar(lambda z: optim(z,y,V,w_prime) , bracket=[-50000000,50000000]) 
+        z = result.root
+        return z + epsilon * np.sqrt(Q) / y
+    except Exception as e:
+        # print all parameters
+        print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)        
+        raise e
 
 def log1pexp(x):
     """Compute log(1+exp(x)) componentwise."""
@@ -29,9 +48,6 @@ def log1pexp(x):
     idx4 = x > 33.3
     out[idx4] = x[idx4]
     return out
-
-def loss(z):
-    return log1pexp(-z)
 
 def adversarial_loss(y,z, epsilon, Q):
     return log1pexp(-y*z + epsilon * np.sqrt(Q))
@@ -79,74 +95,17 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
         partial_proximal = ( proximal - w ) ** 2
 
-
-        # approximating gaussian integrals with hermite polynomials ( does not work in q)
-        # x, herm = np.polynomial.hermite.hermgauss(50)
-        # const = np.pi**-0.5
-        # translated_argument = np.sqrt(2 * sigma) * x + w
-
-        # numerator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -2)
-        # denominator = np.sum(herm * const * (1 + np.exp(- y * translated_argument + epsilon * np.sqrt(Q))) ** -1)
-
-        # if numerator == 0.0:
-        #     denominator = 1
-        # else:
-        #     assert denominator != 0, f"denominator is zero, numerator = {numerator}, sigma = {sigma}, y = {y}, Q = {Q}, epsilon = {epsilon}, w = {w}, xi = {xi}"
-
-        # z_out_thing = numerator / denominator
-
-        # epsilon_term = ( z_out_thing - 1 ) / (2 * np.sqrt(Q))
-        # epsilon_term *= epsilon
-
-
-        # the thing with the derivative of the moreau-yosida regularization ( a bit unstable apparently... but seems correct for high tau and lam...)
-        # z_star = proximal
-        # arg = y*z_star - epsilon * np.sqrt(Q)
-        # if arg <= 0:
-        #     numerator = z_star - w - y/(1 + np.exp(arg))
-        # else:
-        #     numerator = z_star - w - (y * np.exp(-arg))/(1 + np.exp(-arg))
-        # denominator = 4 + 2 * np.cosh(y*z_star - epsilon * np.sqrt(Q))
-        # epsilon_term = numerator / denominator
-        # epsilon_term *= y * epsilon / np.sqrt(Q)
-
         z_star = proximal
         arg = y*z_star - epsilon * np.sqrt(Q)
         cosh = 4 + 4 *np.cosh(arg) 
-        first = y*(w - z_star) * sigma / ( 2 * sigma + cosh)
+        # cosh /= sigma # TODO: go in calmth trough derivation again and then fix to whatever turns out to be right.
+        first = y*(w - z_star) / ( cosh)
         if arg <= 0:
             second = sigma / ((1 + np.exp(arg)) * cosh)
         else:
             second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
         epsilon_term = (first + second) * epsilon / np.sqrt(Q)
        
-
-        # Taking the zero temperature limit and then computing the derivative
-        # z_star = proximal
-        # arg = y*z_star - epsilon * np.sqrt(Q)
-        # if arg <= 0:
-        #     epsilon_term = -1 / (1 + np.exp(arg))
-        # else:
-        #     epsilon_term = -np.exp(-arg) / (1 + np.exp(-arg))
-        # epsilon_term *= epsilon / (2 * np.sqrt(Q))
-        # epsilon_term -= ( (z_star - w)**2 )/( 2 * sigma**2)
-        # epsilon_term += xi * (z_star-w) / ( 2 * sigma * np.sqrt(Q) )
-
-        # # taking zero temperature limit after derivative
-        # z_star = proximal
-        # arg = y*z_star - epsilon * np.sqrt(Q)
-        # if arg <= 0:
-        #     epsilon_term = -1 / (1 + np.exp(arg))
-        # else:
-        #     epsilon_term = -np.exp(-arg) / (1 + np.exp(-arg))
-        # epsilon_term *= epsilon / (2 * np.sqrt(Q))     
-
-        # the thing with the derivative of the moreau-yosida regularization (maybe this guy is wrong)
-        # z_star = proximal
-        # arg = y*z_star - epsilon * np.sqrt(Q)
-        # easy = y*(z_star - w) / (4 + 2 * np.cosh(arg))
-        # hard = 1 / ( 5 + 5*np.exp(arg) + np.exp(2*arg) + np.exp(-arg))
-        # epsilon_term = (epsilon / np.sqrt(Q)) * (easy + hard)
 
         return z_0 * (partial_proximal/ (sigma ** 2) + epsilon_term ) * gaussian(xi)
 
@@ -165,21 +124,7 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,Q,epsilon))
 
-        derivative_f_out =  1/sigma * (derivative_proximal -1)
-
-        
-
-        # this is the saddle_point approximation
-        # proximal_2 = proximal_2_logistic_root_scalar(sigma,y,Q,epsilon,w)
-        # denominator =  np.sqrt(1 + 2*sigma* second_derivative_loss(y,proximal_2,Q,epsilon)  )
-        # numerator = np.sqrt(1 + sigma* second_derivative_loss(y,proximal,Q,epsilon))        
-        # arg_g = - ( ( (proximal_2-w)**2)/(2*sigma) + 2 * adversarial_loss(y,proximal_2,epsilon,Q) )
-        # arg_f = ( ( (proximal-w)**2)/(2*sigma) + adversarial_loss(y,proximal,epsilon,Q) )
-        # arg = arg_g + arg_f
-        # z_out_thing = np.exp(arg) * numerator / denominator
-
-        
-
+        derivative_f_out =  1/sigma * (derivative_proximal -1)       
 
         return z_0 * ( derivative_f_out ) * gaussian(xi)
 
@@ -203,16 +148,13 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
         return z_0 * l * gaussian(xi)
 
 
-    I1 = quad(lambda ξ: integrand(ξ,1) , -int_lims, int_lims, limit=500)[0]
-    I2 = quad(lambda ξ: integrand(ξ,-1) , -int_lims, int_lims, limit=500)[0]
+    I1 = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
+    I2 = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
     return (I1 + I2)/2 + (lam/(2*alpha)) * q
 
 
 
-# m,q,sigma -> see application
 def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims):
-    # logging.info("var_hat_func")
-    # logging.info("m: %s, q: %s, sigma: %s, rho_w_star: %s, alpha: %s, epsilon: %s, tau: %s, int_lims: %s", m, q, sigma, rho_w_star, alpha, epsilon, tau, int_lims)
     m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
     q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,lam,int_lims)
     sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
@@ -266,7 +208,7 @@ def fixed_point_finder(
         n_sigma = damped_update(new_sigma, sigma, blend_fpe)
         
 
-        err = max([abs(n_m - m), abs(n_q - q), abs(n_sigma - sigma)])        
+        err = max([abs(n_m - m), abs(n_q - q), abs(n_sigma - sigma)])
         m, q, sigma = n_m, n_q, n_sigma
 
         iter_nb += 1
@@ -275,13 +217,13 @@ def fixed_point_finder(
     return m, q, sigma
 
 if __name__ == "__main__":
-    d = 1500
-    alpha = 3.0
+    d = 1000
+    alpha = 1.0
     n = 1000
     n_test = 100000
     w = sample_weights(d)
-    tau = 2
-    lam = 1
+    tau = 0
+    lam = 0.01
     epsilon = 0.7
     logging.basicConfig(level=logging.INFO)
 
