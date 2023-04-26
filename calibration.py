@@ -44,7 +44,7 @@ def calc_calibration_gd(Xtest, p, dp, w_gd, w, tau, debug = False):
     debug: if true, prints debug information
     """
     f_star = theoretical.predict_proba(Xtest,w,tau)
-    f_erm = theoretical.predict_erm_proba(Xtest,w_gd,debug=True)
+    f_erm = theoretical.predict_erm_proba(Xtest,w_gd,debug=debug)
     if debug:
         print("Calibration, F_ERM debug statements:",np.mean(f_erm),np.std(f_erm),np.var(f_erm),np.min(f_erm),np.max(f_erm))
         print("Calibration, F_STAR debug statements:",np.mean(f_star),np.std(f_star),np.var(f_star),np.min(f_star),np.max(f_star))

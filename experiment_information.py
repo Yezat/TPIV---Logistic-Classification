@@ -15,7 +15,7 @@ import pandas as pd
 import logging
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, experiment_name: str = ""):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, experiment_name: str = ""):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -27,6 +27,8 @@ class ExperimentInformation:
         self.epsilons: np.ndarray = epsilons
         self.lambdas: np.ndarray = lambdas
         self.taus: np.ndarray = taus
+        self.ps: np.ndarray = ps
+        self.dp: float = dp
         self.d: int = d
         self.erm_methods: list = erm_methods
         self.completed: bool = False
@@ -35,11 +37,21 @@ class ExperimentInformation:
     def __str__(self):
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
-        
+
+class CalibrationResults:
+    def __init__(self, ps: np.ndarray, calibrations: np.ndarray, dp: float):
+        self.ps: np.ndarray = ps
+        self.calibrations: np.ndarray = calibrations        
+        self.dp: float = dp # if this is None, we know we computed the calibration using the analytical expression
+    # make this object json serializable
+    def to_json(self):
+        return json.dumps(self, sort_keys=True, indent=4, cls=NumpyEncoder)
+
+
 
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
-    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float):
+    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float):
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
         self.duration: float = duration
@@ -59,6 +71,7 @@ class StateEvolutionExperimentInformation:
         self.epsilon: float = epsilon 
         self.tau: float = tau
         self.lam: float = lam 
+        self.calibrations: CalibrationResults = calibrations
         self.abs_tol: float = abs_tol 
         self.min_iter: int = min_iter
         self.max_iter: int = max_iter
@@ -66,7 +79,7 @@ class StateEvolutionExperimentInformation:
         self.int_lims: float = int_lims    
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float):
+    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults):
         self.id: str = str(uuid.uuid4())
         self.duration : float = duration
         self.code_version: str = __version__
@@ -90,6 +103,10 @@ class ERMExperimentInformation:
         self.d: int = d
         self.tau: float = tau
         self.alpha: float = n/d
+
+        self.analytical_calibrations: CalibrationResults = analytical_calibrations
+        self.erm_calibrations: CalibrationResults = erm_calibrations
+
         self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,lam,epsilon)
 
     # overwrite the to string method to print all attributes and their type
@@ -135,6 +152,7 @@ class DatabaseHandler:
                     epsilon REAL,
                     tau REAL,
                     lam REAL,
+                    calibrations BLOB,
                     abs_tol REAL,
                     min_iter INTEGER,
                     max_iter INTEGER,
@@ -160,6 +178,8 @@ class DatabaseHandler:
                 epsilons BLOB,
                 lambdas BLOB,
                 taus BLOB,
+                ps BLOB,
+                dp REAL,
                 d INTEGER,
                 erm_methods BLOB,
                 completed BOOLEAN
@@ -191,6 +211,8 @@ class DatabaseHandler:
                     d INTEGER,
                     tau REAL,
                     alpha REAL,
+                    analytical_calibrations BLOB,
+                    erm_calibrations BLOB,
                     test_loss REAL
                 )
             ''')
@@ -199,7 +221,7 @@ class DatabaseHandler:
     def insert_experiment(self, experiment_information: ExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
             experiment_information.experiment_name,
             experiment_information.duration,
@@ -211,6 +233,8 @@ class DatabaseHandler:
             json.dumps(experiment_information.epsilons, cls=NumpyEncoder),
             json.dumps(experiment_information.lambdas, cls=NumpyEncoder),
             json.dumps(experiment_information.taus, cls=NumpyEncoder),
+            json.dumps(experiment_information.ps, cls=NumpyEncoder),
+            float(experiment_information.dp),
             experiment_information.d,
             json.dumps(experiment_information.erm_methods),
             experiment_information.completed
@@ -223,7 +247,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -241,6 +265,7 @@ class DatabaseHandler:
             float(experiment_information.epsilon),
             float(experiment_information.tau),
             float(experiment_information.lam),
+            experiment_information.calibrations.to_json(),
             experiment_information.abs_tol,
             experiment_information.min_iter,
             experiment_information.max_iter,
@@ -269,7 +294,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -290,6 +315,8 @@ class DatabaseHandler:
             experiment_information.d,
             float(experiment_information.tau),
             float(experiment_information.alpha),
+            experiment_information.analytical_calibrations.to_json(),
+            experiment_information.erm_calibrations.to_json(),
             experiment_information.test_loss
         ))
         self.connection.commit()
@@ -321,6 +348,8 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         if isinstance(obj,ERMExperimentInformation):
+            return obj.__dict__
+        if isinstance(obj, CalibrationResults):
             return obj.__dict__
         if isinstance(obj,np.int32):
             return str(obj)

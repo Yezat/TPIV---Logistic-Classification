@@ -13,9 +13,10 @@ from _version import __version__
 from experiment_information import *
 from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
 from gradient_descent import sklearn_optimize
+from calibration import calc_calibration_analytical,calc_calibration_gd
 
 class Task:
-    def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d):
+    def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp):
         self.id = id
         self.experiment_id = experiment_id
         self.method = method
@@ -25,8 +26,10 @@ class Task:
         self.tau = tau
         self.d = d
         self.result = None
+        self.ps = ps
+        self.dp = dp
 
-def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d):
+def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp):
     """
     Generate Data, run ERM and save the results to the database
     """
@@ -49,16 +52,31 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d):
         raise Exception(f"Method {method} not implemented")
 
 
+    # let's calculate the calibration
+    analytical_calibrations = []
+    erm_calibrations = []
+    rho = w@w /d
+    m = w_gd@w / d
+    q_erm = w_gd@w_gd / d
+
+    for p in ps:
+        analytical_calibrations.append(calc_calibration_analytical(rho,p,m,q_erm,tau))
+
+        erm_calibrations.append(calc_calibration_gd(Xtest,p,dp,w_gd,w,tau))
+
+    analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
+    erm_calibrations_result = CalibrationResults(ps,erm_calibrations,dp)
+
     end = time.time()
     duration = end - start
-    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
+    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result)
 
 
     logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")
 
     return erm_information
 
-def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d):
+def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps):
     """
     Starts the state evolution and saves the results to the database
     """
@@ -69,9 +87,16 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d):
     end = time.time()
     experiment_duration = end-start
 
-    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS)
+    # let's compute and store the calibrations
+    calibrations = []
+    for p in ps:
+        calibrations.append(calc_calibration_analytical(1,p,m,q,tau))
+    calibration_results = CalibrationResults(ps,calibrations,None)
 
-    logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
+    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS)
+
+    logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
+
     return st_exp_info
 
 
@@ -81,9 +106,9 @@ def process_task(task, logger):
     try:
 
         if task.method == "state_evolution":
-            task.result = run_state_evolution(logger,task.experiment_id,task.alpha,task.epsilon,task.lam,task.tau,task.d)
+            task.result = run_state_evolution(logger,task.experiment_id,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps)
         else:
-            task.result = run_erm(logger,task.experiment_id,task.method,task.alpha,task.epsilon,task.lam,task.tau,task.d)
+            task.result = run_erm(logger,task.experiment_id,task.method,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, task.dp)
     except Exception as e:
         # log the exception
         logger.exception(e)
@@ -123,16 +148,18 @@ def get_default_experiment():
     erm_repetitions: int = 2
     # alphas: np.ndarray = np.array([0.2,0.8,1.3,1.7,2.,2.5])
     # alphas: np.ndarray = np.array([3,4,5,6,7])
-    alphas: np.ndarray = np.linspace(1,3,2)
+    alphas: np.ndarray = np.linspace(1,3,3)
     # epsilons: np.ndarray = np.array([0,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09])
     # epsilons: np.ndarray = np.array([0,0.02,0.05,0.07,0.09,0.12])
     epsilons: np.ndarray = np.array([0.0,0.7])
-    lambdas: np.ndarray = np.array([1])
-    taus: np.ndarray = np.array([0])
+    lambdas: np.ndarray = np.array([1e-3])
+    taus: np.ndarray = np.array([1.5])
+    ps: np.ndarray = np.array([0.75])
+    dp: float = 0.01
     d: int = 1000
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,experiment_name)
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp,experiment_name)
     return experiment
 
 
@@ -180,11 +207,11 @@ def master(num_processes, logger):
                 for tau in experiment.taus:
 
                     for _ in range(experiment.state_evolution_repetitions):
-                        tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d))
+                        tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None))
 
                     for _ in range(experiment.erm_repetitions):
                         for method in experiment.erm_methods:
-                            tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d))
+                            tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp))
 
     # Initialize the progress bar
     pbar = tqdm(total=len(tasks))
