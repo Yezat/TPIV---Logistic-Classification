@@ -214,7 +214,7 @@ def fixed_point_finder(
         iter_nb += 1
         if iter_nb > max_iter:
             raise Exception("fixed_point_finder - reached max_iterations")
-    return m, q, sigma
+    return m, q, sigma, sigma_hat, q_hat, m_hat
 
 if __name__ == "__main__":
     d = 1000

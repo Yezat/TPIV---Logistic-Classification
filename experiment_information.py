@@ -51,7 +51,7 @@ class CalibrationResults:
 
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
-    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float):
+    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float):
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
         self.duration: float = duration
@@ -77,6 +77,9 @@ class StateEvolutionExperimentInformation:
         self.max_iter: int = max_iter
         self.blend_fpe: float = blend_fpe
         self.int_lims: float = int_lims    
+        self.sigma_hat : float = sigma_hat
+        self.q_hat : float = q_hat
+        self.m_hat : float = m_hat
 
 class ERMExperimentInformation:
     def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults):
@@ -157,7 +160,10 @@ class DatabaseHandler:
                     min_iter INTEGER,
                     max_iter INTEGER,
                     blend_fpe REAL,
-                    int_lims REAL
+                    int_lims REAL,
+                    sigma_hat REAL,
+                    q_hat REAL,
+                    m_hat REAL,
                 )
             ''')
             self.connection.commit()
@@ -247,7 +253,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -270,7 +276,10 @@ class DatabaseHandler:
             experiment_information.min_iter,
             experiment_information.max_iter,
             experiment_information.blend_fpe,
-            experiment_information.int_lims
+            experiment_information.int_lims,
+            experiment_information.sigma_hat,
+            experiment_information.q_hat,
+            experiment_information.m_hat
         ))
         self.connection.commit()
 
