@@ -129,8 +129,6 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         return z_0 * ( derivative_f_out ) * gaussian(xi)
 
-    # if 5 * 1/sigma < int_lims:
-    #     int_lims = 5 * 1/sigma
     def reduce_limit(y):
         step = 0.5
         left_lim = int_lims
@@ -239,14 +237,13 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    alpha = 5.0
+    alpha = 5
     n = int(alpha * d)
     n_test = 100000
     w = sample_weights(d)
-    tau = 0
-    lam = 0.01
-    epsilon = 0.69
-    epsilon = 0.7
+    tau = 1
+    lam = 1
+    epsilon = 1.9
     logging.basicConfig(level=logging.INFO)
 
     # alpha=1.0, epsilon=0.0, lambda=1e-05, tau=2, d=1000, gen_error=nan

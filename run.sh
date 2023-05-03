@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --chdir=/home/ktanner/TPIV---Logistic-Classification
+#SBATCH --chdir=/home/ktanner/TPIV---Logistic-Classification/experiments
 #SBATCH --job-name=TPIV-Adversarial
 #SBATCH --nodes=1
 #SBATCH --ntasks=50
