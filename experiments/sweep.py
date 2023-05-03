@@ -165,10 +165,11 @@ def get_default_experiment():
 
 
 # Define the master function
-def master(num_processes, logger):
+def master(num_processes, logger, filename):
 
     # Get the experiment information from this file.
-    filename = "sweep_experiment.json"
+    if filename is None:
+        filename = "sweep_experiment.json"
 
     # create an experiment object and first define default values
     experiment = get_default_experiment()
@@ -289,6 +290,9 @@ if __name__ == "__main__":
     rank = comm.Get_rank()
     size = comm.Get_size()
 
+    # read the filename from the command line
+    filename = sys.argv[1]
+
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -299,7 +303,7 @@ if __name__ == "__main__":
 
     if rank == 0:
         # run the master
-        master(size-1, logger)
+        master(size-1, logger, filename)
         
     else:
         # run the worker
