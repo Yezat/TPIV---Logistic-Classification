@@ -156,13 +156,13 @@ def pure_training_loss(w,X,y,lam,epsilon):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    alpha = 1
-    d = 1000
+    alpha = 5
+    d = 2
     w = sample_weights(d)
     method = "L-BFGS-B"
     method = "sklearn"
     # method = "gd"
-    tau = 2
+    tau = 0
     epsilon = 0
     lam = 1e-5
 
@@ -171,52 +171,55 @@ if __name__ == "__main__":
 
     # generate data
     Xtrain, y = sample_training_data(w,d,int(alpha * d),tau)
+    print(Xtrain)
+    print(y)
+    print(w)
     n_test = 100000
     Xtest,ytest = sample_training_data(w,d,n_test,tau)
 
 
 
-    w_gd = np.empty(w.shape,dtype=w.dtype)
-    w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
-    print(w_gd.shape)
+    # w_gd = np.empty(w.shape,dtype=w.dtype)
+    # w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
+    # print(w_gd.shape)
 
 
-    # compare to LogisticRegression
-    clf = LogisticRegression(random_state=0, solver='lbfgs',max_iter=1000,C=1/lam).fit(Xtrain, y)
-    w_lr = clf.coef_.flatten()
-    # evaluate the norm of the coefficients both ways
-    print("norm(w_gd,2)",norm(w_gd,2))
-    print("norm(w_lr,2)",norm(w_lr,2))
-    # compute the angle between the coefficients
-    print("angle between coefficients",np.arccos(w_gd@w_lr/(norm(w_gd,2)*norm(w_lr,2))))
-    # evaluate the difference between the coefficients both ways
-    print("norm(w_gd-w_lr,2)",norm(w_gd-w_lr,2))
-    # evaluate total loss both ways
-    print("total_loss(w_gd,Xtrain,y,lam,epsilon)",loss_gradient(w_gd,Xtrain,y,lam,epsilon)[0])
-    print("total_loss(w_lr,Xtrain,y,lam,epsilon)",loss_gradient(w_lr,Xtrain,y,lam,epsilon)[0])
-    # evaluate the gradient norm both ways
-    print("norm(total_gradient(w_gd,Xtrain,y,lam,epsilon),2)",norm(loss_gradient(w_gd,Xtrain,y,lam,epsilon)[1],2))
-    print("norm(total_gradient(w_lr,Xtrain,y,lam,epsilon),2)",norm(loss_gradient(w_lr,Xtrain,y,lam,epsilon)[1],2))
+    # # compare to LogisticRegression
+    # clf = LogisticRegression(random_state=0, solver='lbfgs',max_iter=1000,C=1/lam).fit(Xtrain, y)
+    # w_lr = clf.coef_.flatten()
+    # # evaluate the norm of the coefficients both ways
+    # print("norm(w_gd,2)",norm(w_gd,2))
+    # print("norm(w_lr,2)",norm(w_lr,2))
+    # # compute the angle between the coefficients
+    # print("angle between coefficients",np.arccos(w_gd@w_lr/(norm(w_gd,2)*norm(w_lr,2))))
+    # # evaluate the difference between the coefficients both ways
+    # print("norm(w_gd-w_lr,2)",norm(w_gd-w_lr,2))
+    # # evaluate total loss both ways
+    # print("total_loss(w_gd,Xtrain,y,lam,epsilon)",loss_gradient(w_gd,Xtrain,y,lam,epsilon)[0])
+    # print("total_loss(w_lr,Xtrain,y,lam,epsilon)",loss_gradient(w_lr,Xtrain,y,lam,epsilon)[0])
+    # # evaluate the gradient norm both ways
+    # print("norm(total_gradient(w_gd,Xtrain,y,lam,epsilon),2)",norm(loss_gradient(w_gd,Xtrain,y,lam,epsilon)[1],2))
+    # print("norm(total_gradient(w_lr,Xtrain,y,lam,epsilon),2)",norm(loss_gradient(w_lr,Xtrain,y,lam,epsilon)[1],2))
 
-    end = time.time()
-    duration = end - start
+    # end = time.time()
+    # duration = end - start
 
-    from experiment_information import ERMExperimentInformation
-    erm_information = ERMExperimentInformation("my_erm_minimizer_tests",duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
-    print("erm_information.generalization_error_erm, ", erm_information.generalization_error_erm)
-    print("erm_information.generalization_error_overlap, ", erm_information.generalization_error_erm)
+    # from experiment_information import ERMExperimentInformation
+    # erm_information = ERMExperimentInformation("my_erm_minimizer_tests",duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
+    # print("erm_information.generalization_error_erm, ", erm_information.generalization_error_erm)
+    # print("erm_information.generalization_error_overlap, ", erm_information.generalization_error_erm)
     
-    # obtain experiment information for w_lr
-    erm_information_lr = ERMExperimentInformation("my_erm_minimizer_tests",duration,Xtest,w_lr,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
-    print("erm_information_lr.generalization_error_erm, ", erm_information_lr.generalization_error_erm)
-    print("erm_information_lr.generalization_error_overlap, ", erm_information_lr.generalization_error_erm)
+    # # obtain experiment information for w_lr
+    # erm_information_lr = ERMExperimentInformation("my_erm_minimizer_tests",duration,Xtest,w_lr,tau,y,Xtrain,w,ytest,d,method,epsilon,lam)
+    # print("erm_information_lr.generalization_error_erm, ", erm_information_lr.generalization_error_erm)
+    # print("erm_information_lr.generalization_error_overlap, ", erm_information_lr.generalization_error_erm)
 
-    # let's compute the training loss for both
-    print("training_loss(w_gd,Xtrain,y,lam,epsilon)",pure_training_loss(w_gd,Xtrain,y,lam,epsilon))
-    print("training_loss(w_lr,Xtrain,y,lam,epsilon)",pure_training_loss(w_lr,Xtrain,y,lam,epsilon))
+    # # let's compute the training loss for both
+    # print("training_loss(w_gd,Xtrain,y,lam,epsilon)",pure_training_loss(w_gd,Xtrain,y,lam,epsilon))
+    # print("training_loss(w_lr,Xtrain,y,lam,epsilon)",pure_training_loss(w_lr,Xtrain,y,lam,epsilon))
 
-    # print dtypes of the weights, Xtrain, y
-    print("w_gd.dtype",w_gd.dtype)
-    print("w_lr.dtype",w_lr.dtype)
-    print("Xtrain.dtype",Xtrain.dtype)
-    print("y.dtype",y.dtype)
+    # # print dtypes of the weights, Xtrain, y
+    # print("w_gd.dtype",w_gd.dtype)
+    # print("w_lr.dtype",w_lr.dtype)
+    # print("Xtrain.dtype",Xtrain.dtype)
+    # print("y.dtype",y.dtype)

@@ -60,9 +60,6 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
 
 def second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
     return y**2 / (2 * np.cosh(0.5*y*z - 0.5*epsilon * np.sqrt(Q)))**2
-    
-def derivative_proximal(V: float, y: float, z: float, Q: float, epsilon: float) -> float:
-    return 1/(1 + V * second_derivative_loss(y,z,Q,epsilon))
 
 def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
     Q = q
@@ -116,20 +113,40 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
 
 def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0):
     Q = q
-    def integrand(xi, y):
-        z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
 
+    def get_derivative_f_out(xi,y):
         w = np.sqrt(q) * xi
         proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
 
         derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,Q,epsilon))
 
         derivative_f_out =  1/sigma * (derivative_proximal -1)       
+        return derivative_f_out
+    def integrand(xi, y):
+        z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
+
+        derivative_f_out = get_derivative_f_out(xi,y)
 
         return z_0 * ( derivative_f_out ) * gaussian(xi)
 
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    # if 5 * 1/sigma < int_lims:
+    #     int_lims = 5 * 1/sigma
+    def reduce_limit(y):
+        step = 0.5
+        left_lim = int_lims
+        while get_derivative_f_out(-(left_lim-step),y) == 0 and left_lim > 1:
+            left_lim -= step
+        
+        right_lim = int_lims
+        while get_derivative_f_out(right_lim-step,y) == 0 and right_lim > 1:
+            right_lim -= step 
+        return left_lim, right_lim
+
+    left_lim_plus, right_lim_plus = reduce_limit(1)
+    left_lim_minus, right_lim_minus = reduce_limit(-1)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-left_lim_plus,right_lim_plus,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-left_lim_minus,right_lim_minus,limit=500)[0]
 
     return -alpha * 0.5 * (Iplus + Iminus)
 
@@ -193,10 +210,14 @@ def fixed_point_finder(
     m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
     err = 1.0
     iter_nb = 0
+    m_hat = 0
+    q_hat = 0
+    sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
         if iter_nb % 10 == 0:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
+            logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
 
         m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims)
 
@@ -218,12 +239,13 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    alpha = 1.0
-    n = 1000
+    alpha = 5.0
+    n = int(alpha * d)
     n_test = 100000
     w = sample_weights(d)
     tau = 0
     lam = 0.01
+    epsilon = 0.69
     epsilon = 0.7
     logging.basicConfig(level=logging.INFO)
 
@@ -263,8 +285,68 @@ if __name__ == "__main__":
     # print("argmin", argmin)
     # print("min", min)
 
+
+    # m: 82.63289395304557, q: 7815.433666835324, sigma: 21.998493897331464
+    # m = 82.63289395304557
+    # q = 7815.433666835324
+    # sigma = 21.998493897331464
+    # # m_hat: 3.7563015325827918, q_hat: 2.0400338133193365, sigma_hat: 0.035433611283976166
+    # m_hat = 3.7563015325827918
+    # q_hat = 2.0400338133193365
+    # sigma_hat = 0.035433611283976166
+
+    # sigma_hat = sigma_hat_func(m,q,sigma,1,alpha,epsilon,tau,lam,1)
+
+    # print("sigma_hat", sigma_hat)
+
+    # def integrand(xi, y, eps):
+    #     z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
+
+    #     w = np.sqrt(q) * xi
+    #     proximal = proximal_logistic_root_scalar(sigma,y,q,eps,w)
+
+    #     derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,q,eps))
+
+    #     derivative_f_out =  1/sigma * (derivative_proximal -1)       
+
+    #     return z_0 * ( derivative_f_out ) * gaussian(xi)
+
+    
+    
+    # y = 1
+    # print("y", y)
+    
+    # for xi in np.linspace(-10,10,10):
+    #     print("xi", xi)
+    #     for epsilon in [0.69,0.7]:
+    #         print("epsilon", epsilon)            
+    #         # print("integrand", integrand(xi,y,epsilon))
+    #         z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
+    #         # print("z_0", z_0)
+    #         # print("gaussian xi", gaussian(xi))
+    #         w = np.sqrt(q) * xi
+    #         proximal = proximal_logistic_root_scalar(sigma,y,q,epsilon,w)
+
+    #         derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,q,epsilon))
+
+    #         derivative_f_out =  1/sigma * (derivative_proximal -1) 
+    #         print("derivative_f_out", derivative_f_out)
+
+
+    # for epsilon in [0.69,0.7]:
+    #     print("epsilon", epsilon)
+    #     I = quad(lambda xi: integrand(xi,y,epsilon),-1,1,limit=500)[0]
+    #     print("I", I)
+    # I = quad(lambda xi: integrand(xi,1,epsilon),-INT_LIMS,INT_LIMS,limit=500)[0]
+    # print("I", I)
+
+    # m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, 1, alpha, epsilon, tau, lam, INT_LIMS)
+    # print("m_hat", m_hat)
+    # print("q_hat", q_hat)
+    # print("sigma_hat", sigma_hat)
+
     start = time.time()
-    m,q,sigma = fixed_point_finder(logging,rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
+    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logging,rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
     print("m: ", m)
     print("q: ", q)
     print("sigma: ", sigma)
