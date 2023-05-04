@@ -223,7 +223,7 @@ def fixed_point_finder(
     q_hat = 0
     sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 1 == 0:
+        if iter_nb % 10 == 0:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     n = int(alpha * d)
     n_test = 100000
     w = sample_weights(d)
-    tau = 0.1
+    tau = 1
     lam = 0.01
     epsilon = 1.0
     logging.basicConfig(level=logging.INFO)

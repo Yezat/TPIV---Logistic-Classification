@@ -13,7 +13,7 @@ from _version import __version__
 from experiment_information import *
 from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
 from gradient_descent import sklearn_optimize
-from calibration import calc_calibration_analytical,calc_calibration_gd
+from calibration import calc_calibration_analytical,compute_experimental_teacher_calibration
 
 class Task:
     def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp):
@@ -62,7 +62,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp):
     for p in ps:
         analytical_calibrations.append(calc_calibration_analytical(rho,p,m,q_erm,tau))
 
-        erm_calibrations.append(calc_calibration_gd(Xtest,p,dp,w_gd,w,tau))
+        erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
 
     analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
     erm_calibrations_result = CalibrationResults(ps,erm_calibrations,dp)
@@ -89,8 +89,9 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps):
 
     # let's compute and store the calibrations
     calibrations = []
-    for p in ps:
-        calibrations.append(calc_calibration_analytical(1,p,m,q,tau))
+    if ps is not None:
+        for p in ps:
+            calibrations.append(calc_calibration_analytical(1,p,m,q,tau))
     calibration_results = CalibrationResults(ps,calibrations,None)
 
     st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat)
