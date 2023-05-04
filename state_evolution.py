@@ -130,21 +130,32 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         return z_0 * ( derivative_f_out ) * gaussian(xi)
 
     def reduce_limit(y):
-        step = 0.5
-        left_lim = int_lims
-        while get_derivative_f_out(-(left_lim-step),y) == 0 and left_lim > 1:
-            left_lim -= step
+        step = 1
+        left_lim = -int_lims
+        while get_derivative_f_out(left_lim+step,y) == 0 and np.abs(left_lim - y) > 1.5*step:
+            left_lim += step
+            if np.abs(left_lim) <= 2:
+                step = 0.1
         
+        step = 1
         right_lim = int_lims
-        while get_derivative_f_out(right_lim-step,y) == 0 and right_lim > 1:
+        while get_derivative_f_out(right_lim-step,y) == 0 and np.abs(y-right_lim) > 1.5*step:
             right_lim -= step 
+            if np.abs(right_lim) <= 2:
+                step = 0.1
         return left_lim, right_lim
 
     left_lim_plus, right_lim_plus = reduce_limit(1)
     left_lim_minus, right_lim_minus = reduce_limit(-1)
 
-    Iplus = quad(lambda xi: integrand(xi,1),-left_lim_plus,right_lim_plus,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-left_lim_minus,right_lim_minus,limit=500)[0]
+    # print the limits
+    # print("left_lim_plus: ", left_lim_plus)
+    # print("right_lim_plus: ", right_lim_plus)
+    # print("left_lim_minus: ", left_lim_minus)
+    # print("right_lim_minus: ", right_lim_minus)
+
+    Iplus = quad(lambda xi: integrand(xi,1),left_lim_plus,right_lim_plus,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),left_lim_minus,right_lim_minus,limit=500)[0]
 
     return -alpha * 0.5 * (Iplus + Iminus)
 
@@ -212,7 +223,7 @@ def fixed_point_finder(
     q_hat = 0
     sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 10 == 0:
+        if iter_nb % 1 == 0:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
@@ -237,13 +248,13 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    alpha = 5
+    alpha = 100
     n = int(alpha * d)
     n_test = 100000
     w = sample_weights(d)
-    tau = 1
-    lam = 1
-    epsilon = 1.9
+    tau = 0.1
+    lam = 0.01
+    epsilon = 1.0
     logging.basicConfig(level=logging.INFO)
 
     # alpha=1.0, epsilon=0.0, lambda=1e-05, tau=2, d=1000, gen_error=nan
@@ -283,43 +294,44 @@ if __name__ == "__main__":
     # print("min", min)
 
 
-    # m: 82.63289395304557, q: 7815.433666835324, sigma: 21.998493897331464
-    # m = 82.63289395304557
-    # q = 7815.433666835324
-    # sigma = 21.998493897331464
-    # # m_hat: 3.7563015325827918, q_hat: 2.0400338133193365, sigma_hat: 0.035433611283976166
-    # m_hat = 3.7563015325827918
-    # q_hat = 2.0400338133193365
-    # sigma_hat = 0.035433611283976166
+    #     INFO:root:m: 6195.725368342226, q: 48023359.030919306, sigma: 78.03929347491682
+    # INFO:root:m_hat: 79.39238938543217, q_hat: 67.81788255621359, sigma_hat: 2.0449706219246547e-08
+    #     INFO:root:m: 7415.649276665832, q: 58407821.82897628, sigma: 94.5098233687292
+    # INFO:root:m_hat: 78.22290579440369, q_hat: 68.10795191270668, sigma_hat: -0.0
+    m = 7415.649276665832
+    q = 58407821.82897628
+    sigma = 94.5098233687292
+    m_hat = 78.22290579440369
+    q_hat = 68.10795191270668
+    sigma_hat = -0.0
+    sigma_hat = sigma_hat_func(m,q,sigma,1,alpha,epsilon,tau,lam,10)
 
-    # sigma_hat = sigma_hat_func(m,q,sigma,1,alpha,epsilon,tau,lam,1)
+    print("sigma_hat", sigma_hat)
 
-    # print("sigma_hat", sigma_hat)
+    def integrand(xi, y, eps):
+        z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
 
-    # def integrand(xi, y, eps):
-    #     z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
+        w = np.sqrt(q) * xi
+        proximal = proximal_logistic_root_scalar(sigma,y,q,eps,w)
 
-    #     w = np.sqrt(q) * xi
-    #     proximal = proximal_logistic_root_scalar(sigma,y,q,eps,w)
+        derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,q,eps))
 
-    #     derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,q,eps))
+        derivative_f_out =  1/sigma * (derivative_proximal -1)       
 
-    #     derivative_f_out =  1/sigma * (derivative_proximal -1)       
-
-    #     return z_0 * ( derivative_f_out ) * gaussian(xi)
+        return z_0 * ( derivative_f_out ) * gaussian(xi)
 
     
     
     # y = 1
     # print("y", y)
     
-    # for xi in np.linspace(-10,10,10):
+    # for xi in np.linspace(0.9,1.1,100):
     #     print("xi", xi)
-    #     for epsilon in [0.69,0.7]:
-    #         print("epsilon", epsilon)            
+    #     for epsilon in [1.0]:
+    #         # print("epsilon", epsilon)            
     #         # print("integrand", integrand(xi,y,epsilon))
     #         z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
-    #         # print("z_0", z_0)
+    #         print("z_0", z_0)
     #         # print("gaussian xi", gaussian(xi))
     #         w = np.sqrt(q) * xi
     #         proximal = proximal_logistic_root_scalar(sigma,y,q,epsilon,w)
