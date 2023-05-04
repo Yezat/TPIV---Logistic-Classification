@@ -12,7 +12,7 @@ from scipy.optimize import minimize_scalar
 from sweep import run_state_evolution
 import logging
 
-def minimize_lambda(alpha,epsilon,tau,tol, logging):
+def minimize_lambda(alpha,epsilon,tau,tol, logger):
     """
     Compute the optimal lambda given a setting including epsilon, alpha, d, tau etc...
 
