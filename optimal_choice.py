@@ -9,7 +9,7 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir) 
 from calibration import *
 from scipy.optimize import minimize_scalar
-from sweep import run_state_evolution
+from experiments.sweep import run_state_evolution
 import logging
 
 def minimize_lambda(alpha,epsilon,tau,tol, logger):

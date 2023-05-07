@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Tuple
-from scipy.integrate import quad
+from scipy.integrate import quad, fixed_quad, romberg
 from scipy.special import erfc
 from erm import *
 from util import *
@@ -24,7 +24,7 @@ def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, 
         return w
     try:
         w_prime = w - epsilon * np.sqrt(Q) / y
-        result = root_scalar(lambda z: optim(z,y,V,w_prime) , bracket=[-50000000,50000000]) 
+        result = root_scalar(lambda z: optim(z,y,V,w_prime) , bracket=[-50000000,50000000],xtol=10e-10,rtol=10e-10) 
         z = result.root
         return z + epsilon * np.sqrt(Q) / y
     except Exception as e:
@@ -127,35 +127,18 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         derivative_f_out = get_derivative_f_out(xi,y)
 
-        return z_0 * ( derivative_f_out ) * gaussian(xi)
+        return z_0 * ( derivative_f_out ) 
 
-    def reduce_limit(y):
-        step = 1
-        left_lim = -int_lims
-        while get_derivative_f_out(left_lim+step,y) == 0 and np.abs(left_lim - y) > 1.5*step:
-            left_lim += step
-            if np.abs(left_lim) <= 2:
-                step = 0.1
-        
-        step = 1
-        right_lim = int_lims
-        while get_derivative_f_out(right_lim-step,y) == 0 and np.abs(y-right_lim) > 1.5*step:
-            right_lim -= step 
-            if np.abs(right_lim) <= 2:
-                step = 0.1
-        return left_lim, right_lim
+    x, w = np.polynomial.hermite.hermgauss(100)
+    mu, sigma = 0,1
+    const = np.pi**-0.5
+    y = 2.0**0.5*sigma*x + mu
 
-    left_lim_plus, right_lim_plus = reduce_limit(1)
-    left_lim_minus, right_lim_minus = reduce_limit(-1)
+    i_plus = np.array([integrand(xi,1) for xi in y])
+    i_minus = np.array([integrand(xi,-1) for xi in y])
 
-    # print the limits
-    # print("left_lim_plus: ", left_lim_plus)
-    # print("right_lim_plus: ", right_lim_plus)
-    # print("left_lim_minus: ", left_lim_minus)
-    # print("right_lim_minus: ", right_lim_minus)
-
-    Iplus = quad(lambda xi: integrand(xi,1),left_lim_plus,right_lim_plus,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),left_lim_minus,right_lim_minus,limit=500)[0]
+    Iplus = np.sum(w * const * i_plus)
+    Iminus = np.sum(w * const * i_minus)
 
     return -alpha * 0.5 * (Iplus + Iminus)
 
@@ -252,9 +235,9 @@ if __name__ == "__main__":
     n = int(alpha * d)
     n_test = 100000
     w = sample_weights(d)
-    tau = 1
-    lam = 0.01
-    epsilon = 1.0
+    tau = 0.1
+    lam = 1
+    epsilon = 0.8
     logging.basicConfig(level=logging.INFO)
 
     # alpha=1.0, epsilon=0.0, lambda=1e-05, tau=2, d=1000, gen_error=nan
@@ -294,44 +277,39 @@ if __name__ == "__main__":
     # print("min", min)
 
 
-    #     INFO:root:m: 6195.725368342226, q: 48023359.030919306, sigma: 78.03929347491682
-    # INFO:root:m_hat: 79.39238938543217, q_hat: 67.81788255621359, sigma_hat: 2.0449706219246547e-08
-    #     INFO:root:m: 7415.649276665832, q: 58407821.82897628, sigma: 94.5098233687292
-    # INFO:root:m_hat: 78.22290579440369, q_hat: 68.10795191270668, sigma_hat: -0.0
-    m = 7415.649276665832
-    q = 58407821.82897628
-    sigma = 94.5098233687292
-    m_hat = 78.22290579440369
-    q_hat = 68.10795191270668
-    sigma_hat = -0.0
-    sigma_hat = sigma_hat_func(m,q,sigma,1,alpha,epsilon,tau,lam,10)
+    # INFO:root:m: 1064.6272005520711, q: 1147638.4814880975, sigma: 13.409680485796514
+    # INFO:root:m_hat: 79.39244361550637, q_hat: 54.10770407302894, sigma_hat: 0.06230981214041529
+    # m = 1064.6272005520711
+    # q = 1147638.4814880975
+    # sigma = 13.409680485796514
+    # sigma_hat = -0.0
+    # sigma_hat = sigma_hat_func(m,q,sigma,1,alpha,epsilon,tau,lam,10)
 
-    print("sigma_hat", sigma_hat)
+    # print("sigma_hat", sigma_hat)
 
-    def integrand(xi, y, eps):
-        z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
+    # def integrand(xi, y, eps):
+    #     z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
 
-        w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,y,q,eps,w)
+    #     w = np.sqrt(q) * xi
+    #     proximal = proximal_logistic_root_scalar(sigma,y,q,eps,w)
 
-        derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,q,eps))
+    #     derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,q,eps))
 
-        derivative_f_out =  1/sigma * (derivative_proximal -1)       
+    #     derivative_f_out =  1/sigma * (derivative_proximal -1)       
 
-        return z_0 * ( derivative_f_out ) * gaussian(xi)
+    #     return z_0 * ( derivative_f_out ) * gaussian(xi)
 
     
     
     # y = 1
     # print("y", y)
     
-    # for xi in np.linspace(0.9,1.1,100):
-    #     print("xi", xi)
-    #     for epsilon in [1.0]:
+    # for xi in np.linspace(-2,2,100):
+    #     for epsilon in [0.75]:
     #         # print("epsilon", epsilon)            
     #         # print("integrand", integrand(xi,y,epsilon))
     #         z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (1 - m**2/q))))
-    #         print("z_0", z_0)
+    #         # print("z_0", z_0)
     #         # print("gaussian xi", gaussian(xi))
     #         w = np.sqrt(q) * xi
     #         proximal = proximal_logistic_root_scalar(sigma,y,q,epsilon,w)
@@ -339,7 +317,9 @@ if __name__ == "__main__":
     #         derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,q,epsilon))
 
     #         derivative_f_out =  1/sigma * (derivative_proximal -1) 
-    #         print("derivative_f_out", derivative_f_out)
+    #         if derivative_f_out != 0:
+    #             print("derivative f_out non zero at xi", xi)
+    #             print("derivative_f_out", derivative_f_out)
 
 
     # for epsilon in [0.69,0.7]:
