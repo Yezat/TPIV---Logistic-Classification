@@ -127,18 +127,11 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         derivative_f_out = get_derivative_f_out(xi,y)
 
-        return z_0 * ( derivative_f_out ) 
+        return z_0 * ( derivative_f_out ) * gaussian(xi)
 
-    x, w = np.polynomial.hermite.hermgauss(100)
-    mu, sigma = 0,1
-    const = np.pi**-0.5
-    y = 2.0**0.5*sigma*x + mu
 
-    i_plus = np.array([integrand(xi,1) for xi in y])
-    i_minus = np.array([integrand(xi,-1) for xi in y])
-
-    Iplus = np.sum(w * const * i_plus)
-    Iminus = np.sum(w * const * i_minus)
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
 
     return -alpha * 0.5 * (Iplus + Iminus)
 

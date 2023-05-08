@@ -163,7 +163,7 @@ class DatabaseHandler:
                     int_lims REAL,
                     sigma_hat REAL,
                     q_hat REAL,
-                    m_hat REAL,
+                    m_hat REAL
                 )
             ''')
             self.connection.commit()
