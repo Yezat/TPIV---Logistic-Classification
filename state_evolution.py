@@ -130,8 +130,33 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         return z_0 * ( derivative_f_out ) * gaussian(xi)
 
 
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    def reduce_limit(y):
+        step = 1
+        left_lim = -int_lims
+        while get_derivative_f_out(left_lim+step,y) == 0 and np.abs(left_lim - y) > 1.5*step:
+            left_lim += step
+            if np.abs(left_lim) <= 2:
+                step = 0.1
+
+        step = 1
+        right_lim = int_lims
+        while get_derivative_f_out(right_lim-step,y) == 0 and np.abs(y-right_lim) > 1.5*step:
+            right_lim -= step 
+            if np.abs(right_lim) <= 2:
+                step = 0.1
+        return left_lim, right_lim
+
+    left_lim_plus, right_lim_plus = reduce_limit(1)
+    left_lim_minus, right_lim_minus = reduce_limit(-1)
+    
+    # print the limits
+    # print("left_lim_plus: ", left_lim_plus)
+    # print("right_lim_plus: ", right_lim_plus)
+    # print("left_lim_minus: ", left_lim_minus)
+    # print("right_lim_minus: ", right_lim_minus)
+
+    Iplus = quad(lambda xi: integrand(xi,1),left_lim_plus,right_lim_plus,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),left_lim_minus,right_lim_minus,limit=500)[0]
 
     return -alpha * 0.5 * (Iplus + Iminus)
 
