@@ -1,11 +1,11 @@
 from gradient_descent import pure_training_loss
 import theoretical
 from state_evolution import training_error_logistic
-from util import error
+from util import error, adversarial_error
 import numpy as np
 from _version import __version__
 from typing import Tuple
-from util import generalization_error
+from util import generalization_error, adversarial_generalization_error
 import datetime
 import uuid
 from data import *
@@ -41,7 +41,7 @@ class ExperimentInformation:
 class CalibrationResults:
     def __init__(self, ps: np.ndarray, calibrations: np.ndarray, dp: float):
         self.ps: np.ndarray = ps
-        self.calibrations: np.ndarray = calibrations        
+        self.calibrations: np.ndarray = calibrations
         self.dp: float = dp # if this is None, we know we computed the calibration using the analytical expression
     # make this object json serializable
     def to_json(self):
@@ -58,6 +58,7 @@ class StateEvolutionExperimentInformation:
         self.experiment_id: str = experiment_id
         rho_w_star = 1.0
         self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
+        self.adversarial_generalization_error: float = adversarial_generalization_error(rho_w_star, m, q, tau, epsilon)
         self.training_loss: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -68,15 +69,15 @@ class StateEvolutionExperimentInformation:
         self.initial_condition: Tuple[float, float, float] = initial_condition
         self.rho_w_star: float = rho_w_star
         self.alpha: float = alpha
-        self.epsilon: float = epsilon 
+        self.epsilon: float = epsilon
         self.tau: float = tau
-        self.lam: float = lam 
+        self.lam: float = lam
         self.calibrations: CalibrationResults = calibrations
-        self.abs_tol: float = abs_tol 
+        self.abs_tol: float = abs_tol
         self.min_iter: int = min_iter
         self.max_iter: int = max_iter
         self.blend_fpe: float = blend_fpe
-        self.int_lims: float = int_lims    
+        self.int_lims: float = int_lims
         self.sigma_hat : float = sigma_hat
         self.q_hat : float = q_hat
         self.m_hat : float = m_hat
@@ -93,15 +94,18 @@ class ERMExperimentInformation:
         self.cosb: float = self.m / np.sqrt(self.Q*self.rho)
         self.epsilon: float = epsilon
         self.lam: float = lam
-        
+
         n: int = Xtrain.shape[0]
         yhat_gd = theoretical.predict_erm(Xtest,w_gd)
+        # yhat_gd = np.sign(Xtest @ w_gd)
         self.generalization_error_erm: float = error(ytest,yhat_gd)
+        self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon)
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
+        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error(self.rho,self.m,self.Q, tau, epsilon)
         yhat_gd_train = theoretical.predict_erm(Xtrain,w_gd)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
-        self.training_error: float = error(y,yhat_gd_train)        
+        self.training_error: float = error(y,yhat_gd_train)
         self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,lam,epsilon)
         self.d: int = d
         self.tau: float = tau
@@ -143,6 +147,7 @@ class DatabaseHandler:
                     duration REAL,
                     experiment_id TEXT,
                     generalization_error REAL,
+                    adversarial_generalization_error REAL,
                     training_loss REAL,
                     date TEXT,
                     sigma REAL,
@@ -210,6 +215,8 @@ class DatabaseHandler:
                     lam REAL,
                     generalization_error_erm REAL,
                     generalization_error_overlap REAL,
+                    adversarial_generalization_error_erm REAL,
+                    adversarial_generalization_error_overlap REAL,
                     date TEXT,
                     chosen_minimizer TEXT,
                     training_error REAL,
@@ -253,12 +260,13 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
             experiment_information.experiment_id,
             experiment_information.generalization_error,
+            experiment_information.adversarial_generalization_error,
             experiment_information.training_loss,
             experiment_information.date,
             experiment_information.sigma,
@@ -291,7 +299,7 @@ class DatabaseHandler:
         # delete incomplete experiments from state evolution table
         for experiment_id in incomplete_experiment_ids:
             self.cursor.execute(f"DELETE FROM {STATE_EVOLUTION_TABLE} WHERE experiment_id='{experiment_id}'")
-        
+
         # delete incomplete experiments from erm table
         for experiment_id in incomplete_experiment_ids:
             self.cursor.execute(f"DELETE FROM {ERM_TABLE} WHERE experiment_id='{experiment_id}'")
@@ -303,7 +311,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -317,6 +325,8 @@ class DatabaseHandler:
             float(experiment_information.lam),
             experiment_information.generalization_error_erm,
             experiment_information.generalization_error_overlap,
+            experiment_information.adversarial_generalization_error_erm,
+            experiment_information.adversarial_generalization_error_overlap,
             experiment_information.date,
             experiment_information.chosen_minimizer,
             experiment_information.training_error,
@@ -335,7 +345,7 @@ class DatabaseHandler:
 
     def get_state_evolutions(self):
         return pd.read_sql_query(f"SELECT * FROM {STATE_EVOLUTION_TABLE}", self.connection)
-    
+
     def get_erms(self):
         return pd.read_sql_query(f"SELECT * FROM {ERM_TABLE}", self.connection)
 
@@ -387,4 +397,4 @@ if __name__ == "__main__":
         # set experiment to completed
         # dbHandler.complete_experiment(id,100)
         dbHandler.delete_incomplete_experiments()
-    
+

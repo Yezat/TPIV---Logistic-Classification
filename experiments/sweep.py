@@ -1,4 +1,4 @@
-# usage: mpiexec -n 5 python sweep.py
+# usage: mpiexec -n 5 python sweep.py experiment.json
 
 from mpi4py import MPI
 from tqdm import tqdm
@@ -76,13 +76,14 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp):
 
     return erm_information
 
-def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps):
+def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps, log = True):
     """
     Starts the state evolution and saves the results to the database
     """
-    logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
+    if log:
+        logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
-    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logger,rho_w_star=1,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
+    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logger,rho_w_star=1,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
 
     end = time.time()
     experiment_duration = end-start
@@ -96,7 +97,8 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps):
 
     st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat)
 
-    logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
+    if log:
+        logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
 
     return st_exp_info
 

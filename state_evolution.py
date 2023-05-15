@@ -216,6 +216,7 @@ def fixed_point_finder(
     blend_fpe: float = BLEND_FPE,
     int_lims: float = INT_LIMS,    
     initial_condition: Tuple[float, float, float] = INITIAL_CONDITION,
+    log = True,
 ):
     m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
     err = 1.0
@@ -224,7 +225,7 @@ def fixed_point_finder(
     q_hat = 0
     sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 10 == 0:
+        if iter_nb % 10 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")

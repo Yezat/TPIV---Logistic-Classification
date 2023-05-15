@@ -29,15 +29,6 @@ def get_logistic_regressor(X, y, lam):
         clf =  LogisticRegression(penalty='l2',solver='lbfgs',fit_intercept=False, max_iter=max_iter, tol=tol, verbose=0,C=1./lam).fit(X,y)
     return clf
 
-def predict_on_logistic_regressor(clf, X):
-    """
-    Uses a Logistic Regression object from sklearn.linear_model.LogisticRegression to predict labels for test data X
-
-    parameters:
-    clf: LogisticRegression object from sklearn.linear_model.LogisticRegression
-    X: test data (n,d)
-    """
-    return clf.predict(X)
 
 def predict_proba_on_logistic_regressor(clf, X):
     """
@@ -66,13 +57,13 @@ if __name__ == "__main__":
 
     f_erm = predict_proba_on_logistic_regressor(clf,Xtest)
 
-    y_log = predict_on_logistic_regressor(clf,Xtest)
-    print("Accuracy: ", np.mean(y_log == ytest))
-    import theoretical
-    # get weithgs from clf and reshape them
-    w_gd = clf.coef_.reshape(-1)
-    yhat_gd = theoretical.predict_erm(Xtest,w_gd)
-    print("Accuracy: ", np.mean(yhat_gd == ytest))
+    # # y_log = predict_on_logistic_regressor(clf,Xtest)
+    # print("Accuracy: ", np.mean(y_log == ytest))
+    # import theoretical
+    # # get weithgs from clf and reshape them
+    # w_gd = clf.coef_.reshape(-1)
+    # yhat_gd = theoretical.predict_erm(Xtest,w_gd)
+    # print("Accuracy: ", np.mean(yhat_gd == ytest))
 
 
     # fig,ax = plt.subplots()
