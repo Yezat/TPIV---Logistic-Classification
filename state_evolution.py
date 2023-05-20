@@ -162,7 +162,7 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
 
 
-def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
+def training_loss_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
     Q = q
     def integrand(xi,y):
         w = np.sqrt(q) * xi
@@ -178,6 +178,55 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
     I1 = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
     I2 = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
     return (I1 + I2)/2 + (lam/(2*alpha)) * q
+
+def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float, int_lims: float = 20.0):
+    Q = q
+    def integrand(xi, y):
+        e = m * m / (rho_w_star * q)
+        w_0 = np.sqrt(rho_w_star*e) * xi
+        V_0 = rho_w_star * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+
+        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+        w = np.sqrt(q) * xi
+
+        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+
+        activation = np.sign(proximal)
+
+        activation2 = np.sign( sigmoid( proximal ) - 0.5)
+        
+
+        return z_0* gaussian(xi) * (activation != y)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    return (Iplus + Iminus) * 0.5
+
+def adversarial_generalization_error_logistic(m: float, q: float, rho_w_star: float, tau: float, epsilon: float, int_lims: float = 20.0):
+    Q = q
+    def integrand(xi, y):
+        e = m * m / (rho_w_star * q)
+        w_0 = np.sqrt(rho_w_star*e) * xi
+        V_0 = rho_w_star * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+        w = np.sqrt(q) * xi
+
+        
+
+        activation = np.sign(w - y*epsilon * np.sqrt(q))
+        # 
+        
+
+        return z_0 * gaussian(xi) * (activation != y)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    return (Iplus + Iminus) * 0.5
+
 
 
 
@@ -359,7 +408,7 @@ if __name__ == "__main__":
     print("q: ", q)
     print("sigma: ", sigma)
     print("Generalization error", generalization_error(1,m,q,tau))
-    print("Training error",training_error_logistic(m,q,sigma,1,n/d,tau,epsilon, lam) )
+    print("Training error",training_loss_logistic(m,q,sigma,1,n/d,tau,epsilon, lam) )
     print("time", time.time() - start)
 
     

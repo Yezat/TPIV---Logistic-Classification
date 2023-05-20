@@ -1,11 +1,11 @@
 from gradient_descent import pure_training_loss
 import theoretical
-from state_evolution import training_error_logistic
+from state_evolution import training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic
 from util import error, adversarial_error
 import numpy as np
 from _version import __version__
 from typing import Tuple
-from util import generalization_error, adversarial_generalization_error
+from util import generalization_error
 import datetime
 import uuid
 from data import *
@@ -58,8 +58,9 @@ class StateEvolutionExperimentInformation:
         self.experiment_id: str = experiment_id
         rho_w_star = 1.0
         self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error(rho_w_star, m, q, tau, epsilon)
-        self.training_loss: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
+        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho_w_star,tau,epsilon)
+        self.training_loss: float = training_loss_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
+        self.training_error: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
@@ -101,7 +102,7 @@ class ERMExperimentInformation:
         self.generalization_error_erm: float = error(ytest,yhat_gd)
         self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon)
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
-        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error(self.rho,self.m,self.Q, tau, epsilon)
+        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,tau,epsilon)
         yhat_gd_train = theoretical.predict_erm(Xtrain,w_gd)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
@@ -149,6 +150,7 @@ class DatabaseHandler:
                     generalization_error REAL,
                     adversarial_generalization_error REAL,
                     training_loss REAL,
+                    training_error REAL,
                     date TEXT,
                     sigma REAL,
                     q REAL,
@@ -260,7 +262,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -268,6 +270,7 @@ class DatabaseHandler:
             experiment_information.generalization_error,
             experiment_information.adversarial_generalization_error,
             experiment_information.training_loss,
+            experiment_information.training_error,
             experiment_information.date,
             experiment_information.sigma,
             experiment_information.q,

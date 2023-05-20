@@ -9,7 +9,7 @@ def error(y, yhat):
 
 def adversarial_error(y, Xtest, w_gd, epsilon):
     d = Xtest.shape[1]
-    y_hat = np.sign( sigmoid( Xtest@w_gd - y*epsilon * np.sqrt( np.linalg.norm(w_gd,2) / d )  ) - 0.5)
+    y_hat = np.sign( sigmoid( Xtest@w_gd - y*epsilon * np.sqrt( w_gd@w_gd /d)  ) - 0.5)
 
     y_hat_prime = np.sign(-Xtest @ w_gd + y * epsilon * np.sqrt(np.linalg.norm(w_gd, 2) / d))
 
@@ -34,14 +34,6 @@ def generalization_error(rho_w_star,m,q, tau):
     Returns the generalization error in terms of the overlaps
     """
     return np.arccos(m / np.sqrt( (rho_w_star + tau**2 ) * q ) )/np.pi
-
-def adversarial_generalization_error(rho_w_star,m,q, tau, epsilon):
-    """
-    Returns the generalization error in terms of the overlaps
-    """
-    # interesting_expecation = sample_interesting_stuff(tau)
-    interesting_expecation = 0.8
-    return np.arccos( (m  - interesting_expecation * epsilon * np.sqrt(q) ) / np.sqrt( (rho_w_star + tau**2 ) * q *(1 - 2*interesting_expecation*epsilon*np.sqrt(q) + epsilon **2)  ))/np.pi
 
 def sample_interesting_stuff(tau):
     # let's say we stumble upon computing the following expecation value:

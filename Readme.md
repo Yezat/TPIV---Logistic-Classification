@@ -1,25 +1,17 @@
 This is a repository containing code that was written during a semester project in the Information, Learning and Physics, IdePHICS Lab at EPFL.
 
 It contains code for computing the calibration and optimal l2-regularization strengths for a logit classification model on probit iid gaussian data.
-The optimization of the ERM problem can be done using gradient descent and scipy minimize L-BFGS-B
+For this, I adapted code from sklearn to make use and adapt numerical tricks to the adversarial setting.
 
 # Usage
 
-## Calibration 
+Essentially, all we can do is run sweeps. The recommended way to do this is to define an experiment in playground.ipynb (bottom of the file).
+Then you can run a sweep using mpi as described at the top of the sweep.py file in the experiments folder, or alternatively run it on a cluster using the run.sh file.
 
-The file runner.py in the experiments folder shows how to run an experiment on various parameters.
-The results of the experiments are stored in a json file and can be plotted using plot_information file.
+All plotting can be done within the playground.ipynb file.
 
-
-## Choice of optimal l2-regularization strength
-
-The optimal_choice_runner.py file can be used to optimize the l2-regularization strength for a given set of parameters.
-The data is again output as a json file and plots can be generated using the plot_optimal_choices.py file.
-
-### Calibration, test loss and test error at optimal l2-regularization strength
-
-To obtain the calibration, test loss and test error at optimal l2-regularization strengths, it is recommended to use the script calibration_test_loss_at_optimal_lambdas.py
-Again, the resulting json-file containing the data can be plotted using plot_calibration_test_loss_at_optimal_lambdas.py
-
+## Optimal l2-regularization strength and optimal epsilon in terms of calibration
+The file optimal_choice can be used to compute the optimal l2-regularization strength in terms of generalization error.
+The file optimal_epsilon can be used to compute the optimal epsilon in terms of calibration.
 
 "# TPIV---Logistic-Classification" 
