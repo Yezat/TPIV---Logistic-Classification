@@ -247,30 +247,30 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         concentration_point = find_concentration_point(-1)
         Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
 
-        concentration_point = find_concentration_point(1)
-        Iplus = integrand(concentration_point,1)
-        Iplus_quad = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
-        print("concentration point: ", concentration_point)
-        print("Iplus: ", Iplus)        
-        print("Iplus_quad: ", Iplus_quad)
+        # concentration_point = find_concentration_point(1)
+        # Iplus = integrand(concentration_point,1)
+        # Iplus_quad = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+        # print("concentration point: ", concentration_point)
+        # print("Iplus: ", Iplus)        
+        # print("Iplus_quad: ", Iplus_quad)
 
-        for lim in np.linspace(0.01,1,10):
-            Iplus = quad(lambda xi: integrand(xi,1),concentration_point-lim,concentration_point+lim,limit=500)[0]
-            print("Iplus: ", Iplus, " for lim = ", lim)
+        # for lim in np.linspace(0.01,1,10):
+        #     Iplus = quad(lambda xi: integrand(xi,1),concentration_point-lim,concentration_point+lim,limit=500)[0]
+        #     print("Iplus: ", Iplus, " for lim = ", lim)
         
-        concentration_point = find_concentration_point(-1)
-        Iminus = integrand(concentration_point,-1)
-        Iminus_quad = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
-        print("concentration point: ", concentration_point)
-        print("Iminus: ", Iminus)
+        # concentration_point = find_concentration_point(-1)
+        # Iminus = integrand(concentration_point,-1)
+        # Iminus_quad = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+        # print("concentration point: ", concentration_point)
+        # print("Iminus: ", Iminus)
         
-        print("Iminus_quad: ", Iminus_quad)
+        # print("Iminus_quad: ", Iminus_quad)
 
-        for lim in np.linspace(0.01,1,10):
-            Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-lim,concentration_point+lim,limit=500)[0]
-            print("Iminus: ", Iminus, " for lim = ", lim)
+        # for lim in np.linspace(0.01,1,10):
+        #     Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-lim,concentration_point+lim,limit=500)[0]
+        #     print("Iminus: ", Iminus, " for lim = ", lim)
 
-        raise Exception("Iplus + Iminus < 1e-15")
+        # raise Exception("Iplus + Iminus < 1e-15")
 
     """
     Full int_lims
