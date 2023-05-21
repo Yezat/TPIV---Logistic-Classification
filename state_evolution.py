@@ -114,6 +114,9 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
 def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0):
     Q = q
 
+    """
+    Original derivative of f_out (needs a minus in front of alpha * Iplus...)
+    """
     def get_derivative_f_out(xi,y):
         w = np.sqrt(q) * xi
         proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
@@ -122,13 +125,96 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
         derivative_f_out =  1/sigma * (derivative_proximal -1)       
         return derivative_f_out
+    
+    """
+    Alternative derivative of f_out
+    """
+    def alternative_derivative_f_out(xi,y):
+        w = np.sqrt(q) * xi
+        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+
+        second_derivative = second_derivative_loss(y,proximal,Q,epsilon)
+
+        return second_derivative / ( 1 + sigma * second_derivative)
+
     def integrand(xi, y):
         z_0 = erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
 
-        derivative_f_out = get_derivative_f_out(xi,y)
+        # derivative_f_out = get_derivative_f_out(xi,y)
+
+        derivative_f_out = alternative_derivative_f_out(xi,y)
 
         return z_0 * ( derivative_f_out ) * gaussian(xi)
+    
+    # Idea:
+    # I suspect the second_derivative_loss to concentrate around the proximal = y*epsilon*sqrt(Q) 
+    # So we now around what value as a function of the proximal the integrand will concentrate to
+    # The proximal depends on xi as a function of w = xi * sqrt(q)
+    # hence we can find the value of xi where the proximal is equal to y*epsilon*sqrt(Q)
+    # this should be doable by root finding
+    # it has to be seen whether we need to dynamically reduce the limits around this point as long as the integral is zero...
 
+    def find_concentration_point(y):
+        try:
+            # find the point where the proximal is equal to y*epsilon*sqrt(Q) 
+            concentration_point = root_scalar(lambda xi: proximal_logistic_root_scalar(sigma,y,Q,epsilon,np.sqrt(q)*xi) - y*epsilon*np.sqrt(Q),bracket=[-1,1],method='brentq')
+                
+            return concentration_point.root
+        except:
+            # if the root finding fails, just return None
+            return None
+    
+    """
+    Reduce limit around concentration point (does not work in large alpha currently...)
+    """
+
+    # def reduce_limit(y):
+    #     concentration_point = find_concentration_point(y)
+    #     # print the concentration point
+    #     # print("concentration point: ", concentration_point, " for y = ", y)
+    #     if concentration_point is None:
+    #         return quad(lambda xi: integrand(xi,y),-int_lims,int_lims,limit=500)[0]
+
+    #     # print the integrand at the concentration point
+
+    #     min_integral = integrand(concentration_point,y)
+    #     # print("integrand at concentration point: ", min_integral, " for y = ", y)
+
+    #     # if min_integral < lam:
+    #     #     return quad(lambda xi: integrand(xi,y),-int_lims,int_lims,limit=500)[0]
+
+    #     lim = int_lims
+
+    #     # compute the integral at the concentration point
+    #     I = quad(lambda xi: integrand(xi,y),concentration_point-lim,concentration_point+lim,limit=500)[0]
+    #     # print the integral
+    #     # print("integral at concentration point: ", I, " for y = ", y)
+    #     # if the integral is zero, reduce the limits
+                
+    #     max_iter = 100
+    #     c = 0
+    #     while I < min_integral and c < max_iter:
+    #         lim *= 0.5
+    #         c += 1
+    #         I = quad(lambda xi: integrand(xi,y),concentration_point-lim,concentration_point+lim,limit=500)[0]
+    #         # print the integral with very high precision
+    #         # print("integral at concentration point: ", I, " for y = ", y, " with lim = ", lim, " and min_integral = ", min_integral, " concentration point: ", concentration_point)
+            
+    #     if c == max_iter and I < min_integral:
+    #         I = min_integral
+            
+    #     # print the final integral
+    #     # print("final integral at concentration point: ", I, " for y = ", y, " with lim = ", lim, " and min_integral = ", min_integral, " concentration point: ", concentration_point)
+
+    #     # print the limits
+    #     # print("limits: ", concentration_point-lim, concentration_point+lim, " for y = ", y)
+    #     return I
+
+
+    
+    """
+    Reduce limit from earlier version
+    """
 
     def reduce_limit(y):
         step = 1
@@ -148,17 +234,51 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
     left_lim_plus, right_lim_plus = reduce_limit(1)
     left_lim_minus, right_lim_minus = reduce_limit(-1)
-    
-    # print the limits
-    # print("left_lim_plus: ", left_lim_plus)
-    # print("right_lim_plus: ", right_lim_plus)
-    # print("left_lim_minus: ", left_lim_minus)
-    # print("right_lim_minus: ", right_lim_minus)
 
     Iplus = quad(lambda xi: integrand(xi,1),left_lim_plus,right_lim_plus,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),left_lim_minus,right_lim_minus,limit=500)[0]
 
-    return -alpha * 0.5 * (Iplus + Iminus)
+    """
+    Optional reduce limit improvement by using the concentration point
+    """
+    if Iplus + Iminus < 1e-15:
+        concentration_point = find_concentration_point(1)
+        Iplus = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+        concentration_point = find_concentration_point(-1)
+        Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+
+        concentration_point = find_concentration_point(1)
+        Iplus = integrand(concentration_point,1)
+        Iplus_quad = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+        print("concentration point: ", concentration_point)
+        print("Iplus: ", Iplus)        
+        print("Iplus_quad: ", Iplus_quad)
+
+        for lim in np.linspace(0.01,1,10):
+            Iplus = quad(lambda xi: integrand(xi,1),concentration_point-lim,concentration_point+lim,limit=500)[0]
+            print("Iplus: ", Iplus, " for lim = ", lim)
+        
+        concentration_point = find_concentration_point(-1)
+        Iminus = integrand(concentration_point,-1)
+        Iminus_quad = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+        print("concentration point: ", concentration_point)
+        print("Iminus: ", Iminus)
+        
+        print("Iminus_quad: ", Iminus_quad)
+
+        for lim in np.linspace(0.01,1,10):
+            Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-lim,concentration_point+lim,limit=500)[0]
+            print("Iminus: ", Iminus, " for lim = ", lim)
+
+        raise Exception("Iplus + Iminus < 1e-15")
+
+    """
+    Full int_lims
+    """
+    # Iplus = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
+    # Iminus = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
+
+    return alpha * 0.5 * (Iplus + Iminus)
 
 
 
@@ -193,10 +313,7 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
 
         proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
 
-        activation = np.sign(proximal)
-
-        activation2 = np.sign( sigmoid( proximal ) - 0.5)
-        
+        activation = np.sign(proximal)       
 
         return z_0* gaussian(xi) * (activation != y)
 
@@ -274,7 +391,7 @@ def fixed_point_finder(
     q_hat = 0
     sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 10 == 0 and log:
+        if iter_nb % 1 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
@@ -299,14 +416,17 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    alpha = 100
+    alpha = 1000
     n = int(alpha * d)
     n_test = 100000
     w = sample_weights(d)
     tau = 0.1
-    lam = 1
-    epsilon = 0.8
+    lam = 0.01
+    epsilon = 1.0 # or 0.5 don't work...
     logging.basicConfig(level=logging.INFO)
+
+    # TODO: this should work...
+    # 0.41142029787528417, epsilon=0.75, lambda=0.01, tau = 0.1
 
     # alpha=1.0, epsilon=0.0, lambda=1e-05, tau=2, d=1000, gen_error=nan
     
