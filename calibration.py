@@ -9,17 +9,23 @@ from scipy.special import logit
 
 
 def compute_experimental_teacher_calibration(p, w, werm, Xtest, sigma):
-    # size of bins where we put the probas
-    n, d = Xtest.shape
-    dp = 0.025
-    sigmoid = np.vectorize(lambda x : 1. / (1. + np.exp( -x )))
-    Ypred = sigmoid(Xtest @ werm)
+    try:
 
-    index = [i for i in range(n) if p - dp <= Ypred[i] <= p + dp]
-    def probit(lf, sigma):
-        return 0.5 * erfc(- lf / np.sqrt(2 * sigma**2))
+        
+        # size of bins where we put the probas
+        n, d = Xtest.shape
+        dp = 0.025
+        sigmoid = np.vectorize(lambda x : 1. / (1. + np.exp( -x )))
+        Ypred = sigmoid(Xtest @ werm)
 
-    return p - np.mean([probit(w @ Xtest[i], sigma) for i in index])
+        index = [i for i in range(n) if p - dp <= Ypred[i] <= p + dp]
+        def probit(lf, sigma):
+            return 0.5 * erfc(- lf / np.sqrt(2 * sigma**2))
+
+        return p - np.mean([probit(w @ Xtest[i], sigma) for i in index])
+    except Exception as e:
+        print(e)
+        return np.nan
 
 
 

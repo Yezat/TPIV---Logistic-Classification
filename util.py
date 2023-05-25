@@ -9,9 +9,9 @@ def error(y, yhat):
 
 def adversarial_error(y, Xtest, w_gd, epsilon):
     d = Xtest.shape[1]
-    y_hat = np.sign( sigmoid( Xtest@w_gd - y*epsilon * np.sqrt( w_gd@w_gd /d)  ) - 0.5)
+    y_hat = np.sign( sigmoid( Xtest@w_gd - y*np.abs(epsilon) * np.sqrt( w_gd@w_gd /d)  ) - 0.5)
 
-    y_hat_prime = np.sign(-Xtest @ w_gd + y * epsilon * np.sqrt(np.linalg.norm(w_gd, 2) / d))
+    # y_hat_prime = np.sign(-Xtest @ w_gd + y * epsilon * np.sqrt(np.linalg.norm(w_gd, 2) / d))
 
     # assert np.all(y_hat == y_hat_prime)
 

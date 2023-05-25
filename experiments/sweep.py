@@ -15,6 +15,7 @@ from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE,
 from gradient_descent import sklearn_optimize
 from calibration import calc_calibration_analytical,compute_experimental_teacher_calibration
 
+
 class Task:
     def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp):
         self.id = id
@@ -144,8 +145,6 @@ def worker(logger):
     logger.info(f"Worker exiting - my rank is {rank}")
 
 
-
-
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
@@ -178,7 +177,6 @@ def master(num_processes, logger, filename):
     experiment = get_default_experiment()
 
 
-
     # load the experiment parameters from the json file
     try:
         with open(filename) as f:
@@ -207,15 +205,34 @@ def master(num_processes, logger, filename):
     idx = 1
     for alpha in experiment.alphas:
         for epsilon in experiment.epsilons:
-            for lam in experiment.lambdas:
-                for tau in experiment.taus:
+
+            for tau in experiment.taus:
+                
+                # if method is "optimal_lambda":
+                # compute first the optimal lambda
+                if "optimal_lambda" in experiment.erm_methods:
+                    import optimal_choice
+                    logger.info(f"Computing optimal lambda for {alpha}, {epsilon}, {tau}")
+                    lam = optimal_choice.get_optimal_lambda(alpha, epsilon, tau, logger)
 
                     for _ in range(experiment.state_evolution_repetitions):
                         tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None))
 
                     for _ in range(experiment.erm_repetitions):
-                        for method in experiment.erm_methods:
-                            tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp))
+                        method = "sklearn"
+                        tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp))
+                else:
+
+                # if method is not "optimal_lambda":
+                    for lam in experiment.lambdas:
+                    
+
+                        for _ in range(experiment.state_evolution_repetitions):
+                            tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None))
+
+                        for _ in range(experiment.erm_repetitions):
+                            for method in experiment.erm_methods:
+                                tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp))
 
     # Initialize the progress bar
     pbar = tqdm(total=len(tasks))

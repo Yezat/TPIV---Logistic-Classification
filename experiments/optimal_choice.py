@@ -36,6 +36,38 @@ def minimizer_function(lam,alpha,epsilon,tau, logger):
 
     return info.generalization_error
 
+def get_optimal_lambda(alpha, epsilon, tau, logger):
+
+    knwon_lambdas = {}
+    with open("optimal_lambdas.csv","r") as f:
+        lines = f.readlines()
+        for line in lines[1:]:
+            # remove the newline character
+            line = line[:-1]
+            alpha_2, epsilon_2, tau_2, lam_2 = line.split(",")
+            knwon_lambdas[(alpha_2,epsilon_2,tau_2)] = lam_2
+
+
+    query = (str(float(alpha)),str(float(epsilon)),str(float(tau)))
+    logger.info(f"Querying optimal lambda in alpha {alpha} epsilon {epsilon} tau {tau}")
+    if query in knwon_lambdas:
+        logger.info(f"Skipping alpha {alpha} epsilon {epsilon} tau {tau} as we already know the optimal lambda {knwon_lambdas[query]}")
+        return float(knwon_lambdas[query])
+
+    lam = minimize_lambda(alpha,epsilon,tau,1e-4,logger)
+    logger.info(f"Optimal lambda in alpha {alpha} epsilon {epsilon} tau {tau} is {lam}")
+
+    filename = "optimal_lambdas.csv"
+    # if the file does not exist, add a header
+    if not os.path.isfile(filename):
+        with open(filename,"w") as f:
+            f.write("alpha,epsilon,tau,lambda\n")
+
+    # append the result to the file
+    with open(filename,"a") as f:
+        f.write(f"{alpha},{epsilon},{tau},{lam}\n")
+    return lam
+
 
 
 if __name__ == "__main__":
@@ -60,16 +92,5 @@ if __name__ == "__main__":
         tau = 1
     
     # compute the optimal lambda
-    lam = minimize_lambda(alpha,epsilon,tau,1e-4,logger)
-    logger.info(f"Optimal lambda in alpha {alpha} epsilon {epsilon} tau {tau} is {lam}")
-
-    filename = "optimal_lambdas.csv"
-    # if the file does not exist, add a header
-    if not os.path.isfile(filename):
-        with open(filename,"w") as f:
-            f.write("alpha,epsilon,tau,lambda\n")
-
-    # append the result to the file
-    with open(filename,"a") as f:
-        f.write(f"{alpha},{epsilon},{tau},{lam}\n")
+    get_optimal_lambda(alpha,epsilon,tau,logger)    
 

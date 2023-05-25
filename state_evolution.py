@@ -58,7 +58,7 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
     return np.exp(-.5 * (x-mean)**2 / var)/np.sqrt(2*np.pi*var)
 
-def second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
+def  second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
     return y**2 / (2 * np.cosh(0.5*y*z - 0.5*epsilon * np.sqrt(Q)))**2
 
 def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
@@ -243,9 +243,11 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
     """
     if Iplus + Iminus < 1e-15:
         concentration_point = find_concentration_point(1)
-        Iplus = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+        if concentration_point is not None:
+            Iplus = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
         concentration_point = find_concentration_point(-1)
-        Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
+        if concentration_point is not None:
+            Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
 
         # concentration_point = find_concentration_point(1)
         # Iplus = integrand(concentration_point,1)
@@ -334,11 +336,11 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho_w_star: fl
 
         
 
-        activation = np.sign(w - y*epsilon * np.sqrt(q))
+        activation = np.sign(w - y*np.abs(epsilon) * np.sqrt(q))
         # 
         
 
-        return z_0 * gaussian(xi) * (activation != y)
+        return z_0 * gaussian(xi) * (activation != y)\
 
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
