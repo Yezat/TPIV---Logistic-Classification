@@ -13,9 +13,10 @@ import json
 import sqlite3
 import pandas as pd
 import logging
+from data_model import DataModelType
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, experiment_name: str = ""):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, dataModelType: DataModelType, experiment_name: str = ""):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -32,6 +33,7 @@ class ExperimentInformation:
         self.d: int = d
         self.erm_methods: list = erm_methods
         self.completed: bool = False
+        self.data_model_type: DataModelType = dataModelType
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
@@ -90,8 +92,13 @@ class ERMExperimentInformation:
         self.code_version: str = __version__
         self.experiment_id: str = experiment_id
         self.Q: float= w_gd@w_gd / d
-        self.rho: float = w@w /d
-        self.m: float = w_gd@w / d
+        if w is not None:
+
+            self.rho: float = w@w /d
+            self.m: float = w_gd@w / d
+        else:
+            self.rho = 1
+            self.m = 1
         self.cosb: float = self.m / np.sqrt(self.Q*self.rho)
         self.epsilon: float = epsilon
         self.lam: float = lam
@@ -195,7 +202,8 @@ class DatabaseHandler:
                 dp REAL,
                 d INTEGER,
                 erm_methods BLOB,
-                completed BOOLEAN
+                completed BOOLEAN,
+                data_model_type TEXT
             )''')
             self.connection.commit()
 
@@ -236,7 +244,7 @@ class DatabaseHandler:
     def insert_experiment(self, experiment_information: ExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
             experiment_information.experiment_name,
             experiment_information.duration,
@@ -252,8 +260,9 @@ class DatabaseHandler:
             float(experiment_information.dp),
             experiment_information.d,
             json.dumps(experiment_information.erm_methods),
-            experiment_information.completed
-        ))
+            experiment_information.completed,
+            experiment_information.data_model_type.name,
+            ))
         self.connection.commit()
 
     def complete_experiment(self, experiment_id: str, duration: float):
@@ -375,7 +384,30 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.__dict__
         if isinstance(obj,np.int32):
             return str(obj)
+        if isinstance(obj, DataModelType):
+            return obj.name
         return json.JSONEncoder.default(self, obj)
+    
+class NumpyDecoder(json.JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def decode(self, s, _w=json.decoder.WHITESPACE.match):
+        # Parse the JSON string into a Python object
+        obj = super().decode(s, _w)
+
+        # Check if the 'data_model_type' field is present in the object
+        if 'data_model_type' in obj:
+            # Get the value of 'data_model_type'
+            data_model_type_str = obj['data_model_type']
+
+            # Map the string value to the enumeration type
+            data_model_type = DataModelType[data_model_type_str]
+
+            # Replace the string value with the enumeration type
+            obj['data_model_type'] = data_model_type
+
+        return obj
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

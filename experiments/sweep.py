@@ -14,10 +14,11 @@ from experiment_information import *
 from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
 from gradient_descent import sklearn_optimize
 from calibration import calc_calibration_analytical,compute_experimental_teacher_calibration
+from data_model import *
 
 
 class Task:
-    def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp):
+    def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp, data_model_type):
         self.id = id
         self.experiment_id = experiment_id
         self.method = method
@@ -29,23 +30,40 @@ class Task:
         self.result = None
         self.ps = ps
         self.dp = dp
+        self.data_model_type: DataModelType = data_model_type
 
-def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp):
+def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, data_model):
     """
     Generate Data, run ERM and save the results to the database
     """
     logger.info(f"Starting ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method}")
     start = time.time()
 
-    # generate ground truth
-    w = sample_weights(d)
+    # # generate ground truth (now to be done by the datamodel.)
+    # w = sample_weights(d)
 
-    # generate data
-    Xtrain, y = sample_training_data(w,d,int(alpha * d),tau)
-    n_test = 100000
-    Xtest,ytest = sample_training_data(w,d,n_test,tau)
+    # # generate data
+    # Xtrain, y = sample_training_data(w,d,int(alpha * d),tau)
+    # n_test = 100000
+    # Xtest,ytest = sample_training_data(w,d,n_test,tau)
 
-    w_gd = np.empty(w.shape,dtype=w.dtype)
+    # test to see if the data_model provides teacher weights
+    # does data_model have the theta attribute and is it not none?
+    if hasattr(data_model, "theta") and data_model.theta is not None:
+        w = data_model.theta
+        rho = w@w /d
+        m = w_gd@w / d
+    else:
+        w = None
+        rho = data_model.rho
+        m = None
+    Xtrain, y, Xtest, ytest = data_model.get_data(int(alpha * d), tau)
+
+    # Log the sizes of the data
+    logger.info(f"Size of Xtrain: {Xtrain.shape}")
+    logger.info(f"Size of y: {y.shape}")
+    logger.info(f"Size of Xtest: {Xtest.shape}")
+    logger.info(f"Size of ytest: {ytest.shape}")
 
     if method == "sklearn":
         w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
@@ -53,17 +71,45 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp):
         raise Exception(f"Method {method} not implemented")
 
 
+    # Log the norm of the weights
+    logger.info(f"Norm of w_gd: {np.linalg.norm(w_gd,2)}")
+
     # let's calculate the calibration
     analytical_calibrations = []
     erm_calibrations = []
-    rho = w@w /d
-    m = w_gd@w / d
+
+
+    # Log the data types of Xtest and w_gd
+    logger.info(f"Type of Xtest: {type(Xtest)}")
+    logger.info(f"Type of w_gd: {type(w_gd)}")
+
+    # Log the numpy data types of Xtest and w_gd
+    logger.info(f"Type of Xtest: {Xtest.dtype}")
+    logger.info(f"Type of w_gd: {w_gd.dtype}")
+
+    # Log the shapes of Xtest and w_gd
+    logger.info(f"Shape of Xtest: {Xtest.shape}")
+    logger.info(f"Shape of w_gd: {w_gd.shape}")
+
+    yhat_gd = theoretical.predict_erm(Xtest,w_gd)
+
+    # Log the prediction
+    logger.info(f"Prediction: {yhat_gd}")
+
+    gen_err = error(ytest,yhat_gd)
+
+    # Log the generalizaton error
+    logger.info(f"Generalization error: {gen_err}")
+    
+    
     q_erm = w_gd@w_gd / d
 
-    for p in ps:
-        analytical_calibrations.append(calc_calibration_analytical(rho,p,m,q_erm,tau))
-
-        erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
+    if w is not None:
+        # We cannot compute the calibration if we don't know the ground truth.
+        for p in ps:
+            
+            analytical_calibrations.append(calc_calibration_analytical(rho,p,m,q_erm,tau))        
+            erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
 
     analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
     erm_calibrations_result = CalibrationResults(ps,erm_calibrations,dp)
@@ -77,14 +123,17 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp):
 
     return erm_information
 
-def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps, log = True):
+def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,data_model, log = True):
     """
     Starts the state evolution and saves the results to the database
     """
+
+    # TODO: are the correct values in data_model?
+
     if log:
         logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
-    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logger,rho_w_star=1,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
+    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
 
     end = time.time()
     experiment_duration = end-start
@@ -109,10 +158,17 @@ def process_task(task, logger):
     
     try:
 
-        if task.method == "state_evolution":
-            task.result = run_state_evolution(logger,task.experiment_id,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps)
+        if task.data_model_type == DataModelType.Gaussian:
+            data_model = GaussianDataModel()
+        elif task.data_model_type == DataModelType.FashionMNIST:
+            data_model = FashionMNISTDataModel()
         else:
-            task.result = run_erm(logger,task.experiment_id,task.method,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, task.dp)
+            raise Exception("DataModelType not implemented")
+
+        if task.method == "state_evolution":
+            task.result = run_state_evolution(logger,task.experiment_id,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, data_model)
+        else:
+            task.result = run_erm(logger,task.experiment_id,task.method,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, task.dp, data_model)
     except Exception as e:
         # log the exception
         logger.exception(e)
@@ -161,7 +217,8 @@ def get_default_experiment():
     d: int = 1000
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp,experiment_name)
+    dataModelType: DataModelType = DataModelType.Gaussian
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp,dataModelType,experiment_name)
     return experiment
 
 
@@ -180,12 +237,15 @@ def master(num_processes, logger, filename):
     # load the experiment parameters from the json file
     try:
         with open(filename) as f:
-            experiment.__dict__ = json.load(f)
+            experiment.__dict__ = json.load(f, cls=NumpyDecoder)
             # create a new experiment id
             experiment.experiment_id = str(uuid.uuid4())
             # overwrite the code version
             experiment.code_version = __version__
             experiment.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logger.info("Loaded experiment from file %s", filename)
+            # log the dataModelType
+            logger.info(f"DataModelType: {experiment.data_model_type}")
     except FileNotFoundError:
         logger.error("Could not find file %s. Using the standard elements instead", filename)
 
@@ -214,13 +274,14 @@ def master(num_processes, logger, filename):
                     import optimal_choice
                     logger.info(f"Computing optimal lambda for {alpha}, {epsilon}, {tau}")
                     lam = optimal_choice.get_optimal_lambda(alpha, epsilon, tau, logger)
+                    # TODO make this sweep more efficient, i.e. parallelize it...
 
                     for _ in range(experiment.state_evolution_repetitions):
-                        tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None))
+                        tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None,experiment.data_model_type))
 
                     for _ in range(experiment.erm_repetitions):
                         method = "sklearn"
-                        tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp))
+                        tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                 else:
 
                 # if method is not "optimal_lambda":
@@ -228,11 +289,11 @@ def master(num_processes, logger, filename):
                     
 
                         for _ in range(experiment.state_evolution_repetitions):
-                            tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None))
+                            tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
 
                         for _ in range(experiment.erm_repetitions):
                             for method in experiment.erm_methods:
-                                tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp))
+                                tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
 
     # Initialize the progress bar
     pbar = tqdm(total=len(tasks))

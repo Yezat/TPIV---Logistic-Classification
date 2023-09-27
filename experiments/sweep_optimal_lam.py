@@ -10,9 +10,12 @@
 
 import os
 
-# read the optimal_epsilons.csv file and store the results in a dictionary
+optimal_lambdas_filename = "optimal_lambdas.csv"
+optimal_lambdas_filename = "fashion_mnist_optimal_lambdas.csv"
+
+# read the optimal_lambdas.csv file and store the results in a dictionary
 knwon_lambdas = {}
-with open("optimal_lambdas.csv","r") as f:
+with open(optimal_lambdas_filename,"r") as f:
     lines = f.readlines()
     for line in lines[1:]:
         # remove the newline character
@@ -22,8 +25,10 @@ with open("optimal_lambdas.csv","r") as f:
 
 
 alphas = [0.1,0.5,1,2,5,10,20,50,100]
+alphas = [12000/784]
 epsilon = 0.0
-taus = [0.1,0.5,1,1.5,2.0,2.5]
+# taus = [0.1,0.5,1,1.5,2.0,2.5]
+taus = [0]
 
 # print(knwon_lambdas)
 
@@ -35,5 +40,5 @@ for alpha in alphas:
             print(f"Skipping alpha {alpha} epsilon {epsilon} tau {tau} as we already know the optimal lambda")
             continue
         else:
-            print(f"Running optimal_choice.py {alpha} {epsilon} {tau}")
-            os.system(f"python3 optimal_choice.py {alpha} {epsilon} {tau}")
+            print(f"Running optimal_choice.py {alpha} {epsilon} {tau} {optimal_lambdas_filename}")
+            os.system(f"python3 optimal_choice.py {alpha} {epsilon} {tau} {optimal_lambdas_filename}")

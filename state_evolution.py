@@ -6,6 +6,7 @@ from erm import *
 from util import *
 from data import *
 import logging
+from data_model import *
 from scipy.optimize import root_scalar
 import time
 
@@ -29,7 +30,7 @@ def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, 
         return z + epsilon * np.sqrt(Q) / y
     except Exception as e:
         # print all parameters
-        print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)        
+        print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)
         raise e
 
 def log1pexp(x):
@@ -355,10 +356,25 @@ def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims):
     sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
     return m_hat, q_hat, sigma_hat
 
-def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam):
-    sigma = 1 / (lam + sigma_hat)
-    q = (rho_w_star * m_hat**2 + q_hat) / (lam + sigma_hat)** 2
-    m = (rho_w_star * m_hat) / (lam + sigma_hat)
+def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model):
+    
+    sigma = np.mean(data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega))
+    
+    if data_model.commute:
+        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam + sigma_hat*data_model.spec_Omega)**2)
+
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam + sigma_hat*data_model.spec_Omega))
+
+    else:
+        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam + sigma_hat*data_model.spec_Omega)**2)
+        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega)**2)
+
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam + sigma_hat * data_model.spec_Omega))
+
+
+    # sigma = 1 / (lam + sigma_hat)
+    # q = (rho_w_star * m_hat**2 + q_hat) / (lam + sigma_hat)** 2
+    # m = (rho_w_star * m_hat) / (lam + sigma_hat)
     return m, q, sigma
 
 def damped_update(new, old, damping):
@@ -371,8 +387,10 @@ MAX_ITER_FPE = 5000
 INT_LIMS = 10.0
 INITIAL_CONDITION = (0.1,0.1,0.9)
 
+
 def fixed_point_finder(
     logger,
+    my_data_model: DataModel,
     rho_w_star: float,
     alpha: float,
     epsilon: float,
@@ -385,7 +403,9 @@ def fixed_point_finder(
     int_lims: float = INT_LIMS,    
     initial_condition: Tuple[float, float, float] = INITIAL_CONDITION,
     log = True,
+    
 ):
+    my_data_model
     m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
     err = 1.0
     iter_nb = 0
@@ -393,14 +413,14 @@ def fixed_point_finder(
     q_hat = 0
     sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 1 == 0 and log:
+        if iter_nb % 10 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
 
         m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims)
 
-        new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam)
+        new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, my_data_model)
 
         
         n_m = damped_update(new_m, m, blend_fpe)

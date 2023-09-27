@@ -11,9 +11,10 @@ from scipy.optimize import minimize
 from sklearn.utils.validation import check_array, check_consistent_length, _check_sample_weight
 from scipy.linalg import norm
 import adversarial_loss_gradient as skloss
+import sklearn_loss as skloss_original
 
 """
-sklearn
+sklearn - expects labels as -1 and 1.
 """
 def preprocessing(coef, X, y, lam, epsilon):
     # heavily inspired by the sklearn code, with hopefully all the relevant bits copied over to make it work using lbfgs
@@ -66,7 +67,8 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
                 w0,
                 method=method,
                 jac=True,
-                args=(X, target, l2_reg_strength, epsilon, sample_weight, n_threads)
+                args=(X, target, l2_reg_strength, epsilon, sample_weight, n_threads),
+                options={"maxiter": 1000, "disp": False},
             )
     
     w0, loss = opt_res.x, opt_res.fun
@@ -80,6 +82,7 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
     raw_prediction = X @ weights
 
     half = skloss.CyHalfBinomialLoss()
+    # half = skloss_original.CyHalfBinomialLoss()
 
     loss_out = None
     gradient_out = None
@@ -100,12 +103,16 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
         gradient_out = gradient_out.squeeze(1)
 
     half.loss_gradient( y_true=y,
-        raw_prediction=raw_prediction,
-        adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),
+        raw_prediction=raw_prediction,    
+        adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),    
+        # sample_weight=sample_weight,
         loss_out=loss_out,
         gradient_out=gradient_out,
         n_threads=n_threads,
     )
+    
+    
+
     loss,grad_per_sample = loss_out,gradient_out
 
 
