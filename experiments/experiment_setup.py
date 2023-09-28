@@ -12,8 +12,8 @@ import numpy as np
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 3
-    alphas: np.ndarray = np.linspace(0.1,0.5,3)
-    epsilons: np.ndarray = np.array([0]) # np.linspace(0,1,5)
+    alphas: np.ndarray = np.linspace(0.1,5,10)
+    epsilons: np.ndarray = np.array([0,0.2,0.4]) # np.linspace(0,1,5)
     lambdas: np.ndarray = np.array([0.01])
     taus: np.ndarray = np.array([0.0])
     ps: np.ndarray = np.array([0.75]) 

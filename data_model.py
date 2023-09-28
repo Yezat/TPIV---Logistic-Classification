@@ -54,9 +54,7 @@ class DataModel(object):
 
         self.spec_PhiPhit = np.real(np.linalg.eigvalsh(self.PhiPhiT))
 
-    
-    def get_data():
-        return None,None,None,None
+
 
 
 class Custom(DataModel):
@@ -168,6 +166,7 @@ class GaussianDataModel(DataModel):
 
 
     def get_data(self, n, tau):
+        raise NotImplementedError("Gaussian data model does not have data")
         Xtrain, y = sample_training_data(self.theta,self.d,n,tau)
         n_test = 100000
         Xtest,ytest = sample_training_data(self.theta,self.d,n_test,tau)
@@ -263,6 +262,7 @@ class FashionMNISTDataModel(DataModel):
         self.y_test = y_test
 
     def get_data(self, n, tau):
+        raise NotImplementedError("Fashion MNIST data model does not have data")
         if n > self.X_train.shape[0]:
             raise ValueError("n should be smaller than the number of training points")
         Xtrain = self.X_train[:n]
@@ -313,19 +313,19 @@ class RandomKitchenSinkDataModel(DataModel):
         
         logger.info("Let that Random Kitchen Sink in")
 
-        self.KitchenKind = KitchenKind.TeacherStudent
+        self.kitchen_kind = KitchenKind.TeacherStudent
 
         self.d = student_dimension
         self.p = teacher_dimension
 
         # check if a pickle exists
-        source_pickle = f"{source_pickle_path}data/random_kitchen_sink_{student_dimension}_{teacher_dimension}_{self.KitchenKind.name}.pkl"
+        source_pickle = f"{source_pickle_path}data/random_kitchen_sink_{student_dimension}_{teacher_dimension}_{self.kitchen_kind.name}.pkl"
         if os.path.isfile(source_pickle):
             # load self from pickle
             with open(source_pickle, 'rb') as f:
                 # assign all the attributes of the pickle to self
                 tmp_dict = pickle.load(f)
-                for key in [a for a in dir(tmp_dict) if not a.startswith('__')]:
+                for key in [a for a in dir(tmp_dict) if not a.startswith('__') and not a == "get_data" and not a == "logger" and not a == "get_info"]:
                     value = getattr(tmp_dict, key)
                     # print("setting " + key + " to " + str(value) + " from pickle")
                     setattr(self, key, value)
@@ -336,7 +336,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 'erf': (0, 2/np.sqrt(3*np.pi), 0.200364), 'tanh': (0, 0.605706, 0.165576),
                 'sign': (0, np.sqrt(2/np.pi), np.sqrt(1-2/np.pi))}
             
-            if self.KitchenKind == KitchenKind.Vanilla:
+            if self.kitchen_kind == KitchenKind.Vanilla:
             # ----------------- The Vanilla Gaussian Model ----------------
                 assert self.p == self.d, "p must be equal to d for the vanilla gaussian model"
                 self.Psi = np.eye(self.p)
@@ -344,7 +344,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.Phi = np.eye(self.d)
                 self.theta = np.random.normal(0,1, self.p) 
 
-            elif self.KitchenKind == KitchenKind.TeacherStudent:
+            elif self.kitchen_kind == KitchenKind.TeacherStudent:
             # ----------------- The Teacher and Student Kitchen Sink ----------------
 
                 D = student_dimension + teacher_dimension # dimension of c
@@ -355,8 +355,8 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.F_student = np.random.normal(0,1, (d,D)) / np.sqrt(D) # student random projection
 
                 # Coefficients
-                _, kappa1_teacher, kappastar_teacher = COEFICIENTS['tanh']
-                _, kappa1_student, kappastar_student = COEFICIENTS['tanh']
+                _, kappa1_teacher, kappastar_teacher = COEFICIENTS['sign']
+                _, kappa1_student, kappastar_student = COEFICIENTS['sign']
 
                 # Covariances
                 self.Psi = (kappa1_teacher**2 * self.F_teacher @ self.F_teacher.T + kappastar_teacher**2 * np.identity(p))
@@ -376,7 +376,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.theta = np.random.normal(0,1, p)
 
 
-            elif self.KitchenKind == KitchenKind.StudentOnly:
+            elif self.kitchen_kind == KitchenKind.StudentOnly:
             # ------------- The Student only Kitchen Sink ---------------- 
                 self.k0, self.k1, self.k2 = COEFICIENTS['sign']
 
@@ -468,7 +468,8 @@ class RandomKitchenSinkDataModel(DataModel):
         self.spec_PhiPhit = np.real(np.linalg.eigvalsh(self.PhiPhiT))
 
     def get_data(self, n, tau):
-        if self.KitchenKind == KitchenKind.StudentOnly:
+        if self.kitchen_kind == KitchenKind.StudentOnly:
+            logger.info("Student only kitchen sink")
             # Student Kitchen
             Xtrain, y = sample_training_data(self.theta,self.p,n,tau)
             n_test = 100000
@@ -478,23 +479,28 @@ class RandomKitchenSinkDataModel(DataModel):
             Xtest = np.sign(Xtest @ self.F)
             return Xtrain, y, Xtest, ytest
         
-        elif self.KitchenKind == KitchenKind.TeacherStudent:
+        elif self.kitchen_kind == KitchenKind.TeacherStudent:
 
             # Teacher-Student Kitchen
             D = self.d + self.p
             c = np.random.normal(0,1,(n,D))
-            u = np.tanh(1/np.sqrt(D) * self.F_teacher @ c.T).T
-            v = np.tanh(1/np.sqrt(D) * self.F_student @ c.T).T
+            u = np.sign(1/np.sqrt(D) * self.F_teacher @ c.T).T
+            v = np.sign(1/np.sqrt(D) * self.F_student @ c.T).T
             y = np.sign(1/np.sqrt(self.d) * u @ self.theta)
-            X = v
-            X_test = np.random.normal(0,1,(100000,self.d)) / np.sqrt(self.d)
-            u_test = np.tanh(1/np.sqrt(D) * self.F_teacher @ c.T).T
-            v_test = np.tanh(1/np.sqrt(D) * self.F_student @ c.T).T
+            X = v / np.sqrt(self.d)
+            X_test = np.random.normal(0,1,(10000,D)) 
+            u_test = np.sign(1/np.sqrt(D) * self.F_teacher @ X_test.T).T
+            v_test = np.sign(1/np.sqrt(D) * self.F_student @ X_test.T).T
             y_test = np.sign(1/np.sqrt(self.d) * u_test @ self.theta)
-            X_test = v_test
+            X_test = v_test / np.sqrt(self.d)
+            # Log the shapes
+            # self.logger.info("X.shape = " + str(X.shape))
+            # self.logger.info("y.shape = " + str(y.shape))
+            # self.logger.info("X_test.shape = " + str(X_test.shape))
+            # self.logger.info("y_test.shape = " + str(y_test.shape))
             return X, y, X_test, y_test
     
-        elif self.KitchenKind == KitchenKind.Vanilla:
+        elif self.kitchen_kind == KitchenKind.Vanilla:
 
             # Gaussian vanilla
             c = np.random.normal(0,1,(n,self.d)) / np.sqrt(self.d)
