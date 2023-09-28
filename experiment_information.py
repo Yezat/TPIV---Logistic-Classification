@@ -86,16 +86,17 @@ class StateEvolutionExperimentInformation:
         self.m_hat : float = m_hat
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults):
+    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float):
         self.id: str = str(uuid.uuid4())
         self.duration : float = duration
         self.code_version: str = __version__
         self.experiment_id: str = experiment_id
-        self.Q: float= w_gd@w_gd / d
+        self.Q: float= Q
+        self.m: float = m
         if w is not None:
 
             self.rho: float = w@w /d
-            self.m: float = w_gd@w / d
+            
         else:
             self.rho = 1
             self.m = 1

@@ -350,28 +350,31 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho_w_star: fl
 
 
 
-def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims):
-    m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
+def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma):
+    m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)/np.sqrt(gamma)
     q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,lam,int_lims)
     sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
     return m_hat, q_hat, sigma_hat
 
-def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model):
+def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model, logger):
     
     sigma = np.mean(data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega))
     
+    
     if data_model.commute:
+        
         q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam + sigma_hat*data_model.spec_Omega)**2)
 
         m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam + sigma_hat*data_model.spec_Omega))
 
     else:
+        
         q = q_hat * np.mean(data_model.spec_Omega**2 / (lam + sigma_hat*data_model.spec_Omega)**2)
         q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega)**2)
 
         m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam + sigma_hat * data_model.spec_Omega))
 
-
+    
     # sigma = 1 / (lam + sigma_hat)
     # q = (rho_w_star * m_hat**2 + q_hat) / (lam + sigma_hat)** 2
     # m = (rho_w_star * m_hat) / (lam + sigma_hat)
@@ -405,7 +408,9 @@ def fixed_point_finder(
     log = True,
     
 ):
-    my_data_model
+    rho_w_star = my_data_model.rho
+    # rho_w_star = 1
+    gamma = my_data_model.gamma
     m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
     err = 1.0
     iter_nb = 0
@@ -413,14 +418,14 @@ def fixed_point_finder(
     q_hat = 0
     sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 10 == 0 and log:
+        if iter_nb % 1 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
 
-        m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims)
+        m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma)
 
-        new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, my_data_model)
+        new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, my_data_model, logger)
 
         
         n_m = damped_update(new_m, m, blend_fpe)
