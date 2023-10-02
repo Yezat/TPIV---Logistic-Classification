@@ -8,6 +8,8 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 from data import *
 import pickle
+from scipy.stats import multivariate_normal
+
 
 
 # Taken from Loureiro
@@ -54,6 +56,8 @@ class DataModel(object):
 
         self.spec_PhiPhit = np.real(np.linalg.eigvalsh(self.PhiPhiT))
 
+        
+
 
 
 
@@ -75,9 +79,16 @@ class Custom(DataModel):
         self.Omega = student_student_cov
         self.Phi = teacher_student_cov.T
         self.theta = teacher_weights
+
+        
         
         self.p, self.k = self.Phi.shape
         self.gamma = self.k / self.p
+
+        # assume iid gaussian prior
+        self.Sigma_w = np.eye(self.k)
+        # Assign the inverse of Sigma_w
+        self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
         
         self.PhiPhiT = (self.Phi @ self.theta.reshape(self.k,1) @ 
                         self.theta.reshape(1,self.k) @ self.Phi.T)
@@ -152,6 +163,9 @@ class GaussianDataModel(DataModel):
         # Phi is a zero matrix
         self.Phi = np.zeros((d,d))
         self.theta = sample_weights(d)
+
+        self.Sigma_w = np.eye(d)
+        self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
         
         self.p, self.k = self.Phi.shape
         self.gamma = self.k / self.p
@@ -207,7 +221,6 @@ class FashionMNISTDataModel(DataModel):
                 spec_Omega = np.array(data['spec_Omega'])
                 diagUtPhiPhitU = np.array(data['diagUtPhiPhitU'])
 
-
                 ntot = X_train.shape[0]
                 self.d = X_train.shape[1]
 
@@ -239,7 +252,8 @@ class FashionMNISTDataModel(DataModel):
             y_test[y_test == 0] = -1
             y_test[y_test == 7] = 1
 
-        
+        self.Sigma_w = np.eye(d) # Just an assumption...
+        self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
         
 
         self.p = ntot
@@ -307,21 +321,60 @@ class KitchenKind(Enum):
     Vanilla = 1
     StudentOnly = 2
     TeacherStudent = 3
+    DoubleCovariate = 4
+
+
+
+
+def sample_multivariate_gaussian(mean, covariance_matrix, n):
+    """
+    Sample from a multivariate Gaussian distribution with zero mean and a given covariance matrix.
+    
+    Args:
+    - mean: The mean vector (list or numpy array).
+    - covariance_matrix: The covariance matrix (list or numpy array).
+    - n: The number of samples to generate.
+    
+    Returns:
+    - samples: An array of shape (n, k), where k is the dimensionality of the distribution.
+    """
+    if len(mean) != len(covariance_matrix) or len(covariance_matrix[0]) != len(mean):
+        raise ValueError("The dimensions of 'mean' and 'covariance_matrix' must match.")
+
+    k = len(mean)  # Dimensionality of the distribution
+
+    # Cholesky decomposition of the covariance matrix
+    L = np.linalg.cholesky(covariance_matrix)
+
+    # Generate independent standard normal samples
+    z = np.random.randn(n, k)
+
+    # Transform the standard normal samples to the desired distribution
+    samples = mean + np.dot(z, L.T)
+
+    return samples
+
+
 
 class RandomKitchenSinkDataModel(DataModel):
-    def __init__(self, student_dimension, teacher_dimension, logger, source_pickle_path = "../"):
-        
+    def __init__(self, student_dimension, teacher_dimension, logger, source_pickle_path = "../", delete_existing = False):  
+
+        self.logger = logger
+ 
         logger.info("Let that Random Kitchen Sink in")
 
-        self.kitchen_kind = KitchenKind.TeacherStudent
+        self.kitchen_kind = KitchenKind.DoubleCovariate
 
         self.d = student_dimension
         self.p = teacher_dimension
 
+
+
         # check if a pickle exists
         source_pickle = f"{source_pickle_path}data/random_kitchen_sink_{student_dimension}_{teacher_dimension}_{self.kitchen_kind.name}.pkl"
-        if os.path.isfile(source_pickle):
-            # load self from pickle
+        if os.path.isfile(source_pickle) and not delete_existing:
+        
+            # load self from pickle 
             with open(source_pickle, 'rb') as f:
                 # assign all the attributes of the pickle to self
                 tmp_dict = pickle.load(f)
@@ -332,6 +385,7 @@ class RandomKitchenSinkDataModel(DataModel):
 
 
         else:
+
             COEFICIENTS = {'relu': (1/np.sqrt(2*np.pi), 0.5, np.sqrt((np.pi-2)/(4*np.pi))), 
                 'erf': (0, 2/np.sqrt(3*np.pi), 0.200364), 'tanh': (0, 0.605706, 0.165576),
                 'sign': (0, np.sqrt(2/np.pi), np.sqrt(1-2/np.pi))}
@@ -343,6 +397,8 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.Omega = np.eye(self.d)
                 self.Phi = np.eye(self.d)
                 self.theta = np.random.normal(0,1, self.p) 
+                self.Sigma_w = np.eye(self.p)
+                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
 
             elif self.kitchen_kind == KitchenKind.TeacherStudent:
             # ----------------- The Teacher and Student Kitchen Sink ----------------
@@ -373,21 +429,63 @@ class RandomKitchenSinkDataModel(DataModel):
                 # print('Phi', Phi.shape)
 
                 # Teacher weights
-                self.theta = np.random.normal(0,1, p)
-
-
+                self.theta = np.random.normal(0,1, self.p) 
+                self.Sigma_w = np.eye(self.p)
+                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+              
             elif self.kitchen_kind == KitchenKind.StudentOnly:
             # ------------- The Student only Kitchen Sink ---------------- 
                 self.k0, self.k1, self.k2 = COEFICIENTS['sign']
 
                 # F = np.random.normal(0, 1, (d, p)) / np.sqrt(p)
-                self.F = np.random.normal(0, 1, (self.d, self.p)) / np.sqrt(self.p + self.p)
+                self.F = np.random.normal(0, 1, (self.p, self.d)) / np.sqrt(self.d)
                 
-                self.theta =  sample_weights(self.p)
+                self.theta =  np.random.normal(0,1, self.p) 
+                self.Sigma_w = np.eye(self.p)
+                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
 
                 self.Psi = np.eye(self.p)
                 self.Phi = self.k1 * self.F # must not be transposed! Loureiro transposes twice.
-                self.Omega = self.k0**2 * np.ones(self.d) * np.ones(self.d).T + self.k1**2 * self.F @ self.F.T/self.d + self.k2**2 * np.eye(self.d)
+                self.Omega = np.ones(self.d).T + self.k1**2 * self.F @ self.F.T/self.d + self.k2**2 * np.eye(self.d)
+            elif self.kitchen_kind == KitchenKind.DoubleCovariate:
+                # ------------- The Double Covariate Kitchen Sink ----------------
+                # Not technically a kitchen sink, just a covariate
+                assert self.p == self.d, "p must be equal to d for the vanilla gaussian model"
+                
+                var = 0.1 # Choose the var too big and the state evolution will run into issues.
+                self.Sigma_w = np.random.normal(0,var, (self.p,self.p)) 
+                # Let's make Sigma_w positive definite
+                self.Sigma_w = self.Sigma_w.T @ self.Sigma_w / self.p + np.eye(self.p)
+
+                # self.Sigma_w = np.eye(self.p)
+
+                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+                
+                # Let's sample the teacher weights as a normal distribution with covariance sigma_w
+                self.theta = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
+
+                # print the norm of theta
+                logger.info("||theta|| = " + str(np.linalg.norm(self.theta)))
+
+                # Let's go and sample Sigma_x
+                self.Sigma_x = np.random.normal(0,0.1, (self.p,self.p))
+                logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
+                self.Sigma_x = self.Sigma_x.T @ self.Sigma_x / self.p 
+                # log the norm of Sigma_x
+                logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
+                self.Sigma_x += np.eye(self.p)
+                logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
+
+
+
+                # Let's test if Sigma_x is positive definite
+                min_eigval = np.min(np.linalg.eigvalsh(self.Sigma_x))
+                if min_eigval < 0:
+                    raise Exception("Sigma_x is not positive definite; min eigval: ", min_eigval)
+                
+                self.Psi = self.Sigma_x
+                self.Omega = self.Sigma_x
+                self.Phi = np.eye(self.d)
 
             self.gamma = self.p / self.d
             
@@ -402,7 +500,13 @@ class RandomKitchenSinkDataModel(DataModel):
             logger.info("PhiPhiT.shape = " + str(self.PhiPhiT.shape))
             logger.info("Omega.shape = " + str(self.Omega.shape))
 
-            
+
+            assumption_1 = self.Omega - self.Phi.T @ np.linalg.inv(self.Psi) @ self.Phi
+            min_eigval = np.min(np.linalg.eigvalsh(assumption_1))
+            if min_eigval < 0:
+                raise Exception("Assumption on Schur Complement failed: Matrix was not positive semi-definite; min eigval: ", min_eigval)
+
+
             self.logger = logger
 
 
@@ -466,18 +570,25 @@ class RandomKitchenSinkDataModel(DataModel):
         self.spec_Omega = np.real(self.spec_Omega)
         self.logger.info("Omega done...")
         self.spec_PhiPhit = np.real(np.linalg.eigvalsh(self.PhiPhiT))
+        self.spec_Sigma_w_inv, self.eigv_Sigma_w_inv = np.linalg.eigh(self.Sigma_w_inv)
+        self.spec_Sigma_w_inv = np.real(self.spec_Sigma_w_inv) # is it necessary to force them being real?
 
     def get_data(self, n, tau):
         if self.kitchen_kind == KitchenKind.StudentOnly:
             logger.info("Student only kitchen sink")
             # Student Kitchen
-            Xtrain, y = sample_training_data(self.theta,self.p,n,tau)
-            n_test = 100000
-            Xtest,ytest = sample_training_data(self.theta,self.p,n_test,tau)
-            # Transform the data using the random kitchen sink
-            Xtrain = np.sign(Xtrain @ self.F)
-            Xtest = np.sign(Xtest @ self.F)
-            return Xtrain, y, Xtest, ytest
+            c = np.random.normal(0,1,(n,self.p)) / np.sqrt(self.p)
+            u = c
+            y = np.sign(u @ self.theta)
+            v = np.sign(1/np.sqrt(self.d) * self.F @ u.T).T
+            X = v / np.sqrt(self.d)
+            X_test = np.random.normal(0,1,(10000,self.p)) / np.sqrt(self.p)
+            u_test = X_test
+            v_test = np.sign(1/np.sqrt(self.d) * self.F @ X_test.T).T
+            y_test = np.sign(1/np.sqrt(self.d) * u_test @ self.theta)
+            X_test = v_test / np.sqrt(self.d)
+            return X, y, X_test, y_test
+            
         
         elif self.kitchen_kind == KitchenKind.TeacherStudent:
 
@@ -510,6 +621,27 @@ class RandomKitchenSinkDataModel(DataModel):
             X_test = np.random.normal(0,1,(100000,self.d)) / np.sqrt(self.d)
             y_test = np.sign(1/np.sqrt(self.d) * X_test @ self.theta)
             return X, y, X_test, y_test
+        elif self.kitchen_kind == KitchenKind.DoubleCovariate:
+
+
+
+            self.logger.info(f"Getting data for Double Covariate {n}")
+            # let's sample a multivariate normal with zero mean and self.Omega covariance
+            X = sample_multivariate_gaussian(np.zeros(self.p), self.Omega, n) / np.sqrt(self.p)
+            # mn = multivariate_normal(mean = np.zeros(self.p), cov = self.Psi)
+            # X = mn.rvs(n)/np.sqrt(self.p)
+            # X = np.random.multivariate_normal(np.zeros(self.p), self.Psi, n) 
+            # Log the norm of X
+            self.logger.info("||X|| = " + str(np.linalg.norm(X)))
+            y = np.sign(1/np.sqrt(self.p) * X @ self.theta)
+            X_test = sample_multivariate_gaussian(np.zeros(self.p), self.Psi, 10000) / np.sqrt(self.p)
+            # Log the norm of X_test
+            self.logger.info("||X_test|| = " + str(np.linalg.norm(X_test)))
+            y_test = np.sign(1/np.sqrt(self.p) * X_test @ self.theta)
+            return X, y, X_test, y_test
+        
+            
+
         else:
             raise ValueError("Kitchen kind not recognised")
     
@@ -521,5 +653,10 @@ if __name__ == "__main__":
     # Make the logger log to console
     logger.addHandler(logging.StreamHandler())
     logger.setLevel(logging.INFO)
-    model = RandomKitchenSinkDataModel(1000,1000, logger)
+    
+    model = RandomKitchenSinkDataModel(1000,1000, logger, delete_existing=True)
     print(model.get_info())
+    # Let's store Psi in a json file
+    import json
+    with open("../data/Psi.json", "w") as f:
+        json.dump(model.Psi.tolist(), f)

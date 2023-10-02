@@ -1,4 +1,4 @@
-# usage: mpiexec -n 5 python sweep.py experiment.json
+# usage: mpiexec -n 5 python sweep.py sweep_experiment.json
 
 from mpi4py import MPI
 from tqdm import tqdm
@@ -220,10 +220,11 @@ def get_default_experiment():
     ps: np.ndarray = np.array([0.75])
     dp: float = 0.01
     d: int = 1000
+    p: int = 1000
     erm_methods: list = ["sklearn"]
     experiment_name: str = "Default Experiment"
     dataModelType: DataModelType = DataModelType.Gaussian
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp,dataModelType,experiment_name)
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp,dataModelType,p,experiment_name)
     return experiment
 
 
@@ -270,7 +271,7 @@ def master(num_processes, logger, filename):
     elif experiment.data_model_type == DataModelType.FashionMNIST:
         data_model = FashionMNISTDataModel()
     elif experiment.data_model_type == DataModelType.RandomKitchenSink:
-        data_model = RandomKitchenSinkDataModel(experiment.d,experiment.d, logger) # TODO for now we hard-code the difference...
+        data_model = RandomKitchenSinkDataModel(experiment.d,experiment.p, logger) # TODO for now we hard-code the difference...
     else:
         raise Exception("DataModelType not implemented")
 

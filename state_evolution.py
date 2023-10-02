@@ -358,21 +358,21 @@ def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, ga
 
 def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model, logger):
     
-    sigma = np.mean(data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega))
+    sigma = np.mean(data_model.spec_Omega/(lam * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))
     
     
     if data_model.commute:
         
-        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam + sigma_hat*data_model.spec_Omega)**2)
+        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam* data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam + sigma_hat*data_model.spec_Omega))
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam* data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega))
 
     else:
         
-        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam + sigma_hat*data_model.spec_Omega)**2)
-        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega)**2)
+        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam* data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
+        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam* data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega)**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam + sigma_hat * data_model.spec_Omega))
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam* data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))
 
     
     # sigma = 1 / (lam + sigma_hat)

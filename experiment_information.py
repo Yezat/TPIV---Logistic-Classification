@@ -16,7 +16,7 @@ import logging
 from data_model import DataModelType
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, dataModelType: DataModelType, experiment_name: str = ""):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, dataModelType: DataModelType, p: int, experiment_name: str = ""):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -30,6 +30,7 @@ class ExperimentInformation:
         self.taus: np.ndarray = taus
         self.ps: np.ndarray = ps
         self.dp: float = dp
+        self.p: int = p
         self.d: int = d
         self.erm_methods: list = erm_methods
         self.completed: bool = False
@@ -202,6 +203,7 @@ class DatabaseHandler:
                 ps BLOB,
                 dp REAL,
                 d INTEGER,
+                p INTEGER,
                 erm_methods BLOB,
                 completed BOOLEAN,
                 data_model_type TEXT
@@ -245,7 +247,7 @@ class DatabaseHandler:
     def insert_experiment(self, experiment_information: ExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
             experiment_information.experiment_name,
             experiment_information.duration,
@@ -260,6 +262,7 @@ class DatabaseHandler:
             json.dumps(experiment_information.ps, cls=NumpyEncoder),
             float(experiment_information.dp),
             experiment_information.d,
+            experiment_information.p,
             json.dumps(experiment_information.erm_methods),
             experiment_information.completed,
             experiment_information.data_model_type.name,
