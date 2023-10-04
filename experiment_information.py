@@ -54,12 +54,12 @@ class CalibrationResults:
 
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
-    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float):
+    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float, rho: float):
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
         self.duration: float = duration
         self.experiment_id: str = experiment_id
-        rho_w_star = 1.0
+        rho_w_star = rho
         self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
         self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho_w_star,tau,epsilon)
         self.training_loss: float = training_loss_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)

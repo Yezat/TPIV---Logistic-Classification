@@ -67,7 +67,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     # logger.info(f"Data Model get_data method: {data_model.get_data.__name__}")
     Xtrain, y, Xtest, ytest, w = data_model.get_data(int(alpha * d), tau)
     if w is not None:
-        rho = w@w /d
+        rho = w.dot(data_model.Psi@w) /d
     else:
         rho = data_model.rho
         m = None
@@ -121,7 +121,6 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     if w is not None:
         
         m = w_gd.dot(data_model.Phi@w) / np.sqrt(d*data_model.p)
-        m = w_gd @ w / d
         logger.info("ERM m: %f", m)
         
         # print the shapes and norms of w and w_gd
@@ -165,10 +164,10 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
     calibrations = []
     if ps is not None:
         for p in ps:
-            calibrations.append(calc_calibration_analytical(1,p,m,q,tau))
+            calibrations.append(calc_calibration_analytical(data_model.rho,p,m,q,tau))
     calibration_results = CalibrationResults(ps,calibrations,None)
 
-    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat)
+    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat,data_model.rho)
 
     if log:
         logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   

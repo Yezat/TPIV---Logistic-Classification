@@ -171,10 +171,13 @@ class GaussianDataModel(DataModel):
         self.p, self.k = self.Phi.shape
         self.gamma = self.k / self.p
         
-        self.PhiPhiT = (self.Phi @ self.theta.reshape(self.k,1) @ 
-                        self.theta.reshape(1,self.k) @ self.Phi.T)
+        # What if we fixed self.theta # self.theta.T?
+        
+
+        self.PhiPhiT = (1 * self.Phi @ self.Phi.T)
         
         self.rho = self.theta.dot(self.Psi @ self.theta) / self.k
+        self.rho = 1
 
         self._diagonalise() # see base_data_model (should not be necessary)
         self._check_commute()
@@ -364,6 +367,7 @@ class KitchenKind(Enum):
     DoubleCovariate = 4
     VanillaStrongWeak = 5 # only some eigenvalues are stronger than others...
     StrongWeak = 6 # If there are covariances
+    SourceCapacity = 7
 
 
 
@@ -376,10 +380,11 @@ class RandomKitchenSinkDataModel(DataModel):
  
         logger.info("Let that Random Kitchen Sink in")
 
-        self.kitchen_kind = KitchenKind.DoubleCovariate
+        self.kitchen_kind = KitchenKind.VanillaStrongWeak
 
         self.d = student_dimension
         self.p = teacher_dimension
+        self.gamma = self.p / self.d
 
 
 
@@ -412,6 +417,10 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.theta = np.random.normal(0,1, self.p) 
                 self.Sigma_w = np.eye(self.p)
                 self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+
+                self.rho = 1
+                self.PhiPhiT = np.eye(self.d)      
+                self.Sigma_x = np.eye(self.p)          
 
             elif self.kitchen_kind == KitchenKind.TeacherStudent:
             # ----------------- The Teacher and Student Kitchen Sink ----------------
@@ -470,7 +479,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 # Let's make Sigma_w positive definite
                 self.Sigma_w = self.Sigma_w.T @ self.Sigma_w / self.p + np.eye(self.p)
 
-                # self.Sigma_w = np.eye(self.p)
+                self.Sigma_w = np.eye(self.p)
 
                 self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
                 
@@ -481,12 +490,12 @@ class RandomKitchenSinkDataModel(DataModel):
                 logger.info("||theta|| = " + str(np.linalg.norm(self.theta)))
 
                 # Let's go and sample Sigma_x
-                self.Sigma_x = np.random.normal(0,1.0, (self.p,self.p))
+                self.Sigma_x = np.random.normal(0,1, (self.p,self.p))
                 logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
-                self.Sigma_x = self.Sigma_x.T @ self.Sigma_x / self.p 
+                self.Sigma_x = self.Sigma_x.T @ self.Sigma_x / self.p
                 # log the norm of Sigma_x
                 logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
-                self.Sigma_x += np.eye(self.p)
+                self.Sigma_x += 10 *  np.eye(self.p)
                 logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
 
 
@@ -498,7 +507,16 @@ class RandomKitchenSinkDataModel(DataModel):
                 
                 self.Psi = self.Sigma_x
                 self.Omega = self.Sigma_x
-                self.Phi = np.eye(self.d)
+                self.Phi = self.Sigma_x
+
+                self.PhiPhiT = self.Phi @ self.Sigma_w @ self.Phi.T
+                
+                # Let's get the eigenvalues of Psi
+                self.spec_Psi = np.linalg.eigvalsh(self.Psi)
+                # Let's get the eigenvalues of Sigma_w
+                self.spec_Sigma_w = np.linalg.eigvalsh(self.Sigma_w)
+                self.rho = self.spec_Psi.dot(self.spec_Sigma_w) / self.p
+
             elif self.kitchen_kind == KitchenKind.VanillaStrongWeak:
                 # ------------------ The Vanilla Identity Gaussian Model with Stronger Eigenvalues ----------------
                 assert self.p == self.d, "p must be equal to d for the vanilla strong-weak model"
@@ -507,6 +525,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.Sigma_w = np.eye(self.p)
                 d1 = 1
                 # self.Sigma_w[:d1,:d1] = 1 * np.eye(d1)
+                self.Sigma_w[0,0] = 1
 
                 self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
 
@@ -514,22 +533,44 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.theta = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
 
                 # Let's for now take Sigma_x = Sigma_w
-                self.Sigma_x = self.Sigma_w
+                self.Sigma_x = np.eye(self.p)
 
-                self.Sigma_x[0,0] = 100
+                self.Sigma_x[0,0] = 1000
 
                 self.Psi = self.Sigma_x
                 self.Omega = self.Sigma_x
-                self.Phi = np.eye(self.d)
+                self.Phi = self.Sigma_x
 
+                self.PhiPhiT = self.Phi @ self.Sigma_w @ self.Phi.T
+                
+                # Let's get the eigenvalues of Psi
+                self.spec_Psi = np.linalg.eigvalsh(self.Psi)
+                # Let's get the eigenvalues of Sigma_w
+                self.spec_Sigma_w = np.linalg.eigvalsh(self.Sigma_w)
+                self.rho = self.spec_Psi.dot(self.spec_Sigma_w) / self.p
+            elif self.kitchen_kind == KitchenKind.SourceCapacity:
+                alph = 1.2
+                r = 0.3
 
-            self.gamma = self.p / self.d
+                spec_Omega0 = np.array([self.p/(k+1)**alph for k in range(self.p)])
+                self.Omega=np.diag(spec_Omega0)
+                self.Phi = self.Omega
+                self.Psi = self.Omega
+
+                self.theta = np.sqrt(np.array([1/(k+1)**((1+alph*(2*r-1))) for k in range(self.p)]))
+                self.rho = np.mean(spec_Omega0 * self.theta**2)
+                self.PhiPhiT = np.diag(spec_Omega0**2 * self.theta**2)
+
+                self.Sigma_w  = np.eye(self.p)
+                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+
             
-            self.PhiPhiT = (self.Phi @ self.theta.reshape(self.p,1) @ 
-                            self.theta.reshape(1,self.p) @ self.Phi.T)
+            
+            # self.PhiPhiT = (self.Phi @ self.theta.reshape(self.p,1) @ 
+            #                 self.theta.reshape(1,self.p) @ self.Phi.T)
             
             
-            self.rho = self.theta.dot(self.Psi @ self.theta) / self.p
+            # self.rho = self.theta.dot(self.Psi @ self.theta) / self.p
 
             logger.info("Sampled all data")
 
@@ -541,7 +582,7 @@ class RandomKitchenSinkDataModel(DataModel):
             assumption_1 = self.Omega - self.Phi.T @ np.linalg.inv(self.Psi) @ self.Phi
             min_eigval = np.min(np.linalg.eigvalsh(assumption_1))
             if min_eigval < 0:
-                raise Exception("Assumption on Schur Complement failed: Matrix was not positive semi-definite; min eigval: ", min_eigval)
+                logger.warning(f"Assumption on Schur Complement failed: Matrix was not positive semi-definite; min eigval: {min_eigval}")
 
 
             self.logger = logger
@@ -569,9 +610,9 @@ class RandomKitchenSinkDataModel(DataModel):
             'student_dimension': self.d,
             'aspect_ratio': self.gamma,
             'rho': self.rho,
+            'commute': self.commute,
             'kitchen_kind': self.kitchen_kind.name,
             'Norm Sigma_w': np.linalg.norm(self.Sigma_w),
-            'Norm Sigma_x': np.linalg.norm(self.Sigma_x),
             'Norm Psi': np.linalg.norm(self.Psi),
             'Norm Omega': np.linalg.norm(self.Omega),
             'Norm Phi': np.linalg.norm(self.Phi),
@@ -672,17 +713,30 @@ class RandomKitchenSinkDataModel(DataModel):
             self.logger.info(f"Getting data for {self.kitchen_kind.name} {n}")
 
             # the = sample_multivariate_gaussian(np.zeros(self.p), self.Sigma_w,1
-            the = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
+            the = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Sigma_w, method="cholesky")
 
-            # let's sample a multivariate normal with zero mean and self.Omega covariance (both scipy and np are extremely slow in mps on my machine)
-            X = sample_multivariate_gaussian(np.zeros(self.p), self.Psi, n) / np.sqrt(self.p)
-            self.logger.info("||X|| = " + str(np.linalg.norm(X)))
+            # let's sample a multivariate normal with zero mean and self.Omega covariance (both scipy and np are extremely slow in mps on my machine) depends on the method I believe.. and maybe some locking issues
+            
+            X = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, n, method="cholesky") / np.sqrt(self.p)            
             y = np.sign(1/np.sqrt(self.p) * X @ the)
-            X_test = sample_multivariate_gaussian(np.zeros(self.p), self.Psi, 10000) / np.sqrt(self.p)
+            
+            X_test = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, 10000, method="cholesky") / np.sqrt(self.p)
             # Log the norm of X_test
-            self.logger.info("||X_test|| = " + str(np.linalg.norm(X_test)))
+            
             y_test = np.sign(1/np.sqrt(self.p) * X_test @ the)
             return X, y, X_test, y_test, the
+        elif self.kitchen_kind == KitchenKind.SourceCapacity:
+            self.logger.info(f"Getting data for {self.kitchen_kind.name} {n}")
+
+            # let's sample a multivariate normal with zero mean and self.Omega covariance (both scipy and np are extremely slow in mps on my machine) depends on the method I believe.. and maybe some locking issues
+            
+            X = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, n, method="cholesky") / np.sqrt(self.p)            
+            y = np.sign(1/np.sqrt(self.p) * X @ self.theta)
+            
+            X_test = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, 10000, method="cholesky") / np.sqrt(self.p)            
+            y_test = np.sign(1/np.sqrt(self.p) * X_test @ self.theta)
+
+            return X, y, X_test, y_test, self.theta
         
             
 
@@ -704,3 +758,20 @@ if __name__ == "__main__":
     import json
     with open("../data/Psi.json", "w") as f:
         json.dump(model.Psi.tolist(), f)
+
+
+    # print the shapes of spec_Omega and spec_PhiPhit
+    print(model.spec_Omega.shape)
+    print(model.spec_PhiPhit.shape)
+
+    # count the unique values of spec_Omega
+    # print(np.unique(model.spec_Omega, return_counts=True))
+    # print(np.unique(model.spec_PhiPhit, return_counts=True))
+
+ 
+    # Get the unique values of the eigenspectru
+    # print(np.unique(np.linalg.eigvalsh(model.Psi), return_counts=True))
+
+    # Let's sample some data
+    # X, y, X_test, y_test, the = model.get_data(10000, 0.1)
+

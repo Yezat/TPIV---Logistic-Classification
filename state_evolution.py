@@ -219,7 +219,7 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
 
 
-    def reduce_limit(y):
+    def reduce_limit(y): # this stuff is only necessary for epsilons...
         step = 1
         left_lim = -int_lims
         while get_derivative_f_out(left_lim+step,y) == 0 and np.abs(left_lim - y) > 1.5*step:
@@ -340,10 +340,19 @@ def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, ga
 
 def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model, logger):
     one = data_model.Sigma_w_inv
-    one = 1
+    one = data_model.spec_Sigma_w_inv
     
-    sigma = np.mean(data_model.spec_Omega/(lam  * one + sigma_hat * data_model.spec_Omega))
-    
+    # sigma = np.mean(data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega))
+
+    # if data_model.commute:
+    #     q = np.mean((data_model.spec_Omega**2 * q_hat +
+    #                 m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) /
+    #                 (lam + sigma_hat*data_model.spec_Omega)**2)
+
+    #     m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit /
+    #                                             (lam + sigma_hat*data_model.spec_Omega))
+
+    sigma = np.mean(data_model.spec_Omega/(lam  * one + sigma_hat * data_model.spec_Omega))    
     
     if data_model.commute:
         
