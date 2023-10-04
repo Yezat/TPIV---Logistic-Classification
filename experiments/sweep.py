@@ -140,7 +140,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
 
     end = time.time()
     duration = end - start
-    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm)
+    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho)
 
 
     logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")

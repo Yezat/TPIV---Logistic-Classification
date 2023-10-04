@@ -380,7 +380,7 @@ class RandomKitchenSinkDataModel(DataModel):
  
         logger.info("Let that Random Kitchen Sink in")
 
-        self.kitchen_kind = KitchenKind.VanillaStrongWeak
+        self.kitchen_kind = KitchenKind.DoubleCovariate
 
         self.d = student_dimension
         self.p = teacher_dimension
@@ -474,12 +474,12 @@ class RandomKitchenSinkDataModel(DataModel):
                 # Not technically a kitchen sink, just a covariate
                 assert self.p == self.d, "p must be equal to d for the vanilla gaussian model"
                 
-                var = 0.0 # Choose the var too big and the state evolution will run into issues.
+                var = 0.3 # Choose the var too big and the state evolution will run into issues.
                 self.Sigma_w = np.random.normal(0,var, (self.p,self.p)) 
                 # Let's make Sigma_w positive definite
                 self.Sigma_w = self.Sigma_w.T @ self.Sigma_w / self.p + np.eye(self.p)
 
-                self.Sigma_w = np.eye(self.p)
+                # self.Sigma_w = np.eye(self.p)
 
                 self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
                 
@@ -525,7 +525,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.Sigma_w = np.eye(self.p)
                 d1 = 1
                 # self.Sigma_w[:d1,:d1] = 1 * np.eye(d1)
-                self.Sigma_w[0,0] = 1
+                self.Sigma_w[0,0] = 500
 
                 self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
 
@@ -535,7 +535,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 # Let's for now take Sigma_x = Sigma_w
                 self.Sigma_x = np.eye(self.p)
 
-                self.Sigma_x[0,0] = 1000
+                self.Sigma_x[0,0] = 100
 
                 self.Psi = self.Sigma_x
                 self.Omega = self.Sigma_x

@@ -87,20 +87,14 @@ class StateEvolutionExperimentInformation:
         self.m_hat : float = m_hat
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float):
+    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float):
         self.id: str = str(uuid.uuid4())
         self.duration : float = duration
         self.code_version: str = __version__
         self.experiment_id: str = experiment_id
         self.Q: float= Q
         self.m: float = m
-        if w is not None:
-
-            self.rho: float = w@w /d
-            
-        else:
-            self.rho = 1
-            self.m = 1
+        self.rho: float = rho
         self.cosb: float = self.m / np.sqrt(self.Q*self.rho)
         self.epsilon: float = epsilon
         self.lam: float = lam
@@ -116,7 +110,7 @@ class ERMExperimentInformation:
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
         self.training_error: float = error(y,yhat_gd_train)
-        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,lam,epsilon)
+        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,lam,epsilon, Q)
         self.d: int = d
         self.tau: float = tau
         self.alpha: float = n/d
@@ -124,7 +118,7 @@ class ERMExperimentInformation:
         self.analytical_calibrations: CalibrationResults = analytical_calibrations
         self.erm_calibrations: CalibrationResults = erm_calibrations
 
-        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,lam,epsilon)
+        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,lam,epsilon,Q)
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):

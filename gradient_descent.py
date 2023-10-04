@@ -134,10 +134,10 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
     return loss, grad
 
 
-def pure_training_loss(w,X,y,lam,epsilon):
+def pure_training_loss(w,X,y,lam,epsilon,Q):
     from state_evolution import adversarial_loss
     z = X@w
-    return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() + 0.5 * lam * (w@w))/X.shape[0]
+    return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),Q).sum() + 0.5 * lam * (w@w))/X.shape[0]
 
 
 if __name__ == "__main__":

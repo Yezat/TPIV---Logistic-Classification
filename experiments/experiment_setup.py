@@ -15,7 +15,7 @@ def get_default_experiment():
     alphas: np.ndarray = np.linspace(0.1,10,5)
     epsilons: np.ndarray = np.array([0]) # np.linspace(0,1,5)
     lambdas: np.ndarray = np.array([0.01])
-    taus: np.ndarray = np.array([0.0])
+    taus: np.ndarray = np.array([0.001])
     ps: np.ndarray = np.array([0.75]) 
     dp: float = 0.01
     d: int = 1000
