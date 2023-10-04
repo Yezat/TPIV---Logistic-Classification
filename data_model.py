@@ -190,10 +190,10 @@ class GaussianDataModel(DataModel):
 
         the = np.random.normal(0,1, self.d) 
         X = np.random.normal(0,1,(n,self.d)) / np.sqrt(self.d)
-        y = np.sign(1/np.sqrt(self.d) * X @ the) 
+        y = np.sign(1/np.sqrt(self.d) * X @ the + tau * np.random.normal(0,1,(n,)) )
         n_test = 100000
         X_test = np.random.normal(0,1,(n_test,self.d)) / np.sqrt(self.d)
-        y_test = np.sign(1/np.sqrt(self.d) * X_test @ the )
+        y_test = np.sign(1/np.sqrt(self.d) * X_test @ the + tau * np.random.normal(0,1,(n_test,)))
         return X, y, X_test, y_test, the
     
     def get_info(self):
@@ -661,10 +661,10 @@ class RandomKitchenSinkDataModel(DataModel):
             # Gaussian vanilla
             c = np.random.normal(0,1,(n,self.d)) / np.sqrt(self.d)
             u = c
-            y = np.sign(1/np.sqrt(self.d) * u @ the) 
+            y = np.sign(1/np.sqrt(self.d) * u @ the + tau * np.random.normal(0,1,(n,))) 
             X = u
             X_test = np.random.normal(0,1,(100000,self.d)) / np.sqrt(self.d)
-            y_test = np.sign(1/np.sqrt(self.d) * X_test @ the)
+            y_test = np.sign(1/np.sqrt(self.d) * X_test @ the + tau * np.random.normal(0,1,(100000,)))
             return X, y, X_test, y_test, the
         elif self.kitchen_kind == KitchenKind.DoubleCovariate or self.kitchen_kind == KitchenKind.VanillaStrongWeak or self.kitchen_kind == KitchenKind.StrongWeak:
 

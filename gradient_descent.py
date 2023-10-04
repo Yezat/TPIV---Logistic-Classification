@@ -11,7 +11,6 @@ from scipy.optimize import minimize
 from sklearn.utils.validation import check_array, check_consistent_length, _check_sample_weight
 from scipy.linalg import norm
 import adversarial_loss_gradient as skloss
-import sklearn_loss as skloss_original
 
 """
 sklearn - expects labels as -1 and 1.

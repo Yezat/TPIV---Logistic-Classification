@@ -22,7 +22,7 @@ def get_default_experiment():
     p: int = 1000
     erm_methods: list = ["sklearn"] #"optimal_lambda"
     experiment_name: str = "Vanilla Strong Weak Trials"
-    data_model_type: DataModelType = DataModelType.RandomKitchenSink
+    data_model_type: DataModelType = DataModelType.Gaussian
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,p, experiment_name)
     return experiment
 experiment = get_default_experiment()
