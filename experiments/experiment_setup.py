@@ -11,8 +11,8 @@ import numpy as np
 # # Create a SweepExperiment
 def get_default_experiment():
     state_evolution_repetitions: int = 1
-    erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.1,4,5)
+    erm_repetitions: int = 3
+    alphas: np.ndarray = np.linspace(0.1,5,5)
     epsilons: np.ndarray = np.array([0]) # np.linspace(0,1,5)
     lambdas: np.ndarray = np.array([0.01])
     taus: np.ndarray = np.array([0.0])
@@ -21,7 +21,7 @@ def get_default_experiment():
     d: int = 1000
     p: int = 1000
     erm_methods: list = ["sklearn"] #"optimal_lambda"
-    experiment_name: str = "RKS with Covariate Prior Trials"
+    experiment_name: str = "Vanilla Strong Weak Trials"
     data_model_type: DataModelType = DataModelType.RandomKitchenSink
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,p, experiment_name)
     return experiment

@@ -157,12 +157,13 @@ class GaussianDataModel(DataModel):
     def __init__(self, d):
         self.DataModelType = DataModelType.Gaussian
 
+        self.d = d
         # Psi 
         self.Psi = np.eye(d)
         self.Omega = np.eye(d)
         # Phi is a zero matrix
-        self.Phi = np.zeros((d,d))
-        self.theta = sample_weights(d)
+        self.Phi = np.eye(d)
+        self.theta = np.random.normal(0,1, d) 
 
         self.Sigma_w = np.eye(d)
         self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
@@ -180,11 +181,20 @@ class GaussianDataModel(DataModel):
 
 
     def get_data(self, n, tau):
-        raise NotImplementedError("Gaussian data model does not have data")
-        Xtrain, y = sample_training_data(self.theta,self.d,n,tau)
+        
+        # theta = sample_weights(self.d)
+        # Xtrain, y = sample_training_data(theta,self.d,n,tau)
+        # n_test = 100000
+        # Xtest,ytest = sample_training_data(theta,self.d,n_test,tau)
+        # return Xtrain, y, Xtest, ytest, theta
+
+        the = np.random.normal(0,1, self.d) 
+        X = np.random.normal(0,1,(n,self.d)) / np.sqrt(self.d)
+        y = np.sign(1/np.sqrt(self.d) * X @ the) 
         n_test = 100000
-        Xtest,ytest = sample_training_data(self.theta,self.d,n_test,tau)
-        return Xtrain, y, Xtest, ytest
+        X_test = np.random.normal(0,1,(n_test,self.d)) / np.sqrt(self.d)
+        y_test = np.sign(1/np.sqrt(self.d) * X_test @ the )
+        return X, y, X_test, y_test, the
     
     def get_info(self):
         info = {
@@ -317,14 +327,6 @@ class FashionMNISTDataModel(DataModel):
         return info
     
 
-class KitchenKind(Enum):
-    Vanilla = 1
-    StudentOnly = 2
-    TeacherStudent = 3
-    DoubleCovariate = 4
-
-
-
 
 def sample_multivariate_gaussian(mean, covariance_matrix, n):
     """
@@ -353,6 +355,17 @@ def sample_multivariate_gaussian(mean, covariance_matrix, n):
     samples = mean + np.dot(z, L.T)
 
     return samples
+
+
+class KitchenKind(Enum):
+    Vanilla = 1
+    StudentOnly = 2
+    TeacherStudent = 3
+    DoubleCovariate = 4
+    VanillaStrongWeak = 5 # only some eigenvalues are stronger than others...
+    StrongWeak = 6 # If there are covariances
+
+
 
 
 
@@ -452,7 +465,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 # Not technically a kitchen sink, just a covariate
                 assert self.p == self.d, "p must be equal to d for the vanilla gaussian model"
                 
-                var = 0.1 # Choose the var too big and the state evolution will run into issues.
+                var = 0.0 # Choose the var too big and the state evolution will run into issues.
                 self.Sigma_w = np.random.normal(0,var, (self.p,self.p)) 
                 # Let's make Sigma_w positive definite
                 self.Sigma_w = self.Sigma_w.T @ self.Sigma_w / self.p + np.eye(self.p)
@@ -468,7 +481,7 @@ class RandomKitchenSinkDataModel(DataModel):
                 logger.info("||theta|| = " + str(np.linalg.norm(self.theta)))
 
                 # Let's go and sample Sigma_x
-                self.Sigma_x = np.random.normal(0,0.1, (self.p,self.p))
+                self.Sigma_x = np.random.normal(0,1.0, (self.p,self.p))
                 logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
                 self.Sigma_x = self.Sigma_x.T @ self.Sigma_x / self.p 
                 # log the norm of Sigma_x
@@ -486,11 +499,35 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.Psi = self.Sigma_x
                 self.Omega = self.Sigma_x
                 self.Phi = np.eye(self.d)
+            elif self.kitchen_kind == KitchenKind.VanillaStrongWeak:
+                # ------------------ The Vanilla Identity Gaussian Model with Stronger Eigenvalues ----------------
+                assert self.p == self.d, "p must be equal to d for the vanilla strong-weak model"
+
+                # For now we will just increase the first few eigenvalues
+                self.Sigma_w = np.eye(self.p)
+                d1 = 1
+                # self.Sigma_w[:d1,:d1] = 1 * np.eye(d1)
+
+                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+
+                # Sample the teacher from Sigma_w
+                self.theta = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
+
+                # Let's for now take Sigma_x = Sigma_w
+                self.Sigma_x = self.Sigma_w
+
+                self.Sigma_x[0,0] = 100
+
+                self.Psi = self.Sigma_x
+                self.Omega = self.Sigma_x
+                self.Phi = np.eye(self.d)
+
 
             self.gamma = self.p / self.d
             
             self.PhiPhiT = (self.Phi @ self.theta.reshape(self.p,1) @ 
                             self.theta.reshape(1,self.p) @ self.Phi.T)
+            
             
             self.rho = self.theta.dot(self.Psi @ self.theta) / self.p
 
@@ -531,7 +568,15 @@ class RandomKitchenSinkDataModel(DataModel):
             'teacher_dimension': self.p,
             'student_dimension': self.d,
             'aspect_ratio': self.gamma,
-            'rho': self.rho
+            'rho': self.rho,
+            'kitchen_kind': self.kitchen_kind.name,
+            'Norm Sigma_w': np.linalg.norm(self.Sigma_w),
+            'Norm Sigma_x': np.linalg.norm(self.Sigma_x),
+            'Norm Psi': np.linalg.norm(self.Psi),
+            'Norm Omega': np.linalg.norm(self.Omega),
+            'Norm Phi': np.linalg.norm(self.Phi),
+            'Norm PhiPhiT': np.linalg.norm(self.PhiPhiT),
+            'Norm theta': np.linalg.norm(self.theta),
         }
         return info
 
@@ -612,33 +657,32 @@ class RandomKitchenSinkDataModel(DataModel):
             return X, y, X_test, y_test
     
         elif self.kitchen_kind == KitchenKind.Vanilla:
-
+            the = np.random.normal(0,1, self.d)
             # Gaussian vanilla
             c = np.random.normal(0,1,(n,self.d)) / np.sqrt(self.d)
             u = c
-            y = np.sign(1/np.sqrt(self.d) * u @ self.theta) 
+            y = np.sign(1/np.sqrt(self.d) * u @ the) 
             X = u
             X_test = np.random.normal(0,1,(100000,self.d)) / np.sqrt(self.d)
-            y_test = np.sign(1/np.sqrt(self.d) * X_test @ self.theta)
-            return X, y, X_test, y_test
-        elif self.kitchen_kind == KitchenKind.DoubleCovariate:
+            y_test = np.sign(1/np.sqrt(self.d) * X_test @ the)
+            return X, y, X_test, y_test, the
+        elif self.kitchen_kind == KitchenKind.DoubleCovariate or self.kitchen_kind == KitchenKind.VanillaStrongWeak or self.kitchen_kind == KitchenKind.StrongWeak:
 
 
+            self.logger.info(f"Getting data for {self.kitchen_kind.name} {n}")
 
-            self.logger.info(f"Getting data for Double Covariate {n}")
-            # let's sample a multivariate normal with zero mean and self.Omega covariance
-            X = sample_multivariate_gaussian(np.zeros(self.p), self.Omega, n) / np.sqrt(self.p)
-            # mn = multivariate_normal(mean = np.zeros(self.p), cov = self.Psi)
-            # X = mn.rvs(n)/np.sqrt(self.p)
-            # X = np.random.multivariate_normal(np.zeros(self.p), self.Psi, n) 
-            # Log the norm of X
+            # the = sample_multivariate_gaussian(np.zeros(self.p), self.Sigma_w,1
+            the = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
+
+            # let's sample a multivariate normal with zero mean and self.Omega covariance (both scipy and np are extremely slow in mps on my machine)
+            X = sample_multivariate_gaussian(np.zeros(self.p), self.Psi, n) / np.sqrt(self.p)
             self.logger.info("||X|| = " + str(np.linalg.norm(X)))
-            y = np.sign(1/np.sqrt(self.p) * X @ self.theta)
+            y = np.sign(1/np.sqrt(self.p) * X @ the)
             X_test = sample_multivariate_gaussian(np.zeros(self.p), self.Psi, 10000) / np.sqrt(self.p)
             # Log the norm of X_test
             self.logger.info("||X_test|| = " + str(np.linalg.norm(X_test)))
-            y_test = np.sign(1/np.sqrt(self.p) * X_test @ self.theta)
-            return X, y, X_test, y_test
+            y_test = np.sign(1/np.sqrt(self.p) * X_test @ the)
+            return X, y, X_test, y_test, the
         
             
 

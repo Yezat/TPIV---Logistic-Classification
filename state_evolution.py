@@ -112,7 +112,7 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
 
     return alpha * 0.5 * (Iplus + Iminus)
 
-def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0):
+def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0, logger = None):
     Q = q
 
     """
@@ -217,6 +217,8 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
     Reduce limit from earlier version
     """
 
+
+
     def reduce_limit(y):
         step = 1
         left_lim = -int_lims
@@ -231,6 +233,8 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
             right_lim -= step 
             if np.abs(right_lim) <= 2:
                 step = 0.1
+        # if logger is not None:
+        #    logger.info("-------------------------- left_lim: " + str(left_lim) + " right_lim: " + str(right_lim) + " for y = " + str(y))
         return left_lim, right_lim
 
     left_lim_plus, right_lim_plus = reduce_limit(1)
@@ -240,9 +244,11 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
     Iminus = quad(lambda xi: integrand(xi,-1),left_lim_minus,right_lim_minus,limit=500)[0]
 
     """
-    Optional reduce limit improvement by using the concentration point
+    Optional reduce limit improvement by using the concentration 
     """
+    # TODO - necessary? as far as I remember, it was for large epsilon and large alphas.
     if Iplus + Iminus < 1e-15:
+        logger.info("-------------------------- Concentration points")
         concentration_point = find_concentration_point(1)
         if concentration_point is not None:
             Iplus = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
@@ -250,30 +256,6 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
         if concentration_point is not None:
             Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
 
-        # concentration_point = find_concentration_point(1)
-        # Iplus = integrand(concentration_point,1)
-        # Iplus_quad = quad(lambda xi: integrand(xi,1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
-        # print("concentration point: ", concentration_point)
-        # print("Iplus: ", Iplus)        
-        # print("Iplus_quad: ", Iplus_quad)
-
-        # for lim in np.linspace(0.01,1,10):
-        #     Iplus = quad(lambda xi: integrand(xi,1),concentration_point-lim,concentration_point+lim,limit=500)[0]
-        #     print("Iplus: ", Iplus, " for lim = ", lim)
-        
-        # concentration_point = find_concentration_point(-1)
-        # Iminus = integrand(concentration_point,-1)
-        # Iminus_quad = quad(lambda xi: integrand(xi,-1),concentration_point-0.1,concentration_point+0.1,limit=500)[0]
-        # print("concentration point: ", concentration_point)
-        # print("Iminus: ", Iminus)
-        
-        # print("Iminus_quad: ", Iminus_quad)
-
-        # for lim in np.linspace(0.01,1,10):
-        #     Iminus = quad(lambda xi: integrand(xi,-1),concentration_point-lim,concentration_point+lim,limit=500)[0]
-        #     print("Iminus: ", Iminus, " for lim = ", lim)
-
-        # raise Exception("Iplus + Iminus < 1e-15")
 
     """
     Full int_lims
@@ -350,29 +332,32 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho_w_star: fl
 
 
 
-def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma):
+def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=None):
     m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)/np.sqrt(gamma)
     q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,lam,int_lims)
-    sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)
+    sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims,logger=logger)
     return m_hat, q_hat, sigma_hat
 
 def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model, logger):
+    one = data_model.Sigma_w_inv
+    one = 1
     
-    sigma = np.mean(data_model.spec_Omega/(lam * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))
+    sigma = np.mean(data_model.spec_Omega/(lam  * one + sigma_hat * data_model.spec_Omega))
     
     
     if data_model.commute:
         
-        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam* data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam* data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega))
+        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam * one + sigma_hat*data_model.spec_Omega)**2)
+
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam * one + sigma_hat*data_model.spec_Omega))
 
     else:
         
-        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam* data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
-        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam* data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega)**2)
+        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam * one + sigma_hat*data_model.spec_Omega)**2)
+        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam * one + sigma_hat * data_model.spec_Omega)**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam* data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam * one + sigma_hat * data_model.spec_Omega))
 
     
     # sigma = 1 / (lam + sigma_hat)
@@ -409,7 +394,6 @@ def fixed_point_finder(
     
 ):
     rho_w_star = my_data_model.rho
-    # rho_w_star = 1
     gamma = my_data_model.gamma
     m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
     err = 1.0
@@ -418,12 +402,12 @@ def fixed_point_finder(
     q_hat = 0
     sigma_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 1 == 0 and log:
+        if iter_nb % 10 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
 
-        m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma)
+        m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=logger)
 
         new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, my_data_model, logger)
 
@@ -443,14 +427,109 @@ def fixed_point_finder(
 
 if __name__ == "__main__":
     d = 1000
-    alpha = 1000
+    alpha = 3
     n = int(alpha * d)
     n_test = 100000
     w = sample_weights(d)
-    tau = 0.1
+    tau = 0.0
     lam = 0.01
-    epsilon = 1.0 # or 0.5 don't work...
-    logging.basicConfig(level=logging.INFO)
+    epsilon = 0.0 # or 0.5 don't work...
+    import logging
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.addHandler(logging.StreamHandler())
+
+    kitchen_model = RandomKitchenSinkDataModel(1000,1000, logger,source_pickle_path="")
+    w = kitchen_model.theta
+
+
+
+    start = time.time()
+    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logging, kitchen_model,rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
+    print("m: ", m)
+    print("q: ", q)
+    print("sigma: ", sigma)
+    print("Generalization error", generalization_error(1,m,q,tau))
+    print("Training error",training_loss_logistic(m,q,sigma,1,n/d,tau,epsilon, lam) )
+    print("time", time.time() - start)
+
+
+
+    # Let's investigate some parts of the fixed_point_finder
+
+    # For this initialize properly
+    rho_w_star = kitchen_model.rho
+    # rho_w_star = 1
+    gamma = kitchen_model.gamma
+    m, q, sigma = INITIAL_CONDITION[0], INITIAL_CONDITION[1], INITIAL_CONDITION[2]
+    err = 1.0
+    iter_nb = 0
+    m_hat = 0
+    q_hat = 0
+    sigma_hat = 0
+
+
+    m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, INT_LIMS, gamma)
+
+    # print initial hats
+    print("m_hat: ", m_hat)
+    print("q_hat: ", q_hat)
+    print("sigma_hat: ", sigma_hat)
+
+    # Let's look at the hat functions
+    new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, kitchen_model, logger)    
+
+    # print new values
+    print("new_m: ", new_m)
+    print("new_q: ", new_q)
+    print("new_sigma: ", new_sigma)
+
+
+
+
+
+    Q = q
+    def integrand(xi, y):
+        e = m * m / (rho_w_star * q)
+        w_0 = np.sqrt(rho_w_star*e) * xi
+        V_0 = rho_w_star * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+
+        w = np.sqrt(q) * xi
+        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        partial_proximal = ( proximal - w ) ** 2
+
+        z_star = proximal
+        arg = y*z_star - epsilon * np.sqrt(Q)
+        cosh = 4 + 4 *np.cosh(arg) 
+        # cosh /= sigma # TODO: go in calmth trough derivation again and then fix to whatever turns out to be right.
+        first = y*(w - z_star) / ( cosh)
+        if arg <= 0:
+            second = sigma / ((1 + np.exp(arg)) * cosh)
+        else:
+            second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
+        epsilon_term = (first + second) * epsilon / np.sqrt(Q)
+    
+
+        return z_0 * (partial_proximal/ (sigma ** 2) + epsilon_term ) * gaussian(xi)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-INT_LIMS,INT_LIMS,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-INT_LIMS,INT_LIMS,limit=500)[0]
+
+    # return alpha * 0.5 * (Iplus + Iminus)
+
+    # print the integrand for all possible values of xi 
+    for xi in np.linspace(-INT_LIMS,INT_LIMS,100):
+        print("xi", xi)
+        print("integrand", integrand(xi,1))
+    for xi in np.linspace(-INT_LIMS,INT_LIMS,100):
+        print("xi", xi)
+        print("integrand", integrand(xi,-1))
+
+
+
+
 
     # TODO: this should work...
     # 0.41142029787528417, epsilon=0.75, lambda=0.01, tau = 0.1
@@ -549,14 +628,6 @@ if __name__ == "__main__":
     # print("q_hat", q_hat)
     # print("sigma_hat", sigma_hat)
 
-    start = time.time()
-    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logging,rho_w_star=1,alpha=n/d,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
-    print("m: ", m)
-    print("q: ", q)
-    print("sigma: ", sigma)
-    print("Generalization error", generalization_error(1,m,q,tau))
-    print("Training error",training_loss_logistic(m,q,sigma,1,n/d,tau,epsilon, lam) )
-    print("time", time.time() - start)
 
     
 

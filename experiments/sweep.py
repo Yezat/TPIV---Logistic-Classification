@@ -51,21 +51,26 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
 
     # test to see if the data_model provides teacher weights
     # does data_model have the theta attribute and is it not none?
-    if hasattr(data_model, "theta") and data_model.theta is not None:
-        w = data_model.theta
-        rho = w@w /d
+    # if hasattr(data_model, "theta") and data_model.theta is not None:
+    #     w = data_model.theta
+    #     rho = w@w /d
         
-    else:
-        w = None
-        rho = data_model.rho
-        m = None
+    # else:
+    #     w = None
+    #     rho = data_model.rho
+    #     m = None
 
     # Log the data model kind
     # logger.info(f"Data model: {data_model.__class__.__name__}")
     # logger.info(f"Data Model KitchenKind: {data_model.kitchen_kind}")
     # log the get_data method
     # logger.info(f"Data Model get_data method: {data_model.get_data.__name__}")
-    Xtrain, y, Xtest, ytest = data_model.get_data(int(alpha * d), tau)
+    Xtrain, y, Xtest, ytest, w = data_model.get_data(int(alpha * d), tau)
+    if w is not None:
+        rho = w@w /d
+    else:
+        rho = data_model.rho
+        m = None
 
     # Log the sizes of the data
     # logger.info(f"Size of Xtrain: {Xtrain.shape}")
@@ -116,7 +121,15 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     if w is not None:
         
         m = w_gd.dot(data_model.Phi@w) / np.sqrt(d*data_model.p)
-        # m = w_gd @ w / d
+        m = w_gd @ w / d
+        logger.info("ERM m: %f", m)
+        
+        # print the shapes and norms of w and w_gd
+        # logger.info(f"Shape of w: {w.shape}")
+        # logger.info(f"Shape of w_gd: {w_gd.shape}")
+        # logger.info(f"Norm of w: {np.linalg.norm(w,2)}")
+        # logger.info(f"Norm of w_gd: {np.linalg.norm(w_gd,2)}")
+
         # We cannot compute the calibration if we don't know the ground truth.
         for p in ps:
             
