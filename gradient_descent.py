@@ -45,7 +45,7 @@ def preprocessing(coef, X, y, lam, epsilon):
     target = y_bin
     return w0, X, target, lam, epsilon
 
-def sklearn_optimize(coef,X,y,lam,epsilon):
+def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None):
     w0, X,target, lam, epsilon = preprocessing(coef, X, y, lam, epsilon)
 
     func = loss_gradient 
@@ -53,6 +53,9 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
     sample_weight = None
     l2_reg_strength = lam
     n_threads = 1
+
+    if covariance_prior is None:
+        covariance_prior = np.eye(X.shape[1])
 
     # if epsilon > 1 and lam >= 1:
     #     method = "Newton-CG"
@@ -66,7 +69,7 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
                 w0,
                 method=method,
                 jac=True,
-                args=(X, target, l2_reg_strength, epsilon, sample_weight, n_threads),
+                args=(X, target, l2_reg_strength, epsilon,covariance_prior, sample_weight, n_threads),
                 options={"maxiter": 1000, "disp": False},
             )
     
@@ -74,11 +77,13 @@ def sklearn_optimize(coef,X,y,lam,epsilon):
     return w0
 
 
-def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_threads=1):
+def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sample_weight=None, n_threads=1):
     n_features, n_classes = X.shape[1], 1
     fit_intercept = False
     weights = coef
     raw_prediction = X @ weights
+
+
 
     half = skloss.CyHalfBinomialLoss()
     # half = skloss_original.CyHalfBinomialLoss()
@@ -125,19 +130,26 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, sample_weight=None, n_thr
     if epsilon == 0:
         assert np.linalg.norm(adv_grad_summand) == 0
 
-    loss += 0.5 * l2_reg_strength * (weights @ weights)
+    loss += 0.5 * l2_reg_strength * (weights @ covariance_prior @ weights)
     grad = np.empty_like(coef, dtype=weights.dtype)
-    grad[:n_features] = X.T @ grad_per_sample + l2_reg_strength * weights + adv_grad_summand
+    grad[:n_features] = X.T @ grad_per_sample + (1/2)* l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
     if fit_intercept:
         grad[-1] = grad_per_sample.sum()
 
     return loss, grad
 
 
-def pure_training_loss(w,X,y,lam,epsilon,Q):
+def training_loss(w,X,y,lam,epsilon,covariance_prior = None):
     from state_evolution import adversarial_loss
     z = X@w
-    return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),Q).sum() + 0.5 * lam * (w@w))/X.shape[0]
+    if covariance_prior is None:
+        covariance_prior = np.eye(X.shape[1])
+    return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() + 0.5 * lam * w@covariance_prior@w )/X.shape[0]
+
+def pure_training_loss(w,X,y,epsilon):
+    from state_evolution import adversarial_loss
+    z = X@w
+    return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() )/X.shape[0]
 
 
 if __name__ == "__main__":

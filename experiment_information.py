@@ -1,6 +1,6 @@
 from gradient_descent import pure_training_loss
 import theoretical
-from state_evolution import training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic
+from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic
 from util import error, adversarial_error
 import numpy as np
 from _version import __version__
@@ -62,7 +62,7 @@ class StateEvolutionExperimentInformation:
         rho_w_star = rho
         self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
         self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho_w_star,tau,epsilon)
-        self.training_loss: float = training_loss_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
+        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
         self.training_error: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -87,7 +87,7 @@ class StateEvolutionExperimentInformation:
         self.m_hat : float = m_hat
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float):
+    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray):
         self.id: str = str(uuid.uuid4())
         self.duration : float = duration
         self.code_version: str = __version__
@@ -110,7 +110,7 @@ class ERMExperimentInformation:
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
         self.training_error: float = error(y,yhat_gd_train)
-        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,lam,epsilon, Q)
+        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,epsilon)
         self.d: int = d
         self.tau: float = tau
         self.alpha: float = n/d
@@ -118,7 +118,7 @@ class ERMExperimentInformation:
         self.analytical_calibrations: CalibrationResults = analytical_calibrations
         self.erm_calibrations: CalibrationResults = erm_calibrations
 
-        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,lam,epsilon,Q)
+        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,epsilon)
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):

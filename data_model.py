@@ -474,29 +474,20 @@ class RandomKitchenSinkDataModel(DataModel):
                 # Not technically a kitchen sink, just a covariate
                 assert self.p == self.d, "p must be equal to d for the vanilla gaussian model"
                 
-                var = 0.3 # Choose the var too big and the state evolution will run into issues.
+                var = 0.5 # Choose the var too big and the state evolution will run into issues.
                 self.Sigma_w = np.random.normal(0,var, (self.p,self.p)) 
                 # Let's make Sigma_w positive definite
                 self.Sigma_w = self.Sigma_w.T @ self.Sigma_w / self.p + np.eye(self.p)
-
-                # self.Sigma_w = np.eye(self.p)
-
-                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+                self.Sigma_w_inv = self.Sigma_w
                 
                 # Let's sample the teacher weights as a normal distribution with covariance sigma_w
                 self.theta = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
 
-                # print the norm of theta
-                logger.info("||theta|| = " + str(np.linalg.norm(self.theta)))
 
                 # Let's go and sample Sigma_x
-                self.Sigma_x = np.random.normal(0,1, (self.p,self.p))
-                logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
+                self.Sigma_x = np.random.normal(0,0.9, (self.p,self.p))
                 self.Sigma_x = self.Sigma_x.T @ self.Sigma_x / self.p
-                # log the norm of Sigma_x
-                logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
-                self.Sigma_x += 10 *  np.eye(self.p)
-                logger.info("||Sigma_x|| = " + str(np.linalg.norm(self.Sigma_x)))
+                self.Sigma_x += 1 *  np.eye(self.p)
 
 
 
@@ -521,13 +512,16 @@ class RandomKitchenSinkDataModel(DataModel):
                 # ------------------ The Vanilla Identity Gaussian Model with Stronger Eigenvalues ----------------
                 assert self.p == self.d, "p must be equal to d for the vanilla strong-weak model"
 
+                # TODO Make sure to distinguish teacher and student covariances for the weight priors
+
                 # For now we will just increase the first few eigenvalues
                 self.Sigma_w = np.eye(self.p)
                 d1 = 1
                 # self.Sigma_w[:d1,:d1] = 1 * np.eye(d1)
-                self.Sigma_w[0,0] = 500
+                self.Sigma_w[0,0] = 100
 
-                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+                self.Sigma_w_inv = self.Sigma_w
+                
 
                 # Sample the teacher from Sigma_w
                 self.theta = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
@@ -552,17 +546,20 @@ class RandomKitchenSinkDataModel(DataModel):
                 alph = 1.2
                 r = 0.3
 
+                
+
                 spec_Omega0 = np.array([self.p/(k+1)**alph for k in range(self.p)])
                 self.Omega=np.diag(spec_Omega0)
                 self.Phi = self.Omega
                 self.Psi = self.Omega
 
                 self.theta = np.sqrt(np.array([1/(k+1)**((1+alph*(2*r-1))) for k in range(self.p)]))
-                self.rho = np.mean(spec_Omega0 * self.theta**2)
+                self.rho = np.mean(spec_Omega0 * self.theta**2) 
                 self.PhiPhiT = np.diag(spec_Omega0**2 * self.theta**2)
 
-                self.Sigma_w  = np.eye(self.p)
-                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
+                self.Sigma_t = np.diag(self.theta**2)
+                self.Sigma_w  = np.diag(self.theta)
+                self.Sigma_w_inv = self.Sigma_w
 
             
             
@@ -656,8 +653,7 @@ class RandomKitchenSinkDataModel(DataModel):
         self.spec_Omega = np.real(self.spec_Omega)
         self.logger.info("Omega done...")
         self.spec_PhiPhit = np.real(np.linalg.eigvalsh(self.PhiPhiT))
-        self.spec_Sigma_w_inv, self.eigv_Sigma_w_inv = np.linalg.eigh(self.Sigma_w_inv)
-        self.spec_Sigma_w_inv = np.real(self.spec_Sigma_w_inv) # is it necessary to force them being real?
+        self.spec_Sigma_w_inv = np.real(np.linalg.eigvalsh(self.Sigma_w_inv))
 
     def get_data(self, n, tau):
         if self.kitchen_kind == KitchenKind.StudentOnly:
@@ -666,12 +662,13 @@ class RandomKitchenSinkDataModel(DataModel):
             c = np.random.normal(0,1,(n,self.p)) / np.sqrt(self.p)
             u = c
             y = np.sign(u @ self.theta)
-            v = np.sign(1/np.sqrt(self.d) * self.F @ u.T).T
+            v = np.sign(1/np.sqrt(self.d) * self.F @ u.T + tau * np.random.normal(0,1,(n,))).T
             X = v / np.sqrt(self.d)
-            X_test = np.random.normal(0,1,(10000,self.p)) / np.sqrt(self.p)
+            n_test = 10000
+            X_test = np.random.normal(0,1,(n_test,self.p)) / np.sqrt(self.p)
             u_test = X_test
             v_test = np.sign(1/np.sqrt(self.d) * self.F @ X_test.T).T
-            y_test = np.sign(1/np.sqrt(self.d) * u_test @ self.theta)
+            y_test = np.sign(1/np.sqrt(self.d) * u_test @ self.theta + + tau * np.random.normal(0,1,(n_test,)))
             X_test = v_test / np.sqrt(self.d)
             return X, y, X_test, y_test
             
@@ -683,12 +680,13 @@ class RandomKitchenSinkDataModel(DataModel):
             c = np.random.normal(0,1,(n,D))
             u = np.sign(1/np.sqrt(D) * self.F_teacher @ c.T).T
             v = np.sign(1/np.sqrt(D) * self.F_student @ c.T).T
-            y = np.sign(1/np.sqrt(self.d) * u @ self.theta)
+            y = np.sign(1/np.sqrt(self.d) * u @ self.theta + tau * np.random.normal(0,1,(n,)))
             X = v / np.sqrt(self.d)
-            X_test = np.random.normal(0,1,(10000,D)) 
+            n_test = 10000
+            X_test = np.random.normal(0,1,(n_test,D)) 
             u_test = np.sign(1/np.sqrt(D) * self.F_teacher @ X_test.T).T
             v_test = np.sign(1/np.sqrt(D) * self.F_student @ X_test.T).T
-            y_test = np.sign(1/np.sqrt(self.d) * u_test @ self.theta)
+            y_test = np.sign(1/np.sqrt(self.d) * u_test @ self.theta + tau * np.random.normal(0,1,(n_test,)))
             X_test = v_test / np.sqrt(self.d)
             # Log the shapes
             # self.logger.info("X.shape = " + str(X.shape))
@@ -718,23 +716,22 @@ class RandomKitchenSinkDataModel(DataModel):
             # let's sample a multivariate normal with zero mean and self.Omega covariance (both scipy and np are extremely slow in mps on my machine) depends on the method I believe.. and maybe some locking issues
             
             X = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, n, method="cholesky") / np.sqrt(self.p)            
-            y = np.sign(1/np.sqrt(self.p) * X @ the)
+            y = np.sign(X @ the + tau * np.random.normal(0,1,(n,)))
             
             X_test = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, 10000, method="cholesky") / np.sqrt(self.p)
             # Log the norm of X_test
             
-            y_test = np.sign(1/np.sqrt(self.p) * X_test @ the)
+            y_test = np.sign(X_test @ the + tau * np.random.normal(0,1,(10000,)))
             return X, y, X_test, y_test, the
         elif self.kitchen_kind == KitchenKind.SourceCapacity:
             self.logger.info(f"Getting data for {self.kitchen_kind.name} {n}")
 
             # let's sample a multivariate normal with zero mean and self.Omega covariance (both scipy and np are extremely slow in mps on my machine) depends on the method I believe.. and maybe some locking issues
+            X = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, n, method="cholesky")  / np.sqrt(self.p)
+            y = np.sign(X @ self.theta + tau * np.random.normal(0,1,(n,)))
             
-            X = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, n, method="cholesky") / np.sqrt(self.p)            
-            y = np.sign(1/np.sqrt(self.p) * X @ self.theta)
-            
-            X_test = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, 10000, method="cholesky") / np.sqrt(self.p)            
-            y_test = np.sign(1/np.sqrt(self.p) * X_test @ self.theta)
+            X_test = np.random.default_rng().multivariate_normal(np.zeros(self.p), self.Psi, 10000, method="cholesky") / np.sqrt(self.p)
+            y_test = np.sign(X_test @ self.theta + tau * np.random.normal(0,1,(10000,)))
 
             return X, y, X_test, y_test, self.theta
         

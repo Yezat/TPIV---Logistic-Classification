@@ -268,6 +268,10 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
 
 def training_loss_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
+    return pure_training_loss_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon,lam,int_lims) + (lam/(2*alpha)) * q
+
+
+def pure_training_loss_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
     Q = q
     def integrand(xi,y):
         w = np.sqrt(q) * xi
@@ -282,7 +286,7 @@ def training_loss_logistic(m: float, q: float, sigma: float, rho_w_star: float, 
 
     I1 = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
     I2 = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
-    return (I1 + I2)/2 + (lam/(2*alpha)) * q
+    return (I1 + I2)/2 
 
 def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float, int_lims: float = 20.0):
     Q = q
@@ -339,34 +343,22 @@ def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, ga
     return m_hat, q_hat, sigma_hat
 
 def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model, logger):
-    one = data_model.Sigma_w_inv
-    one = data_model.spec_Sigma_w_inv
-    
-    # sigma = np.mean(data_model.spec_Omega/(lam + sigma_hat * data_model.spec_Omega))
 
-    # if data_model.commute:
-    #     q = np.mean((data_model.spec_Omega**2 * q_hat +
-    #                 m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) /
-    #                 (lam + sigma_hat*data_model.spec_Omega)**2)
-
-    #     m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit /
-    #                                             (lam + sigma_hat*data_model.spec_Omega))
-
-    sigma = np.mean(data_model.spec_Omega/(lam  * one + sigma_hat * data_model.spec_Omega))    
+    sigma = np.mean(data_model.spec_Omega/(lam  * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))    
     
     if data_model.commute:
         
 
-        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam * one + sigma_hat*data_model.spec_Omega)**2)
+        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam * data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam * one + sigma_hat*data_model.spec_Omega))
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam * data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega))
 
     else:
         
-        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam * one + sigma_hat*data_model.spec_Omega)**2)
-        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam * one + sigma_hat * data_model.spec_Omega)**2)
+        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam * data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
+        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega)**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam * one + sigma_hat * data_model.spec_Omega))
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))
 
     
     # sigma = 1 / (lam + sigma_hat)

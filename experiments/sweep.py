@@ -67,7 +67,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     # logger.info(f"Data Model get_data method: {data_model.get_data.__name__}")
     Xtrain, y, Xtest, ytest, w = data_model.get_data(int(alpha * d), tau)
     if w is not None:
-        rho = w.dot(data_model.Psi@w) /d
+        rho = w.dot(data_model.Psi@w) / d
     else:
         rho = data_model.rho
         m = None
@@ -79,7 +79,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     # logger.info(f"Size of ytest: {ytest.shape}")
 
     if method == "sklearn":
-        w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon)
+        w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon, data_model.Sigma_w_inv)
     else:
         raise Exception(f"Method {method} not implemented")
 
@@ -120,7 +120,8 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
 
     if w is not None:
         
-        m = w_gd.dot(data_model.Phi@w) / np.sqrt(d*data_model.p)
+        m = w_gd.dot(data_model.Phi@w) / d
+        # m = w_gd @ w / np.sqrt(d*data_model.p)
         logger.info("ERM m: %f", m)
         
         # print the shapes and norms of w and w_gd
@@ -130,17 +131,18 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
         # logger.info(f"Norm of w_gd: {np.linalg.norm(w_gd,2)}")
 
         # We cannot compute the calibration if we don't know the ground truth.
-        for p in ps:
+        if tau != 0: # TODO is there a point in computing the calibration if tau is zero?
+            for p in ps:
             
-            analytical_calibrations.append(calc_calibration_analytical(rho,p,m,q_erm,tau))        
-            erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
+                analytical_calibrations.append(calc_calibration_analytical(rho,p,m,q_erm,tau))        
+                erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
 
     analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
     erm_calibrations_result = CalibrationResults(ps,erm_calibrations,dp)
 
     end = time.time()
     duration = end - start
-    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho)
+    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w_inv)
 
 
     logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")
