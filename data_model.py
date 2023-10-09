@@ -87,8 +87,6 @@ class Custom(DataModel):
 
         # assume iid gaussian prior
         self.Sigma_w = np.eye(self.k)
-        # Assign the inverse of Sigma_w
-        self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
         
         self.PhiPhiT = (self.Phi @ self.theta.reshape(self.k,1) @ 
                         self.theta.reshape(1,self.k) @ self.Phi.T)
@@ -166,7 +164,6 @@ class GaussianDataModel(DataModel):
         self.theta = np.random.normal(0,1, d) 
 
         self.Sigma_w = np.eye(d)
-        self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
         
         self.p, self.k = self.Phi.shape
         self.gamma = self.k / self.p
@@ -266,7 +263,6 @@ class FashionMNISTDataModel(DataModel):
             y_test[y_test == 7] = 1
 
         self.Sigma_w = np.eye(d) # Just an assumption...
-        self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
         
 
         self.p = ntot
@@ -380,7 +376,7 @@ class RandomKitchenSinkDataModel(DataModel):
  
         logger.info("Let that Random Kitchen Sink in")
 
-        self.kitchen_kind = KitchenKind.DoubleCovariate
+        self.kitchen_kind = KitchenKind.SourceCapacity
 
         self.d = student_dimension
         self.p = teacher_dimension
@@ -416,11 +412,11 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.Phi = np.eye(self.d)
                 self.theta = np.random.normal(0,1, self.p) 
                 self.Sigma_w = np.eye(self.p)
-                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
 
                 self.rho = 1
                 self.PhiPhiT = np.eye(self.d)      
-                self.Sigma_x = np.eye(self.p)          
+                self.Sigma_x = np.eye(self.p)         
+                self.Sigma_delta = np.eye(self.p) 
 
             elif self.kitchen_kind == KitchenKind.TeacherStudent:
             # ----------------- The Teacher and Student Kitchen Sink ----------------
@@ -453,7 +449,6 @@ class RandomKitchenSinkDataModel(DataModel):
                 # Teacher weights
                 self.theta = np.random.normal(0,1, self.p) 
                 self.Sigma_w = np.eye(self.p)
-                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
               
             elif self.kitchen_kind == KitchenKind.StudentOnly:
             # ------------- The Student only Kitchen Sink ---------------- 
@@ -464,7 +459,6 @@ class RandomKitchenSinkDataModel(DataModel):
                 
                 self.theta =  np.random.normal(0,1, self.p) 
                 self.Sigma_w = np.eye(self.p)
-                self.Sigma_w_inv = np.linalg.inv(self.Sigma_w)
 
                 self.Psi = np.eye(self.p)
                 self.Phi = self.k1 * self.F # must not be transposed! Loureiro transposes twice.
@@ -478,7 +472,6 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.Sigma_w = np.random.normal(0,var, (self.p,self.p)) 
                 # Let's make Sigma_w positive definite
                 self.Sigma_w = self.Sigma_w.T @ self.Sigma_w / self.p + np.eye(self.p)
-                self.Sigma_w_inv = self.Sigma_w
                 
                 # Let's sample the teacher weights as a normal distribution with covariance sigma_w
                 self.theta = np.random.multivariate_normal(np.zeros(self.p), self.Sigma_w)
@@ -508,6 +501,8 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.spec_Sigma_w = np.linalg.eigvalsh(self.Sigma_w)
                 self.rho = self.spec_Psi.dot(self.spec_Sigma_w) / self.p
 
+                self.Sigma_delta = np.eye(self.p)
+
             elif self.kitchen_kind == KitchenKind.VanillaStrongWeak:
                 # ------------------ The Vanilla Identity Gaussian Model with Stronger Eigenvalues ----------------
                 assert self.p == self.d, "p must be equal to d for the vanilla strong-weak model"
@@ -520,7 +515,6 @@ class RandomKitchenSinkDataModel(DataModel):
                 # self.Sigma_w[:d1,:d1] = 1 * np.eye(d1)
                 self.Sigma_w[0,0] = 100
 
-                self.Sigma_w_inv = self.Sigma_w
                 
 
                 # Sample the teacher from Sigma_w
@@ -542,6 +536,8 @@ class RandomKitchenSinkDataModel(DataModel):
                 # Let's get the eigenvalues of Sigma_w
                 self.spec_Sigma_w = np.linalg.eigvalsh(self.Sigma_w)
                 self.rho = self.spec_Psi.dot(self.spec_Sigma_w) / self.p
+
+                self.Sigma_delta = np.eye(self.p)
             elif self.kitchen_kind == KitchenKind.SourceCapacity:
                 alph = 1.2
                 r = 0.3
@@ -557,9 +553,11 @@ class RandomKitchenSinkDataModel(DataModel):
                 self.rho = np.mean(spec_Omega0 * self.theta**2) 
                 self.PhiPhiT = np.diag(spec_Omega0**2 * self.theta**2)
 
+                self.Sigma_delta = np.eye(self.p)
+                
+
                 self.Sigma_t = np.diag(self.theta**2)
-                self.Sigma_w  = np.diag(self.theta)
-                self.Sigma_w_inv = self.Sigma_w
+                self.Sigma_w  = np.eye(self.p)
 
             
             
@@ -653,7 +651,8 @@ class RandomKitchenSinkDataModel(DataModel):
         self.spec_Omega = np.real(self.spec_Omega)
         self.logger.info("Omega done...")
         self.spec_PhiPhit = np.real(np.linalg.eigvalsh(self.PhiPhiT))
-        self.spec_Sigma_w_inv = np.real(np.linalg.eigvalsh(self.Sigma_w_inv))
+        self.spec_Sigma_w = np.real(np.linalg.eigvalsh(self.Sigma_w))
+        self.spec_Sigma_delta = np.real(np.linalg.eigvalsh(self.Sigma_delta))
 
     def get_data(self, n, tau):
         if self.kitchen_kind == KitchenKind.StudentOnly:

@@ -79,7 +79,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     # logger.info(f"Size of ytest: {ytest.shape}")
 
     if method == "sklearn":
-        w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon, data_model.Sigma_w_inv)
+        w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon, data_model.Sigma_w)
     else:
         raise Exception(f"Method {method} not implemented")
 
@@ -140,9 +140,12 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
     erm_calibrations_result = CalibrationResults(ps,erm_calibrations,dp)
 
+    A = w_gd @ data_model.Sigma_delta @ w_gd / d
+    N = w_gd @ w_gd / d
+
     end = time.time()
     duration = end - start
-    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w_inv)
+    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w,A,N)
 
 
     logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")
@@ -157,7 +160,7 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
     if log:
         logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
-    m,q,sigma, sigma_hat, q_hat, m_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
+    m,q,sigma,A,N, sigma_hat, q_hat, m_hat,A_hat, N_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
 
     end = time.time()
     experiment_duration = end-start
@@ -169,7 +172,7 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
             calibrations.append(calc_calibration_analytical(data_model.rho,p,m,q,tau))
     calibration_results = CalibrationResults(ps,calibrations,None)
 
-    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat,data_model.rho)
+    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat,data_model.rho,A,N,A_hat,N_hat)
 
     if log:
         logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
@@ -348,6 +351,7 @@ def master(num_processes, logger, filename):
         status = MPI.Status()
         # log status information
         logger.info(f"Received task {received_tasks} from {status.source}") 
+        
         task = MPI.COMM_WORLD.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
         received_tasks += 1
 
@@ -413,6 +417,8 @@ if __name__ == "__main__":
     ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+
+    logger.info("This process has rank %d", rank)
 
     if rank == 0:
         # run the master

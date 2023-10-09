@@ -11,9 +11,9 @@ import numpy as np
 # # Create a SweepExperiment
 def get_default_experiment():
     state_evolution_repetitions: int = 1
-    erm_repetitions: int = 3
-    alphas: np.ndarray = np.linspace(0.1,5,5)
-    epsilons: np.ndarray = np.array([0]) # np.linspace(0,1,5)
+    erm_repetitions: int = 2
+    alphas: np.ndarray = np.linspace(0.1,3,4)
+    epsilons: np.ndarray = np.array([0.001]) # np.linspace(0,1,5)
     lambdas: np.ndarray = np.array([0.01])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 

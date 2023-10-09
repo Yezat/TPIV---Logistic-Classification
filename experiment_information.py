@@ -54,7 +54,7 @@ class CalibrationResults:
 
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
-    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float, rho: float):
+    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float, rho: float, A: float, N: float, A_hat: float, N_hat: float):
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
         self.duration: float = duration
@@ -62,8 +62,8 @@ class StateEvolutionExperimentInformation:
         rho_w_star = rho
         self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
         self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho_w_star,tau,epsilon)
-        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
-        self.training_error: float = training_error_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon, lam)
+        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,A,N,rho_w_star,alpha,tau,epsilon, lam)
+        self.training_error: float = training_error_logistic(m,q,sigma,A,N,rho_w_star,alpha,tau,epsilon, lam)
         # store current date and time
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
@@ -85,9 +85,13 @@ class StateEvolutionExperimentInformation:
         self.sigma_hat : float = sigma_hat
         self.q_hat : float = q_hat
         self.m_hat : float = m_hat
+        self.A : float = A
+        self.N : float = N
+        self.A_hat : float = A_hat
+        self.N_hat : float = N_hat
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray):
+    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray, A: float, N: float):
         self.id: str = str(uuid.uuid4())
         self.duration : float = duration
         self.code_version: str = __version__
@@ -114,6 +118,8 @@ class ERMExperimentInformation:
         self.d: int = d
         self.tau: float = tau
         self.alpha: float = n/d
+        self.A: float = A
+        self.N: float = N
 
         self.analytical_calibrations: CalibrationResults = analytical_calibrations
         self.erm_calibrations: CalibrationResults = erm_calibrations
@@ -173,7 +179,11 @@ class DatabaseHandler:
                     int_lims REAL,
                     sigma_hat REAL,
                     q_hat REAL,
-                    m_hat REAL
+                    m_hat REAL,
+                    A REAL,
+                    N REAL,
+                    A_hat REAL,
+                    N_hat REAL
                 )
             ''')
             self.connection.commit()
@@ -233,7 +243,9 @@ class DatabaseHandler:
                     alpha REAL,
                     analytical_calibrations BLOB,
                     erm_calibrations BLOB,
-                    test_loss REAL
+                    test_loss REAL,
+                    A REAL,
+                    N REAL
                 )
             ''')
             self.connection.commit()
@@ -269,7 +281,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -297,7 +309,11 @@ class DatabaseHandler:
             experiment_information.int_lims,
             experiment_information.sigma_hat,
             experiment_information.q_hat,
-            experiment_information.m_hat
+            experiment_information.m_hat,
+            experiment_information.A,
+            experiment_information.N,
+            experiment_information.A_hat,
+            experiment_information.N_hat
         ))
         self.connection.commit()
 
@@ -321,7 +337,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -346,7 +362,9 @@ class DatabaseHandler:
             float(experiment_information.alpha),
             experiment_information.analytical_calibrations.to_json(),
             experiment_information.erm_calibrations.to_json(),
-            experiment_information.test_loss
+            experiment_information.test_loss,
+            experiment_information.A,
+            experiment_information.N
         ))
         self.connection.commit()
 

@@ -20,17 +20,17 @@ def optim(z,y,V,w_prime):
     else:
         return y*V*np.exp(-y*z)/(1+ np.exp(-y*z)) + w_prime - z
 
-def proximal_logistic_root_scalar(V: float, y: float, Q: float, epsilon: float, w:float) -> float:
+def proximal_logistic_root_scalar(V: float, y: float, Delta: float, epsilon: float, w:float) -> float:
     if y == 0:
         return w
     try:
-        w_prime = w - epsilon * np.sqrt(Q) / y
+        w_prime = w - epsilon * Delta / y
         result = root_scalar(lambda z: optim(z,y,V,w_prime) , bracket=[-50000000,50000000],xtol=10e-10,rtol=10e-10) 
         z = result.root
-        return z + epsilon * np.sqrt(Q) / y
+        return z + epsilon * Delta / y
     except Exception as e:
         # print all parameters
-        print("V: ", V, "y: ", y, "Q: ", Q, "epsilon: ", epsilon, "w: ", w)
+        print("V: ", V, "y: ", y, "Delta: ", Delta, "epsilon: ", epsilon, "w: ", w)
         raise e
 
 def log1pexp(x):
@@ -50,8 +50,14 @@ def log1pexp(x):
     out[idx4] = x[idx4]
     return out
 
-def adversarial_loss(y,z, epsilon, Q):
-    return log1pexp(-y*z + epsilon * np.sqrt(Q))
+def adversarial_loss(y,z, epsilon, Delta):
+    return log1pexp(-y*z + epsilon * Delta)
+
+def first_derivative_loss(argument):
+    return -1/(1 + np.exp(argument))
+
+def second_derivative_loss(y: float, z: float, Delta: float, epsilon: float) -> float:
+    return y**2 / (2 * np.cosh(0.5*y*z - 0.5*epsilon * Delta))**2
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
@@ -59,11 +65,16 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
     return np.exp(-.5 * (x-mean)**2 / var)/np.sqrt(2*np.pi*var)
 
-def  second_derivative_loss(y: float, z: float, Q: float, epsilon: float) -> float:
-    return y**2 / (2 * np.cosh(0.5*y*z - 0.5*epsilon * np.sqrt(Q)))**2
 
-def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
-    Q = q
+
+
+
+"""
+---------------------- Hat Equations ----------------------
+"""
+
+def m_hat_func(m: float, q: float, sigma: float, A: float, N: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+
     def integrand(xi, y):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
@@ -72,7 +83,7 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
         w = np.sqrt(q) * xi
 
-        partial_prox =  proximal_logistic_root_scalar(sigma,y,Q,epsilon,w) - w 
+        partial_prox =  proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w) - w 
 
         return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
 
@@ -80,8 +91,8 @@ def m_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
     return alpha / sigma * (Iplus - Iminus)
 
-def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
-    Q = q
+def q_hat_func(m: float, q: float, sigma: float, A: float, N: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+
     def integrand(xi, y):
         e = m * m / (rho_w_star * q)
         w_0 = np.sqrt(rho_w_star*e) * xi
@@ -90,39 +101,40 @@ def q_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float
         z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
 
         w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
         partial_proximal = ( proximal - w ) ** 2
 
-        z_star = proximal
-        arg = y*z_star - epsilon * np.sqrt(Q)
-        cosh = 4 + 4 *np.cosh(arg) 
+        # TODO double check if this was the only change necessary for the TP w.r.t. Brunos equations.
+        # z_star = proximal
+        # arg = y*z_star - epsilon * np.sqrt(Q)
+        # cosh = 4 + 4 *np.cosh(arg) 
         # cosh /= sigma # TODO: go in calmth trough derivation again and then fix to whatever turns out to be right.
-        first = y*(w - z_star) / ( cosh)
-        if arg <= 0:
-            second = sigma / ((1 + np.exp(arg)) * cosh)
-        else:
-            second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
-        epsilon_term = (first + second) * epsilon / np.sqrt(Q)
+        # first = y*(w - z_star) / ( cosh)
+        # if arg <= 0:
+        #     second = sigma / ((1 + np.exp(arg)) * cosh)
+        # else:
+        #     second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
+        # epsilon_term = (first + second) * epsilon / np.sqrt(Q)
+        # epsilon_term = 0
        
 
-        return z_0 * (partial_proximal/ (sigma ** 2) + epsilon_term ) * gaussian(xi)
+        return z_0 * (partial_proximal/ (sigma ** 2)  ) * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
 
     return alpha * 0.5 * (Iplus + Iminus)
 
-def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0, logger = None):
-    Q = q
+def sigma_hat_func(m: float, q: float, sigma: float, A: float, N: float, rho_w_star: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0, logger = None):
 
     """
     Original derivative of f_out (needs a minus in front of alpha * Iplus...)
     """
     def get_derivative_f_out(xi,y):
         w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
 
-        derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,Q,epsilon))
+        derivative_proximal = 1/(1 + sigma * second_derivative_loss(y,proximal,A/np.sqrt(N),epsilon))
 
         derivative_f_out =  1/sigma * (derivative_proximal -1)       
         return derivative_f_out
@@ -132,9 +144,9 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
     """
     def alternative_derivative_f_out(xi,y):
         w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
 
-        second_derivative = second_derivative_loss(y,proximal,Q,epsilon)
+        second_derivative = second_derivative_loss(y,proximal,A/np.sqrt(N),epsilon)
 
         return second_derivative / ( 1 + sigma * second_derivative)
 
@@ -157,8 +169,9 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
     def find_concentration_point(y):
         try:
+            raise NotImplementedError("This is not working yet, but it might also be unnecessary")
             # find the point where the proximal is equal to y*epsilon*sqrt(Q) 
-            concentration_point = root_scalar(lambda xi: proximal_logistic_root_scalar(sigma,y,Q,epsilon,np.sqrt(q)*xi) - y*epsilon*np.sqrt(Q),bracket=[-1,1],method='brentq')
+            concentration_point = root_scalar(lambda xi: proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,np.sqrt(q)*xi) - y*epsilon*A/np.sqrt(N),bracket=[-1,1],method='brentq')
                 
             return concentration_point.root
         except:
@@ -267,19 +280,94 @@ def sigma_hat_func(m: float, q: float, sigma: float, rho_w_star: float, alpha: f
 
 
 
-def training_loss_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
-    return pure_training_loss_logistic(m,q,sigma,rho_w_star,alpha,tau,epsilon,lam,int_lims) + (lam/(2*alpha)) * q
+def A_hat_func(m: float, q: float, sigma: float, A: float, N: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+    
+    def integrand(xi, y):
+        e = m * m / (rho_w_star * q)
+        w_0 = np.sqrt(rho_w_star*e) * xi
+        V_0 = rho_w_star * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+
+        w = np.sqrt(q) * xi
+        proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
+                
+        z_star = proximal
+        arg = y*z_star - epsilon * A/np.sqrt(N)
+        cosh = 4 + 4 *np.cosh(arg) 
+        cosh /= sigma # TODO: go in calmth trough derivation again and then fix to whatever turns out to be right.
+        first = y*(w - z_star) / ( cosh)
+        if arg <= 0:
+            second = sigma / ((1 + np.exp(arg)) * cosh)
+        else:
+            second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
+        epsilon_term = (first + second) * epsilon * 2 / np.sqrt(N)
 
 
-def pure_training_loss_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
-    Q = q
+        return z_0 * epsilon_term * gaussian(xi)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+
+    return alpha * (Iplus + Iminus) 
+
+
+def N_hat_func(m: float, q: float, sigma: float, A: float, N: float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+    def integrand(xi, y):
+        e = m * m / (rho_w_star * q)
+        w_0 = np.sqrt(rho_w_star*e) * xi
+        V_0 = rho_w_star * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+
+        w = np.sqrt(q) * xi
+        proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
+                
+        z_star = proximal
+        arg = y*z_star - epsilon * A/np.sqrt(N)
+        cosh = 4 + 4 *np.cosh(arg) 
+        cosh /= sigma # TODO: go in calmth trough derivation again and then fix to whatever turns out to be right.
+        first = y*(w - z_star) / ( cosh)
+        if arg <= 0:
+            second = sigma / ((1 + np.exp(arg)) * cosh)
+        else:
+            second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
+        epsilon_term = (first + second) * epsilon * (-1) * A / (N**1.5)
+
+
+        return z_0 * epsilon_term * gaussian(xi)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+
+    return alpha * (Iplus + Iminus) 
+
+def var_hat_func(m, q, sigma, A, N, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=None):
+    m_hat = m_hat_func(m, q, sigma, A, N,rho_w_star,alpha,epsilon,tau,lam,int_lims)/np.sqrt(gamma)
+    q_hat = q_hat_func(m, q, sigma, A, N, rho_w_star,alpha,epsilon,tau,lam,int_lims)
+    sigma_hat = sigma_hat_func(m, q, sigma, A, N,rho_w_star,alpha,epsilon,tau,lam,int_lims,logger=logger)
+    A_hat = A_hat_func(m, q, sigma, A, N,rho_w_star,alpha,epsilon,tau,lam,int_lims)
+    N_hat = N_hat_func(m, q, sigma, A, N,rho_w_star,alpha,epsilon,tau,lam,int_lims)
+    return m_hat, q_hat, sigma_hat, A_hat, N_hat
+
+
+"""
+---------------------- Observables ----------------------
+"""
+
+def training_loss_logistic(m: float, q: float, sigma: float, A: float, N:float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
+    return pure_training_loss_logistic(m,q,sigma,A,N,rho_w_star,alpha,tau,epsilon,lam,int_lims) + (lam/(2*alpha)) * q
+
+
+def pure_training_loss_logistic(m: float, q: float, sigma: float, A: float, N: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
+
     def integrand(xi,y):
         w = np.sqrt(q) * xi
         z_0 = erfc(  ( (-y * m * xi) / np.sqrt(q) ) / np.sqrt(2*(tau**2 + (rho_w_star - m**2/q))))
         
-        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
         
-        l = adversarial_loss(y,proximal, epsilon, Q)
+        l = adversarial_loss(y,proximal, epsilon, A/np.sqrt(N))
 
         return z_0 * l * gaussian(xi)
 
@@ -288,7 +376,7 @@ def pure_training_loss_logistic(m: float, q: float, sigma: float, rho_w_star: fl
     I2 = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
     return (I1 + I2)/2 
 
-def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float, int_lims: float = 20.0):
+def training_error_logistic(m: float, q: float, sigma: float, A: float, N: float, rho_w_star: float, alpha: float, tau: float, epsilon: float, lam: float, int_lims: float = 20.0):
     Q = q
     def integrand(xi, y):
         e = m * m / (rho_w_star * q)
@@ -300,7 +388,7 @@ def training_error_logistic(m: float, q: float, sigma: float, rho_w_star: float,
         # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
         w = np.sqrt(q) * xi
 
-        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
+        proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
 
         activation = np.sign(proximal)       
 
@@ -336,35 +424,44 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho_w_star: fl
 
 
 
-def var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=None):
-    m_hat = m_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims)/np.sqrt(gamma)
-    q_hat = q_hat_func(m, q, sigma, rho_w_star,alpha,epsilon,tau,lam,int_lims)
-    sigma_hat = sigma_hat_func(m, q, sigma,rho_w_star,alpha,epsilon,tau,lam,int_lims,logger=logger)
-    return m_hat, q_hat, sigma_hat
 
-def var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, data_model, logger):
 
-    sigma = np.mean(data_model.spec_Omega/(lam  * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))    
+"""
+---------------------- Overlap Equations ----------------------
+"""
+
+def var_func(m_hat, q_hat, sigma_hat, A_hat, N_hat, rho_w_star, lam, data_model, logger):
+
+    Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Omega + A_hat * data_model.spec_Sigma_delta + N_hat * np.ones(data_model.d)
+
+    sigma = np.mean(data_model.spec_Omega/Lambda)    
     
     if data_model.commute:
         
+        helper = data_model.spec_Omega * q_hat + m_hat**2 * data_model.spec_PhiPhit
 
-        q = np.mean((data_model.spec_Omega**2 * q_hat + m_hat**2 * data_model.spec_Omega * data_model.spec_PhiPhit) / (lam * data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
+        q = np.mean((helper * data_model.spec_Omega) / Lambda**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/(lam * data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega))
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
+
+        A = np.mean( helper*data_model.spec_Sigma_delta / Lambda**2)
+
+        N = np.mean( helper / Lambda**2)
 
     else:
         
-        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam * data_model.spec_Sigma_w_inv + sigma_hat*data_model.spec_Omega)**2)
-        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega)**2)
+        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam * data_model.spec_Sigma_w + sigma_hat*data_model.spec_Omega)**2)
+        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Omega)**2)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam * data_model.spec_Sigma_w_inv + sigma_hat * data_model.spec_Omega))
+        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Omega))
+
+        raise NotImplementedError("TODO: implement A and N for non-commuting case")
 
     
     # sigma = 1 / (lam + sigma_hat)
     # q = (rho_w_star * m_hat**2 + q_hat) / (lam + sigma_hat)** 2
     # m = (rho_w_star * m_hat) / (lam + sigma_hat)
-    return m, q, sigma
+    return m, q, sigma, A, N
 
 def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
@@ -374,7 +471,7 @@ TOL_FPE = 1e-4
 MIN_ITER_FPE = 10
 MAX_ITER_FPE = 5000
 INT_LIMS = 10.0
-INITIAL_CONDITION = (0.1,0.1,0.9)
+INITIAL_CONDITION = (0.1,0.1,0.7,0.1,0.1)
 
 
 def fixed_point_finder(
@@ -396,35 +493,40 @@ def fixed_point_finder(
 ):
     rho_w_star = my_data_model.rho
     gamma = my_data_model.gamma
-    m, q, sigma = initial_condition[0], initial_condition[1], initial_condition[2]
+    m, q, sigma, A, N = initial_condition[0], initial_condition[1], initial_condition[2], initial_condition[3], initial_condition[4]
     err = 1.0
     iter_nb = 0
     m_hat = 0
     q_hat = 0
     sigma_hat = 0
+    A_hat = 0
+    N_hat = 0
     while err > abs_tol or iter_nb < min_iter:
         if iter_nb % 10 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
-            logger.info(f"m: {m}, q: {q}, sigma: {sigma}")
-            logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}")
+            logger.info(f"m: {m}, q: {q}, sigma: {sigma}, A: {A}, N: {N}")
+            logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}, A_hat: {A_hat}, N_hat: {N_hat}")
 
-        m_hat, q_hat, sigma_hat = var_hat_func(m, q, sigma, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=logger)
 
-        new_m, new_q, new_sigma = var_func(m_hat, q_hat, sigma_hat, rho_w_star, lam, my_data_model, logger)
+        m_hat, q_hat, sigma_hat, A_hat, N_hat = var_hat_func(m, q, sigma, A, N, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=logger)
+
+        new_m, new_q, new_sigma, new_A, new_N = var_func(m_hat, q_hat, sigma_hat, A_hat, N_hat, rho_w_star, lam, my_data_model, logger)
 
         
         n_m = damped_update(new_m, m, blend_fpe)
         n_q = damped_update(new_q, q, blend_fpe)
         n_sigma = damped_update(new_sigma, sigma, blend_fpe)
+        n_A = damped_update(new_A, A, blend_fpe)
+        n_N = damped_update(new_N, N, blend_fpe)
         
 
-        err = max([abs(n_m - m), abs(n_q - q), abs(n_sigma - sigma)])
-        m, q, sigma = n_m, n_q, n_sigma
+        err = max([abs(n_m - m), abs(n_q - q), abs(n_sigma - sigma), abs(n_A - A), abs(n_N - N)])
+        m, q, sigma, A, N = n_m, n_q, n_sigma, n_A, n_N
 
         iter_nb += 1
         if iter_nb > max_iter:
             raise Exception("fixed_point_finder - reached max_iterations")
-    return m, q, sigma, sigma_hat, q_hat, m_hat
+    return m, q, sigma, A, N, sigma_hat, q_hat, m_hat, A_hat, N_hat
 
 if __name__ == "__main__":
     d = 1000
@@ -489,44 +591,45 @@ if __name__ == "__main__":
 
 
 
-    Q = q
-    def integrand(xi, y):
-        e = m * m / (rho_w_star * q)
-        w_0 = np.sqrt(rho_w_star*e) * xi
-        V_0 = rho_w_star * (1-e)
+    # Q = q
+    
+    # def integrand(xi, y):
+    #     e = m * m / (rho_w_star * q)
+    #     w_0 = np.sqrt(rho_w_star*e) * xi
+    #     V_0 = rho_w_star * (1-e)
 
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+    #     z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
 
-        w = np.sqrt(q) * xi
-        proximal = proximal_logistic_root_scalar(sigma,y,Q,epsilon,w)
-        partial_proximal = ( proximal - w ) ** 2
+    #     w = np.sqrt(q) * xi
+    #     # proximal = proximal_logistic_root_scalar(sigma,y,A/np.sqrt(N),epsilon,w)
+    #     # partial_proximal = ( proximal - w ) ** 2
 
-        z_star = proximal
-        arg = y*z_star - epsilon * np.sqrt(Q)
-        cosh = 4 + 4 *np.cosh(arg) 
-        # cosh /= sigma # TODO: go in calmth trough derivation again and then fix to whatever turns out to be right.
-        first = y*(w - z_star) / ( cosh)
-        if arg <= 0:
-            second = sigma / ((1 + np.exp(arg)) * cosh)
-        else:
-            second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
-        epsilon_term = (first + second) * epsilon / np.sqrt(Q)
+    #     # z_star = proximal
+    #     arg = y*z_star - epsilon * np.sqrt(Q)
+    #     cosh = 4 + 4 *np.cosh(arg) 
+    #     # cosh /= sigma # TODO: go in calmth trough derivation again and then fix to whatever turns out to be right.
+    #     first = y*(w - z_star) / ( cosh)
+    #     if arg <= 0:
+    #         second = sigma / ((1 + np.exp(arg)) * cosh)
+    #     else:
+    #         second = sigma * np.exp(-arg) / ((1 + np.exp(-arg)) * cosh)
+    #     epsilon_term = (first + second) * epsilon / np.sqrt(Q)
     
 
-        return z_0 * (partial_proximal/ (sigma ** 2) + epsilon_term ) * gaussian(xi)
+    #     return z_0 * (partial_proximal/ (sigma ** 2) + epsilon_term ) * gaussian(xi)
 
-    Iplus = quad(lambda xi: integrand(xi,1),-INT_LIMS,INT_LIMS,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-INT_LIMS,INT_LIMS,limit=500)[0]
+    # Iplus = quad(lambda xi: integrand(xi,1),-INT_LIMS,INT_LIMS,limit=500)[0]
+    # Iminus = quad(lambda xi: integrand(xi,-1),-INT_LIMS,INT_LIMS,limit=500)[0]
 
-    # return alpha * 0.5 * (Iplus + Iminus)
+    # # return alpha * 0.5 * (Iplus + Iminus)
 
-    # print the integrand for all possible values of xi 
-    for xi in np.linspace(-INT_LIMS,INT_LIMS,100):
-        print("xi", xi)
-        print("integrand", integrand(xi,1))
-    for xi in np.linspace(-INT_LIMS,INT_LIMS,100):
-        print("xi", xi)
-        print("integrand", integrand(xi,-1))
+    # # print the integrand for all possible values of xi 
+    # for xi in np.linspace(-INT_LIMS,INT_LIMS,100):
+    #     print("xi", xi)
+    #     print("integrand", integrand(xi,1))
+    # for xi in np.linspace(-INT_LIMS,INT_LIMS,100):
+    #     print("xi", xi)
+    #     print("integrand", integrand(xi,-1))
 
 
 
