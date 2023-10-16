@@ -12,9 +12,9 @@ import numpy as np
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.1,3,4)
-    epsilons: np.ndarray = np.array([0.001]) # np.linspace(0,1,5)
-    lambdas: np.ndarray = np.array([0.01])
+    alphas: np.ndarray = np.linspace(0.1,8,3)
+    epsilons: np.ndarray = np.array([0,0.1,0.5]) # np.linspace(0,1,5)
+    lambdas: np.ndarray = np.array([100])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 
     dp: float = 0.01

@@ -11,6 +11,7 @@ from scipy.optimize import minimize
 from sklearn.utils.validation import check_array, check_consistent_length, _check_sample_weight
 from scipy.linalg import norm
 import adversarial_loss_gradient as skloss
+import mpmath
 
 """
 sklearn - expects labels as -1 and 1.
@@ -50,7 +51,6 @@ def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None):
 
     func = loss_gradient 
 
-    sample_weight = None
     l2_reg_strength = lam
     n_threads = 1
 
@@ -69,7 +69,7 @@ def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None):
                 w0,
                 method=method,
                 jac=True,
-                args=(X, target, l2_reg_strength, epsilon,covariance_prior, sample_weight, n_threads),
+                args=(X, target, l2_reg_strength, epsilon,covariance_prior, n_threads),
                 options={"maxiter": 1000, "disp": False},
             )
     
@@ -77,27 +77,202 @@ def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None):
     return w0
 
 
-def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sample_weight=None, n_threads=1):
-    n_features, n_classes = X.shape[1], 1
-    fit_intercept = False
+
+
+def mpmath_loss_gradient(y_true, raw_prediction, adversarial_norm):
+    """
+    Computes the loss and the gradient of the loss function.
+    Parameters
+    ----------
+    y_true : ndarray, shape (n_samples,)
+        The true labels.
+    raw_prediction : ndarray, shape (n_samples,)
+        The raw predictions.
+    adversarial_norm : float
+        The strength of the adversarial perturbation.
+    Returns
+    -------
+    loss : float
+        The loss.
+    gradient : ndarray, shape (n_features,)
+        The gradient of the loss.
+    """
+    y = y_true
+    z = raw_prediction
+    e = adversarial_norm
+
+
+
+
+    e = mpmath.mpf(e)
+
+    losses = []
+    gradients = []
+    epsilon_gradients = []
+
+    for idx, el in enumerate(zip(y,z)):
+        label = mpmath.mpf(el[0])
+        raw_prediction = mpmath.mpf(el[1])
+
+
+        loss = -label*raw_prediction + label*e + (1-label)*mpmath.log(1+mpmath.exp(raw_prediction+e)) + label*mpmath.log(1+mpmath.exp(raw_prediction-e))
+        C = raw_prediction + adversarial_norm
+        C_prime = raw_prediction - adversarial_norm    
+        gradient = (1-label) / ( 1 + mpmath.exp(-C) ) - label/(1 + mpmath.exp(C_prime))
+        epsilon_gradient = (1-label) / ( 1 + mpmath.exp(-C) ) + label/(1 + mpmath.exp(C_prime))
+
+        # convert the mpmath mpf back to numpy float64
+        loss = np.float64(loss)
+        gradient = np.float64(gradient)
+        epsilon_gradient = np.float64(epsilon_gradient)
+
+        losses.append(loss)
+        gradients.append(gradient)
+        epsilon_gradients.append(epsilon_gradient)
+
+    # convert to numpy arrays
+    losses = np.array(losses)
+    gradients = np.array(gradients)
+    epsilon_gradients = np.array(epsilon_gradients)
+
+    return losses, gradients, epsilon_gradients
+
+
+def log1pexp(x):
+    out = np.zeros_like(x)
+    idx0 = x <= -37
+    out[idx0] = np.exp(x[idx0])
+    idx1 = (x > -37) & (x <= -2)
+    out[idx1] = np.log1p(np.exp(x[idx1]))
+    idx2 = (x > -2) & (x <= 18)
+    out[idx2] = np.log(1. + np.exp(x[idx2]))
+    idx3 = (x > 18) & (x <= 33.3)
+    out[idx3] = x[idx3] + np.exp(-x[idx3])
+    idx4 = x > 33.3
+    out[idx4] = x[idx4]
+    return out
+
+def stable_loss(z,e,y):
+    return -y*z + y*e + (1-y)*log1pexp(z+e) + y*log1pexp(z-e)
+
+def stable_sigmoid(x):
+    out = np.zeros_like(x)
+    idx = x <= 0
+    out[idx] = np.exp(x[idx]) / (1 + np.exp(x[idx]))
+    idx = x > 0
+    out[idx] = 1 / (1 + np.exp(-x[idx]))
+    return out
+
+def stable_gradient(z,e,y):
+    opt_attack_term = (1-y)*stable_sigmoid(z+e) + y*stable_sigmoid(-z+e)
+    data_term = (1-y)*stable_sigmoid(z+e) - y*stable_sigmoid(-z+e)
+    return opt_attack_term, data_term
+
+
+
+
+
+def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, n_threads=1):
+    n_features = X.shape[1]
+    weights = coef
+    raw_prediction = X @ weights / np.sqrt(n_features)
+    half = skloss.CyHalfBinomialLoss()
+    # half = skloss_original.CyHalfBinomialLoss()
+    
+
+    loss_out = np.empty_like(y)
+    gradient_out = np.empty_like(raw_prediction)
+    epsilon_gradient_out = np.empty_like(raw_prediction)
+
+    # Be graceful to shape (n_samples, 1) -> (n_samples,)
+    if raw_prediction.ndim == 2 and raw_prediction.shape[1] == 1:
+        raw_prediction = raw_prediction.squeeze(1)
+    if gradient_out.ndim == 2 and gradient_out.shape[1] == 1:
+        gradient_out = gradient_out.squeeze(1)
+        epsilon_gradient_out = epsilon_gradient_out.squeeze(1)        
+
+    # half.loss_gradient( y_true=y,
+    #     raw_prediction=raw_prediction,    
+    #     adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),
+    #     # sample_weight=sample_weight,
+    #     loss_out=loss_out,
+    #     gradient_out=gradient_out,
+    #     epsilon_gradient_out = epsilon_gradient_out,
+    #     n_threads=n_threads,
+    # )   
+
+    # skloss.mp_loss_gradient( y_true=y,
+    #     raw_prediction=raw_prediction,    
+    #     adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),
+    #     # sample_weight=sample_weight,
+    #     loss_out=loss_out,
+    #     gradient_out=gradient_out,
+    #     epsilon_gradient_out = epsilon_gradient_out
+    # )   
+
+    # loss_out,gradient_out,epsilon_gradient_out = mpmath_loss_gradient(y,raw_prediction,epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features))
+
+    loss_out = stable_loss(raw_prediction,epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),y)
+    epsilon_gradient_out,gradient_out = stable_gradient(raw_prediction,epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),y)
+
+    loss,grad_per_sample = loss_out,gradient_out
+
+    loss = loss.sum()
+
+    adv_correction_factor = epsilon * weights / ( np.sqrt(weights @ weights) * np.sqrt(n_features)) 
+    adv_grad_summand = np.outer(epsilon_gradient_out, adv_correction_factor).sum(axis=0)
+
+
+    # if epsilon is zero, assert that the norm of adv_grad_summand is zero
+    if epsilon == 0:
+        assert np.linalg.norm(adv_grad_summand) == 0
+
+    l2_reg_strength = l2_reg_strength / 2
+
+    loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
+    grad = np.empty_like(coef, dtype=weights.dtype)
+
+    grad[:n_features] = X.T @ grad_per_sample / np.sqrt(n_features) +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
+
+    return loss, grad
+
+def hessian(coef, X, y, l2_reg_strength, epsilon):
+    """
+    Computes the Hessian of the loss function.
+    Parameters
+    ----------
+    coef : ndarray, shape (n_features,)
+        The weights.
+    X : ndarray, shape (n_samples, n_features)
+        The input data.
+    y : ndarray, shape (n_samples,)
+        The target labels.
+    l2_reg_strength : float
+        The strength of the L2 regularization.
+    epsilon : float
+        The strength of the adversarial perturbation.
+    Returns
+    -------
+    hessian : ndarray, shape (n_features, n_features)
+        The Hessian matrix.
+    """
+    
+    # there are numerically problematic parts
+    # Some parts are the same as in the gradient, hence we leverage the cython code from there and add the cosh terms here
+    # We have to keep in mind that the cosh terms might cause trouble...
+
+    n_features = X.shape[1]
+    n_samples = X.shape[0]
     weights = coef
     raw_prediction = X @ weights
 
-
-
+    # init the Cython loss class
     half = skloss.CyHalfBinomialLoss()
-    # half = skloss_original.CyHalfBinomialLoss()
-
-    loss_out = None
-    gradient_out = None
-    if loss_out is None:
-        if gradient_out is None:
-            loss_out = np.empty_like(y)
-            gradient_out = np.empty_like(raw_prediction)
-        else:
-            loss_out = np.empty_like(y, dtype=gradient_out.dtype)
-    elif gradient_out is None:
-        gradient_out = np.empty_like(raw_prediction, dtype=loss_out.dtype)
+    
+    # prepare the output
+    loss_out = np.empty_like(y)
+    gradient_out = np.empty_like(raw_prediction)
+    epsilon_gradient_out = np.empty_like(raw_prediction)
     
 
     # Be graceful to shape (n_samples, 1) -> (n_samples,)
@@ -105,38 +280,68 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sample_
         raw_prediction = raw_prediction.squeeze(1)
     if gradient_out.ndim == 2 and gradient_out.shape[1] == 1:
         gradient_out = gradient_out.squeeze(1)
+        epsilon_gradient_out = epsilon_gradient_out.squeeze(1)
+        
 
     half.loss_gradient( y_true=y,
         raw_prediction=raw_prediction,    
-        adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features),    
+        adversarial_norm = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features)   , 
         # sample_weight=sample_weight,
         loss_out=loss_out,
         gradient_out=gradient_out,
-        n_threads=n_threads,
+        epsilon_gradient_out = epsilon_gradient_out,
+        n_threads=1,
     )
+
+    # dA
+    sqrt_l2_w = np.sqrt(weights @ weights)
+    dA = np.diag( epsilon / sqrt_l2_w)
+    outer_A = np.outer(weights,weights)
+    # remove the diagonal of outer_A
+    np.fill_diagonal(outer_A,0)
+    dA += (outer_A * (epsilon / sqrt_l2_w))
+
+    # A
+    A = epsilon * weights / sqrt_l2_w
+
+    # epsilon norm term
+    gd_multiplier = epsilon_gradient_out - y
+    gd_multiplier *= dA # TODO: check if this should be an outer...
+    epsilon_norm_term = gd_multiplier.sum()
+
+    # C
+    C = X@w + epsilon * sqrt_l2_w
     
-    
+    # dC
+    dC = X + 0.5 * A
 
-    loss,grad_per_sample = loss_out,gradient_out
+    # cosh
+    cosh = -dC/(2*np.cosh(C) + 2)
+
+    # C_prime
+    C_prime = X@w - epsilon * sqrt_l2_w
+
+    # dC_prime
+    dC_prime = X - 0.5 * A
+
+    # cosh_prime
+    cosh_prime = -dC_prime/(2*np.cosh(C_prime) + 2)
 
 
-    loss = loss.sum()
+    # 1-y term
+    minus = X + A
+    minus *= (1-y)
+    minus *= cosh # should be an outer product
 
-    adv_correction_factor = epsilon * weights / ( np.sqrt(weights @ weights) * np.sqrt(n_features))
-    adv_grad_summand = np.outer(grad_per_sample, adv_correction_factor).sum(axis=0)
+    # y term
+    plus = X - A
+    plus *= y
+    plus *= cosh_prime # should be an outer product
 
+    # sum
+    hessian = minus + plus + epsilon_norm_term + dA
 
-    # if epsilon is zero, assert that the norm of adv_grad_summand is zero
-    if epsilon == 0:
-        assert np.linalg.norm(adv_grad_summand) == 0
-
-    loss += 0.5 * l2_reg_strength * (weights @ covariance_prior @ weights)
-    grad = np.empty_like(coef, dtype=weights.dtype)
-    grad[:n_features] = X.T @ grad_per_sample + (1/2)* l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
-    if fit_intercept:
-        grad[-1] = grad_per_sample.sum()
-
-    return loss, grad
+    return hessian
 
 
 def training_loss(w,X,y,lam,epsilon,covariance_prior = None):
@@ -149,7 +354,7 @@ def training_loss(w,X,y,lam,epsilon,covariance_prior = None):
 def pure_training_loss(w,X,y,epsilon):
     from state_evolution import adversarial_loss
     z = X@w
-    return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() )/X.shape[0]
+    return (adversarial_loss(y,z,epsilon,np.sqrt(w@w)).sum())/X.shape[0]
 
 
 if __name__ == "__main__":

@@ -116,12 +116,10 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     logger.info(f"Generalization error: {gen_err}")
     
     q_erm = w_gd.dot(data_model.Omega@w_gd) / d
-    # q_erm = w_gd @ w_gd / d
 
     if w is not None:
         
         m = w_gd.dot(data_model.Phi@w) / d
-        # m = w_gd @ w / np.sqrt(d*data_model.p)
         logger.info("ERM m: %f", m)
         
         # print the shapes and norms of w and w_gd
@@ -142,6 +140,23 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
 
     A = w_gd @ data_model.Sigma_delta @ w_gd / d
     N = w_gd @ w_gd / d
+    # logger.info(f"D-Type w_gd {type(w_gd)}")
+    # logger.info(f"D-Type Sigma_w {type(data_model.Sigma_w)}")
+    # logger.info(f"D-Type Sigma_delta {type(data_model.Sigma_delta)}")
+    # logger.info(f"D-Type A {type(A)}")
+    # logger.info(f"D-Type N {type(N)}")
+    # logger.info(f"D-Type d {type(d)}")
+    # # logger.info the shapes
+    # logger.info(f"Shape {w_gd.shape}")
+    # logger.info(f"Shape Sigma_w {data_model.Sigma_w.shape}")
+    # logger.info(f"Shape Sigma_delta {data_model.Sigma_delta.shape}")
+    # logger.info(f"Shape A {A.shape}")
+    # logger.info(f"Shape N {N.shape}")
+    # # for the numpy arrays print the dtype
+    # logger.info(f"D-Type w_gd {w_gd.dtype}")
+    # logger.info(f"Sigma_w {data_model.Sigma_w.dtype}")
+    # logger.info(f"Sigma_delta {data_model.Sigma_delta.dtype}")
+    
 
     end = time.time()
     duration = end - start
@@ -232,7 +247,7 @@ def get_default_experiment():
     # epsilons: np.ndarray = np.array([0,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09])
     # epsilons: np.ndarray = np.array([0,0.02,0.05,0.07,0.09,0.12])
     epsilons: np.ndarray = np.array([0.0,0.7])
-    lambdas: np.ndarray = np.array([1e-3])
+    lambdas: np.ndarray = np.array([100])
     taus: np.ndarray = np.array([1.5])
     ps: np.ndarray = np.array([0.75])
     dp: float = 0.01

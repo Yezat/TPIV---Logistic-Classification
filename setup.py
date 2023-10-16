@@ -12,7 +12,7 @@ setup(
             include_dirs=[numpy.get_include()]
         )
     ),
-    install_requires=["numpy"]
+    install_requires=["numpy","mpmath"]
 )
 # usage python setup.py build_ext --inplace  
 

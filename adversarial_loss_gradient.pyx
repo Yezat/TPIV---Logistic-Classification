@@ -28,6 +28,7 @@
 
 from cython.parallel import parallel, prange
 import numpy as np
+import mpmath as mp
 
 from libc.math cimport exp, fabs, log, log1p, pow
 from libc.stdlib cimport malloc, free
@@ -49,6 +50,11 @@ ctypedef fused G_DTYPE_C:
 ctypedef struct double_pair:
    double val1
    double val2
+
+ctypedef struct double_triple:
+    double val1
+    double val2
+    double val3
 
 # -------------------------------------
 # Helper functions
@@ -72,12 +78,12 @@ cdef inline double log1pexp(double x) noexcept nogil:
         return x
 
 
-cdef inline double_pair closs_grad_half_binomial(
+cdef inline double_triple closs_grad_half_binomial(
     double y_true,
     double raw_prediction,
     double adversarial_norm
 ) noexcept nogil:
-    cdef double_pair lg
+    cdef double_triple lg
     cdef double adversarial_plus = raw_prediction + adversarial_norm
     cdef double adversarial_minus = raw_prediction - adversarial_norm
     cdef double plus_term
@@ -102,8 +108,10 @@ cdef inline double_pair closs_grad_half_binomial(
         # adversarial_plus will not overflow
         if adversarial_minus <= 0:
             lg.val2 = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus)) - y_true / (1 + exp(adversarial_minus)) 
+            lg.val3 = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus)) + y_true / (1 + exp(adversarial_minus)) 
         else:
             lg.val2 = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus)) - y_true * ( exp(-adversarial_minus) / (1 + exp(-adversarial_minus)) )
+            lg.val3 = (1-y_true) * exp(adversarial_plus) / (1 + exp(adversarial_plus)) + y_true * ( exp(-adversarial_minus) / (1 + exp(-adversarial_minus)) )
 
     else:
         lg.val2 = exp(-adversarial_plus)  # used as temporary
@@ -124,10 +132,61 @@ cdef inline double_pair closs_grad_half_binomial(
         # adversarial_plus will overflow
         if adversarial_minus <= 0:
             lg.val2 = (1-y_true) / (1 + exp(-adversarial_plus)) - y_true * ( 1 / (1 + exp(adversarial_minus)) )
+            lg.val3 = (1-y_true) / (1 + exp(-adversarial_plus)) + y_true * ( 1 / (1 + exp(adversarial_minus)) )
         else:
             lg.val2 = (1-y_true) / (1 + exp(-adversarial_plus)) - y_true * ( exp(-adversarial_minus) / (1 + exp(-adversarial_minus)) )
+            lg.val3 = (1-y_true) / (1 + exp(-adversarial_plus)) + y_true * ( exp(-adversarial_minus) / (1 + exp(-adversarial_minus)) )
 
     return lg
+
+
+cdef inline double_triple mp_closs_grad_half_binomial(
+    double y_true,
+    double raw_prediction,
+    double adversarial_norm
+):
+    cdef double_triple lg
+    cdef double adversarial_plus = raw_prediction + adversarial_norm
+    cdef double adversarial_minus = raw_prediction - adversarial_norm
+    cdef object y = mp.mpf(y_true)
+    cdef object ap = mp.mpf(adversarial_plus)
+    cdef object am = mp.mpf(adversarial_minus)
+    cdef object rp = mp.mpf(raw_prediction)
+    cdef object an = mp.mpf(adversarial_norm)
+
+    cdef object lo = -y * rp + y*an + (1-y)*mp.log(1+mp.exp(rp+an)) + y * mp.log(1+mp.exp(rp-an))
+    cdef object gr = (1-y) / (1 + mp.exp(-ap)) - y/(1+mp.exp(am))
+    cdef object eg = (1-y) / (1 + mp.exp(-ap)) + y/(1+mp.exp(am))
+
+    lg.val1 = np.float64(lo)
+    lg.val2 = np.float64(gr)
+    lg.val3 = np.float64(eg)
+
+    return lg
+
+
+def mp_loss_gradient(
+        const Y_DTYPE_C[::1] y_true,          # IN
+        const Y_DTYPE_C[::1] raw_prediction,  # IN
+        const double adversarial_norm,        # IN
+        G_DTYPE_C[::1] loss_out,              # OUT
+        G_DTYPE_C[::1] gradient_out,          # OUT
+        G_DTYPE_C[::1] epsilon_gradient_out          # OUT
+    ):
+        cdef:
+            int i
+            int n_samples = y_true.shape[0]
+            double_triple dbl3
+
+        for i in range(
+                n_samples
+            ):
+                dbl3 = mp_closs_grad_half_binomial(y_true[i], raw_prediction[i], adversarial_norm)
+                loss_out[i] = dbl3.val1
+                gradient_out[i] = dbl3.val2
+                epsilon_gradient_out[i] = dbl3.val3
+
+        return np.asarray(loss_out), np.asarray(gradient_out), np.asarray(epsilon_gradient_out)
 
 
 cdef class CyHalfBinomialLoss():
@@ -148,18 +207,20 @@ cdef class CyHalfBinomialLoss():
         const double adversarial_norm,        # IN
         G_DTYPE_C[::1] loss_out,              # OUT
         G_DTYPE_C[::1] gradient_out,          # OUT
+        G_DTYPE_C[::1] epsilon_gradient_out,          # OUT
         int n_threads=1
     ):
         cdef:
             int i
             int n_samples = y_true.shape[0]
-            double_pair dbl2
+            double_triple dbl3
 
         for i in prange(
                 n_samples, schedule='static', nogil=True, num_threads=n_threads
             ):
-                dbl2 = closs_grad_half_binomial(y_true[i], raw_prediction[i], adversarial_norm)
-                loss_out[i] = dbl2.val1
-                gradient_out[i] = dbl2.val2
+                dbl3 = closs_grad_half_binomial(y_true[i], raw_prediction[i], adversarial_norm)
+                loss_out[i] = dbl3.val1
+                gradient_out[i] = dbl3.val2
+                epsilon_gradient_out[i] = dbl3.val3
 
-        return np.asarray(loss_out), np.asarray(gradient_out)
+        return np.asarray(loss_out), np.asarray(gradient_out), np.asarray(epsilon_gradient_out)
