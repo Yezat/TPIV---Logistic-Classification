@@ -56,8 +56,16 @@ def adversarial_loss(y,z, epsilon, Delta):
 def first_derivative_loss(argument):
     return -1/(1 + np.exp(argument))
 
+def stable_cosh(x):
+    out = np.zeros_like(x)
+    idx = x <= 0
+    out[idx] = np.exp(x[idx]) / (1 + np.exp(2*x[idx]) + 2*np.exp(x[idx]))
+    idx = x > 0
+    out[idx] = np.exp(-x[idx]) / (1 + np.exp(-2*x[idx]) + 2*np.exp(-x[idx]))
+    return out
+
 def second_derivative_loss(y: float, z: float, Delta: float, epsilon: float) -> float:
-    return y**2 / (2 * np.cosh(0.5*y*z - 0.5*epsilon * Delta))**2
+    return y**2 * stable_cosh(0.5*y*z - 0.5*epsilon * Delta)**(2)
 
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
@@ -439,36 +447,27 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho_w_star: fl
 
 def var_func(m_hat, q_hat, sigma_hat, A_hat, N_hat, rho_w_star, lam, data_model, logger):
 
-    Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Omega + A_hat * data_model.spec_Sigma_delta + N_hat
-    # Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Omega
+    Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x + A_hat * data_model.spec_Sigma_delta + N_hat
+    # Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x
 
-    sigma = np.mean(data_model.spec_Omega/Lambda)
+    sigma = np.mean(data_model.spec_Sigma_x/Lambda)
 
-    if data_model.commute:
+    
 
-        helper = data_model.spec_Omega * q_hat + m_hat**2 * data_model.spec_PhiPhit + A_hat * data_model.spec_Sigma_delta + N_hat
-        helper_small = data_model.spec_Omega * q_hat + m_hat**2 * data_model.spec_PhiPhit
+    helper = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit + A_hat * data_model.spec_Sigma_delta + N_hat
+    helper_small = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit
 
-        q = np.mean((helper * data_model.spec_Omega) / Lambda**2)  #+ np.mean(data_model.spec_Omega / Lambda)
+    q = np.mean((helper * data_model.spec_Sigma_x) / Lambda**2)  #+ np.mean(data_model.spec_Sigma_x / Lambda)
 
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
+    m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
 
-        A = np.mean( helper*data_model.spec_Sigma_delta / Lambda**2)
-        # A = np.mean( helper * data_model.spec_Sigma_delta / Lambda**2) + np.mean(data_model.spec_Sigma_delta / Lambda)
-        # A = np.mean(data_model.spec_Sigma_delta / Lambda)
+    A = np.mean( helper*data_model.spec_Sigma_delta / Lambda**2)
+    # A = np.mean( helper * data_model.spec_Sigma_delta / Lambda**2) + np.mean(data_model.spec_Sigma_delta / Lambda)
+    # A = np.mean(data_model.spec_Sigma_delta / Lambda)
 
-        N = np.mean( helper / Lambda**2)
-        # N = np.mean( helper / Lambda**2) + np.mean(1 / Lambda)
-        # N =  np.mean(1 / Lambda)
-
-    else:
-
-        q = q_hat * np.mean(data_model.spec_Omega**2 / (lam * data_model.spec_Sigma_w + sigma_hat*data_model.spec_Omega)**2)
-        q += m_hat**2 * np.mean(data_model._UTPhiPhiTU * data_model.spec_Omega/(lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Omega)**2)
-
-        m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model._UTPhiPhiTU/(lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Omega))
-
-        raise NotImplementedError("TODO: implement A and N for non-commuting case")
+    N = np.mean( helper / Lambda**2)
+    # N = np.mean( helper / Lambda**2) + np.mean(1 / Lambda)
+    # N =  np.mean(1 / Lambda)
 
 
     # sigma = 1 / (lam + sigma_hat)
@@ -489,7 +488,7 @@ INITIAL_CONDITION = (0.1,0.1,0.7,0.1,0.1)
 
 def fixed_point_finder(
     logger,
-    my_data_model: DataModel,
+    my_data_model: AbstractDataModel,
     rho_w_star: float,
     alpha: float,
     epsilon: float,

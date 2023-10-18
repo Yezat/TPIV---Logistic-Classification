@@ -22,10 +22,19 @@ def get_default_experiment():
     p: int = 1000
     erm_methods: list = ["sklearn"] #"optimal_lambda"
     experiment_name: str = "Vanilla Strong Weak Trials"
-    data_model_type: DataModelType = DataModelType.RandomKitchenSink
+    data_model_type: DataModelType = DataModelType.VanillaGaussian
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,p, experiment_name)
     return experiment
 experiment = get_default_experiment()
+
+import logging
+logger = logging.getLogger()
+# Make the logger log to console
+logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.INFO)
+
+# Force a creation of a new data_model
+experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True)
 # # use json dump to save the experiment parameters
 with open("sweep_experiment.json","w") as f:
     # use the NumpyEncoder to encode numpy arrays

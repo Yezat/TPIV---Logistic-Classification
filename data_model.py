@@ -113,6 +113,7 @@ class AbstractDataModel(ABC):
         self.spec_PhiPhit = np.linalg.eigvalsh(self.PhiPhiT)
         self.spec_Sigma_x = np.linalg.eigvalsh(self.Sigma_x)
         self.spec_Sigma_delta = np.linalg.eigvalsh(self.Sigma_delta)
+        self.spec_Sigma_w = np.linalg.eigvalsh(self.Sigma_w)
 
         # store the pickle
         self.store_self_to_pickle()

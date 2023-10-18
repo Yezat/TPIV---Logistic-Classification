@@ -13,7 +13,7 @@ import json
 import sqlite3
 import pandas as pd
 import logging
-from data_model import DataModelType
+from data_model import *
 
 class ExperimentInformation:
     def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, dataModelType: DataModelType, p: int, experiment_name: str = ""):
@@ -40,6 +40,14 @@ class ExperimentInformation:
     def __str__(self):
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
+    
+    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False):
+        if self.data_model_type == DataModelType.VanillaGaussian:
+            return VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing)
+        elif self.data_model_type == DataModelType.SourceCapacity:
+            return SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing)
+        else:
+            raise Exception("Unknown DataModelType, did you remember to add the initialization?")
 
 class CalibrationResults:
     def __init__(self, ps: np.ndarray, calibrations: np.ndarray, dp: float):
