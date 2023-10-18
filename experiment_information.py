@@ -1,4 +1,4 @@
-from gradient_descent import pure_training_loss
+from gradient_descent import pure_training_loss, min_eigenvalue_hessian
 import theoretical
 from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic
 from util import error, adversarial_error
@@ -16,7 +16,7 @@ import logging
 from data_model import *
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, dataModelType: DataModelType, p: int, experiment_name: str = ""):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, dataModelType: DataModelType, p: int, experiment_name: str = "", compute_hessian: bool = False):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -35,6 +35,7 @@ class ExperimentInformation:
         self.erm_methods: list = erm_methods
         self.completed: bool = False
         self.data_model_type: DataModelType = dataModelType
+        self.compute_hessian: bool = compute_hessian
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
@@ -62,24 +63,23 @@ class CalibrationResults:
 
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
-    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float, rho: float, A: float, N: float, A_hat: float, N_hat: float):
+    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float, rho: float, A: float, N: float, A_hat: float, N_hat: float, a: float, n: float, a_hat: float, n_hat: float, d: float):
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
         self.duration: float = duration
         self.experiment_id: str = experiment_id
-        rho_w_star = rho
-        self.generalization_error: float = generalization_error(rho_w_star, m, q, tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho_w_star,tau,epsilon)
-        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,A,N,rho_w_star,alpha,tau,epsilon, lam)
-        self.training_error: float = training_error_logistic(m,q,sigma,A,N,rho_w_star,alpha,tau,epsilon, lam)
-        # store current date and time
+        self.generalization_error: float = generalization_error(rho, m, q, tau)
+        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho,tau,epsilon/np.sqrt(d))
+        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon/np.sqrt(d), lam)
+        self.training_error: float = training_error_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon/np.sqrt(d), lam)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
         self.q: float = q
+        self.Q_self: float = sigma + q
         self.m: float = m
-        self.cosb: float = self.m / np.sqrt((self.q)*rho_w_star)
+        self.cosb: float = self.m / np.sqrt((self.q)*rho)
         self.initial_condition: Tuple[float, float, float] = initial_condition
-        self.rho_w_star: float = rho_w_star
+        self.rho: float = rho
         self.alpha: float = alpha
         self.epsilon: float = epsilon
         self.tau: float = tau
@@ -97,9 +97,13 @@ class StateEvolutionExperimentInformation:
         self.N : float = N
         self.A_hat : float = A_hat
         self.N_hat : float = N_hat
+        self.a: float = a
+        self.n: float = a
+        self.a_hat: float = a_hat
+        self.n_hat: float = n_hat
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray, A: float, N: float):
+    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray, A: float, N: float, compute_hessian: bool):
         self.id: str = str(uuid.uuid4())
         self.duration : float = duration
         self.code_version: str = __version__
@@ -110,10 +114,8 @@ class ERMExperimentInformation:
         self.cosb: float = self.m / np.sqrt(self.Q*self.rho)
         self.epsilon: float = epsilon
         self.lam: float = lam
-
         n: int = Xtrain.shape[0]
         yhat_gd = theoretical.predict_erm(Xtest,w_gd)
-        # yhat_gd = np.sign(Xtest @ w_gd)
         self.generalization_error_erm: float = error(ytest,yhat_gd)
         self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon)
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
@@ -133,6 +135,16 @@ class ERMExperimentInformation:
         self.erm_calibrations: CalibrationResults = erm_calibrations
 
         self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,epsilon)
+        if compute_hessian:
+            self.test_set_min_eigenvalue_hessian = min_eigenvalue_hessian(Xtest,ytest,w_gd,epsilon,lam,Sigma_w)
+            self.test_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(Xtest,ytest,w,epsilon,lam,Sigma_w)
+            self.train_set_min_eigenvalue_hessian = min_eigenvalue_hessian(Xtrain,y,w_gd,epsilon,lam,Sigma_w)
+            self.train_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(Xtrain,y,w,epsilon,lam,Sigma_w)
+        else:
+            self.test_set_min_eigenvalue_hessian = None
+            self.test_set_min_eigenvalue_hessian_teacher_weights = None
+            self.train_set_min_eigenvalue_hessian = None
+            self.train_set_min_eigenvalue_hessian_teacher_weights = None
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
@@ -171,10 +183,11 @@ class DatabaseHandler:
                     date TEXT,
                     sigma REAL,
                     q REAL,
+                    Q_self REAL,
                     m REAL,
                     cosb REAL,
                     initial_condition BLOB,
-                    rho_w_star REAL,
+                    rho REAL,
                     alpha REAL,
                     epsilon REAL,
                     tau REAL,
@@ -188,10 +201,14 @@ class DatabaseHandler:
                     sigma_hat REAL,
                     q_hat REAL,
                     m_hat REAL,
-                    A REAL,
-                    N REAL,
-                    A_hat REAL,
-                    N_hat REAL
+                    A_self REAL,
+                    N_self REAL,
+                    A_self_hat REAL,
+                    N_self_hat REAL,
+                    a REAL,
+                    n REAL,
+                    a_hat REAL,
+                    n_hat REAL
                 )
             ''')
             self.connection.commit()
@@ -253,7 +270,11 @@ class DatabaseHandler:
                     erm_calibrations BLOB,
                     test_loss REAL,
                     A REAL,
-                    N REAL
+                    N REAL,
+                    Test_set_min_eigenvalue_hessian REAL,
+                    Test_set_min_eigenvalue_hessian_teacher_weights REAL,
+                    Train_set_min_eigenvalue_hessian REAL,
+                    Train_set_min_eigenvalue_hessian_teacher_weights REAL
                 )
             ''')
             self.connection.commit()
@@ -289,7 +310,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -301,10 +322,11 @@ class DatabaseHandler:
             experiment_information.date,
             experiment_information.sigma,
             experiment_information.q,
+            experiment_information.Q_self,
             experiment_information.m,
             experiment_information.cosb,
             json.dumps(experiment_information.initial_condition),
-            experiment_information.rho_w_star,
+            experiment_information.rho,
             float(experiment_information.alpha),
             float(experiment_information.epsilon),
             float(experiment_information.tau),
@@ -321,7 +343,11 @@ class DatabaseHandler:
             experiment_information.A,
             experiment_information.N,
             experiment_information.A_hat,
-            experiment_information.N_hat
+            experiment_information.N_hat,
+            experiment_information.a,
+            experiment_information.n,
+            experiment_information.a_hat,
+            experiment_information.n_hat
         ))
         self.connection.commit()
 
@@ -345,7 +371,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -372,7 +398,11 @@ class DatabaseHandler:
             experiment_information.erm_calibrations.to_json(),
             experiment_information.test_loss,
             experiment_information.A,
-            experiment_information.N
+            experiment_information.N,
+            experiment_information.test_set_min_eigenvalue_hessian,
+            experiment_information.test_set_min_eigenvalue_hessian_teacher_weights,
+            experiment_information.train_set_min_eigenvalue_hessian,
+            experiment_information.train_set_min_eigenvalue_hessian_teacher_weights
         ))
         self.connection.commit()
 

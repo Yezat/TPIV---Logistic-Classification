@@ -1,7 +1,6 @@
 """
 This module calculates calibrations
 """
-from erm import *
 from gradient_descent import *
 from util import sigma_star
 from scipy.special import erfc

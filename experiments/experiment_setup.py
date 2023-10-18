@@ -12,9 +12,9 @@ import numpy as np
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.1,8,3)
-    epsilons: np.ndarray = np.array([0,0.1,0.5]) # np.linspace(0,1,5)
-    lambdas: np.ndarray = np.array([100])
+    alphas: np.ndarray = np.linspace(0.1,6,3)
+    epsilons: np.ndarray = np.array([0.3]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
+    lambdas: np.ndarray = np.array([0.1,1.0,10.0])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 
     dp: float = 0.01
@@ -23,7 +23,8 @@ def get_default_experiment():
     erm_methods: list = ["sklearn"] #"optimal_lambda"
     experiment_name: str = "Vanilla Strong Weak Trials"
     data_model_type: DataModelType = DataModelType.VanillaGaussian
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,p, experiment_name)
+    compute_hessian: bool = False
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,p, experiment_name,compute_hessian)
     return experiment
 experiment = get_default_experiment()
 
@@ -42,3 +43,11 @@ with open("sweep_experiment.json","w") as f:
     json_string = json.dumps(experiment.__dict__,cls= NumpyEncoder)
     # now write it
     f.write(json_string)
+
+# Start the MPI
+
+import subprocess
+
+# Run this command
+# mpiexec -n 2 python sweep.py sweep_experiment.json
+# subprocess.run(["mpiexec","-n","4","python","sweep.py","sweep_experiment.json"])

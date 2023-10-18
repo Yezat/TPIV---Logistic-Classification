@@ -1,19 +1,7 @@
 """
 This module contains functions that can predict probabilities and labels given data, weights and noise levels
 """
-from scipy.special import erfc
 import numpy as np
-
-
-# plot imports
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import rcParams
-
-from erm import *
-rcParams.update({'figure.autolayout': True})
-
-from data import *
 from gradient_descent import *
 
 

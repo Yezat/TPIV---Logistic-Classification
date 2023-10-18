@@ -33,7 +33,7 @@ class Task:
         self.data_model_type: DataModelType = data_model_type
 
 
-def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, data_model):
+def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, data_model, compute_hessian):
     """
     Generate Data, run ERM and save the results to the database
     """
@@ -48,13 +48,10 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
         m = None
 
     if method == "sklearn":
-        w_gd = sklearn_optimize(sample_weights(d),Xtrain,y,lam,epsilon, data_model.Sigma_w)
+        w_gd = sklearn_optimize(np.random.normal(0,1,(d,)),Xtrain,y,lam,epsilon, data_model.Sigma_w)
     else:
         raise Exception(f"Method {method} not implemented")
 
-
-    # Log the norm of the weights
-    logger.info(f"Norm of w_gd: {np.linalg.norm(w_gd,2)}")
 
     # let's calculate the calibration
     analytical_calibrations = []
@@ -72,7 +69,6 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     if w is not None:
         
         m = w_gd.dot(data_model.Sigma_x@w) / d
-        logger.info("ERM m: %f", m)
         
 
         # We cannot compute the calibration if we don't know the ground truth.
@@ -90,7 +86,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
 
     end = time.time()
     duration = end - start
-    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w,A,N)
+    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w,A,N, compute_hessian)
 
 
     logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")
@@ -105,7 +101,7 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
     if log:
         logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
-    m,q,sigma,A,N, sigma_hat, q_hat, m_hat,A_hat, N_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
+    m,q,sigma,A,N,a,n, sigma_hat, q_hat, m_hat,A_hat, N_hat,a_hat,n_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon/np.sqrt(d),tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
 
     end = time.time()
     experiment_duration = end-start
@@ -117,7 +113,7 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
             calibrations.append(calc_calibration_analytical(data_model.rho,p,m,q,tau))
     calibration_results = CalibrationResults(ps,calibrations,None)
 
-    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat,data_model.rho,A,N,A_hat,N_hat)
+    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat,data_model.rho,A,N,A_hat,N_hat,a,n,a_hat,n_hat,d)
 
     if log:
         logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
@@ -126,7 +122,7 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
 
 
 # Define a function to process a task
-def process_task(task, logger, data_model):
+def process_task(task, logger, data_model, compute_hessian):
     
     try:
         
@@ -135,7 +131,7 @@ def process_task(task, logger, data_model):
         if task.method == "state_evolution":
             task.result = run_state_evolution(logger,task.experiment_id,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, data_model)
         else:
-            task.result = run_erm(logger,task.experiment_id,task.method,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, task.dp, data_model)
+            task.result = run_erm(logger,task.experiment_id,task.method,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, task.dp, data_model, compute_hessian)
     except Exception as e:
         # log the exception
         logger.exception(e)
@@ -145,7 +141,7 @@ def process_task(task, logger, data_model):
     return task
 
 # Define the worker function
-def worker(logger, data_model):
+def worker(logger, data_model, compute_hessian):
     # get the rank
     rank = MPI.COMM_WORLD.Get_rank()   
 
@@ -158,7 +154,7 @@ def worker(logger, data_model):
                 logger.info(f"Received exit signal - my rank is {rank}")
                 break
             # Process the task
-            result = process_task(task, logger, data_model)
+            result = process_task(task, logger, data_model, compute_hessian)
             # Send the result to the master
             MPI.COMM_WORLD.send(result, dest=0, tag=task.id)
         except Exception as e:
@@ -364,7 +360,7 @@ if __name__ == "__main__":
         
     else:
         # run the worker
-        worker(logger, experiment.get_data_model(logger))
+        worker(logger, experiment.get_data_model(logger), experiment.compute_hessian)
 
     MPI.Finalize()
     
