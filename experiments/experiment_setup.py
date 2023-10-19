@@ -13,7 +13,7 @@ def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
     alphas: np.ndarray = np.linspace(0.1,6,3)
-    epsilons: np.ndarray = np.array([0.3]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
+    epsilons: np.ndarray = np.array([0.0,0.5]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
     lambdas: np.ndarray = np.array([0.1,1.0,10.0])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 

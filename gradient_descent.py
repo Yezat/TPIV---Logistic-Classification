@@ -148,7 +148,7 @@ def training_loss(w,X,y,lam,epsilon,covariance_prior = None):
 def pure_training_loss(w,X,y,epsilon):
     from state_evolution import adversarial_loss
     z = X@w/np.sqrt(X.shape[1])
-    return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),np.sqrt(w@w)).sum())/X.shape[0]
+    return (adversarial_loss(y,z,epsilon*np.sqrt(w@w)/np.sqrt(X.shape[1])).sum())/X.shape[0]
 
 def stable_cosh(x):
     out = np.zeros_like(x)

@@ -101,7 +101,7 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
     if log:
         logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
-    m,q,sigma,A,N,a,n, sigma_hat, q_hat, m_hat,A_hat, N_hat,a_hat,n_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon/np.sqrt(d),tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
+    m,q,sigma,A,N,a,n, sigma_hat, q_hat, m_hat,A_hat, N_hat,a_hat,n_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
 
     end = time.time()
     experiment_duration = end-start

@@ -69,9 +69,9 @@ class StateEvolutionExperimentInformation:
         self.duration: float = duration
         self.experiment_id: str = experiment_id
         self.generalization_error: float = generalization_error(rho, m, q, tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho,tau,epsilon/np.sqrt(d))
-        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon/np.sqrt(d), lam)
-        self.training_error: float = training_error_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon/np.sqrt(d), lam)
+        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho,tau, epsilon * a / np.sqrt(n))
+        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon, lam)
+        self.training_error: float = training_error_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon, lam)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = sigma
         self.q: float = q
