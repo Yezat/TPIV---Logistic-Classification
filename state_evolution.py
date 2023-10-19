@@ -195,16 +195,21 @@ def a_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:
         # m_derivative *= epsilon/np.sqrt(n)
 
         z_star = proximal_logistic_root_scalar(sigma,y,epsilon*a/np.sqrt(n),w)
-        m_derivative = moreau_envelope(sigma,z_star,y,epsilon*a/np.sqrt(n),w)
-        m_derivative *= epsilon / np.sqrt(n)
+        # m_derivative = moreau_envelope(sigma,z_star,y,epsilon*a/np.sqrt(n),w)
+        
+        arg = y*z_star - epsilon * a/np.sqrt(n)
+        m_derivative = stable_sigmoid(-arg)
+        
+        # m_derivative = (stable_sigmoid(-y*z_star + epsilon * a / np.sqrt(n)) + (z_star-w)/sigma)
 
+        m_derivative *= epsilon / np.sqrt(n)
 
         return z_0 * m_derivative * gaussian(xi)
 
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
 
-    return 0.5*alpha * (Iplus + Iminus)
+    return alpha * (Iplus + Iminus)
 
 
 def n_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:float, rho_w_star: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
@@ -221,7 +226,14 @@ def n_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:
         # m_derivative *= -0.5*epsilon*a/(n**(3/2))
 
         z_star = proximal_logistic_root_scalar(sigma,y,epsilon*a/np.sqrt(n),w)
-        m_derivative = moreau_envelope(sigma,z_star,y,epsilon*a/np.sqrt(n),w)
+        # m_derivative = moreau_envelope(sigma,z_star,y,epsilon*a/np.sqrt(n),w)
+        
+
+        arg = y*z_star - epsilon * a/np.sqrt(n)
+        m_derivative = stable_sigmoid(-arg)
+
+        # m_derivative = (stable_sigmoid(-y*z_star + epsilon * a / np.sqrt(n)) + (z_star-w)/sigma)
+
         m_derivative *= -0.5*epsilon*a/(n**(3/2))
 
         return z_0 * m_derivative * gaussian(xi)
@@ -229,7 +241,7 @@ def n_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
 
-    return 0.5*alpha * (Iplus + Iminus)
+    return alpha * (Iplus + Iminus)
 
 def var_hat_func(m, q, sigma, A, N,a,n, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=None):
     m_hat = m_hat_func(m, q, sigma, A, N,a,n,rho_w_star,alpha,epsilon,tau,lam,int_lims)/np.sqrt(gamma)
