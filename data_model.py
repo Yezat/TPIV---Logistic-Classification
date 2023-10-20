@@ -181,6 +181,7 @@ class VanillaGaussianDataModel(AbstractDataModel):
     
 class SourceCapacityDataModel(AbstractDataModel):
     def __init__(self, d,logger, source_pickle_path="../",delete_existing=False)->None:
+        
         self.model_type = DataModelType.SourceCapacity
         super().__init__(d,logger, source_pickle_path,delete_existing)
 
