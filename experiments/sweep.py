@@ -48,9 +48,10 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
         m = None
 
     if method == "sklearn":
-        w_gd = sklearn_optimize(np.random.normal(0,1,(d,)),Xtrain,y,lam,epsilon, data_model.Sigma_w)
+        w_gd = sklearn_optimize(np.random.normal(0,1,(d,)),Xtrain,y,lam,epsilon, data_model.Sigma_w, data_model.Sigma_delta, logger)
     else:
         raise Exception(f"Method {method} not implemented")
+        # TODO there is no point anymore for method..
 
 
     # let's calculate the calibration
@@ -86,7 +87,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
 
     end = time.time()
     duration = end - start
-    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w,A,N, compute_hessian)
+    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w,A,N, compute_hessian, data_model.Sigma_delta)
 
 
     logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")
@@ -117,6 +118,9 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
 
     if log:
         logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
+        # lof the overlaps we found
+        logger.info(f"m={m}, q={q}, sigma={sigma}, A={A}, N={N}, a={a}, n={n}")
+        logger.info(f"m_hat={m_hat}, q_hat={q_hat}, sigma_hat={sigma_hat}, A_hat={A_hat}, N_hat={N_hat}, a_hat={a_hat}, n_hat={n_hat}")
 
     return st_exp_info
 
@@ -206,7 +210,7 @@ def load_experiment(filename, logger):
             experiment.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info("Loaded experiment from file %s", filename)
             # log the dataModelType
-            logger.info(f"DataModelType: {experiment.data_model_type}")
+            logger.info(f"DataModelType: {experiment.data_model_type.name}")
     except FileNotFoundError:
         logger.error("Could not find file %s. Using the standard elements instead", filename)
 
@@ -360,7 +364,7 @@ if __name__ == "__main__":
         
     else:
         # run the worker
-        worker(logger, experiment.get_data_model(logger), experiment.compute_hessian)
+        worker(logger, experiment.get_data_model(logger,delete_existing=False), experiment.compute_hessian)
 
     MPI.Finalize()
     

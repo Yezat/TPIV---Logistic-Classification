@@ -9,13 +9,26 @@ def error(y, yhat):
 
 def adversarial_error(y, Xtest, w_gd, epsilon):
     d = Xtest.shape[1]
-    y_hat = np.sign( sigmoid( Xtest@w_gd - y*np.abs(epsilon) * np.sqrt( w_gd@w_gd /d)  ) - 0.5)
+    y_hat = np.sign( sigmoid( Xtest@w_gd - y*epsilon * np.sqrt( w_gd@w_gd /d)  ) - 0.5)
 
     # y_hat_prime = np.sign(-Xtest @ w_gd + y * epsilon * np.sqrt(np.linalg.norm(w_gd, 2) / d))
 
     # assert np.all(y_hat == y_hat_prime)
 
     return error(y, y_hat)
+
+def random_positive_definite_matrix(d, scaling = 50, variance = 2):
+    """
+    Returns a random positive definite matrix of size d x d
+    """
+    A = np.random.normal(0,variance,size=(d,d))
+    return A.T @ A + scaling * np.eye(d)
+
+def power_law_diagonal_matrix(d,alpha = 1.1):
+    """
+    Returns a diagonal matrix with a spectra that is power-law distributed
+    """
+    return np.diag([d/(k+1)**alpha for k in range(d)])
 
 def sigma_star(x):
     """

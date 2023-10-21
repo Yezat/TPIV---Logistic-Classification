@@ -46,26 +46,26 @@ def preprocessing(coef, X, y, lam, epsilon):
     target = y_bin
     return w0, X, target, lam, epsilon
 
-def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None):
+def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None, sigma_delta = None, logger = None):
     w0, X,target, lam, epsilon = preprocessing(coef, X, y, lam, epsilon)
 
     func = loss_gradient 
 
     l2_reg_strength = lam
-    n_threads = 1
 
     if covariance_prior is None:
         covariance_prior = np.eye(X.shape[1])
+    if sigma_delta is None:
+        sigma_delta = np.eye(X.shape[1])
 
-    method = "L-BFGS-B"
-    
+    method = "L-BFGS-B"    
 
     opt_res = minimize(
                 func,
                 w0,
                 method=method,
                 jac=True,
-                args=(X, target, l2_reg_strength, epsilon,covariance_prior, n_threads),
+                args=(X, target, l2_reg_strength, epsilon,covariance_prior, sigma_delta),
                 options={"maxiter": 1000, "disp": False},
             )
     
@@ -107,34 +107,37 @@ def stable_gradient(z,e,y):
 
 
 
-def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, n_threads=1):
+def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta):
     n_features = X.shape[1]
     weights = coef
     raw_prediction = X @ weights / np.sqrt(n_features)    
 
-    adv_factor = epsilon * np.sqrt(weights @ weights) / np.sqrt(n_features)
+    l2_reg_strength /= 2
 
-    loss_out = stable_loss(raw_prediction,adv_factor,y)
-    epsilon_gradient_out,gradient_out = stable_gradient(raw_prediction,adv_factor,y)
+    wSw = weights.dot(sigma_delta@weights)
+    nww = np.sqrt(weights@weights)
 
-    loss,grad_per_sample = loss_out,gradient_out
+    optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
 
+    loss = stable_loss(raw_prediction,optimal_attack,y)
     loss = loss.sum()
+    loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
 
-    adv_correction_factor = epsilon * weights / ( np.sqrt(weights @ weights) * np.sqrt(n_features) ) 
-    adv_grad_summand = np.outer(epsilon_gradient_out, adv_correction_factor).sum(axis=0)
+
+    epsilon_gradient_per_sample,gradient_per_sample = stable_gradient(raw_prediction,optimal_attack,y)   
+
+    derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+
+    adv_grad_summand = np.outer(epsilon_gradient_per_sample, derivative_optimal_attack).sum(axis=0)
 
 
     # if epsilon is zero, assert that the norm of adv_grad_summand is zero
     if epsilon == 0:
-        assert np.linalg.norm(adv_grad_summand) == 0
+        assert np.linalg.norm(adv_grad_summand) == 0    
 
-    l2_reg_strength /= 2
-
-    loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
+    
     grad = np.empty_like(coef, dtype=weights.dtype)
-
-    grad[:n_features] = X.T @ grad_per_sample / np.sqrt(n_features) +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
+    grad[:n_features] = X.T @ gradient_per_sample / np.sqrt(n_features) +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
 
     return loss, grad
 
@@ -145,10 +148,11 @@ def training_loss(w,X,y,lam,epsilon,covariance_prior = None):
         covariance_prior = np.eye(X.shape[1])
     return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() + 0.5 * lam * w@covariance_prior@w )/X.shape[0]
 
-def pure_training_loss(w,X,y,epsilon):
+def pure_training_loss(w,X,y,epsilon, Sigma_delta):
     from state_evolution import adversarial_loss
     z = X@w/np.sqrt(X.shape[1])
-    return (adversarial_loss(y,z,epsilon*np.sqrt(w@w)/np.sqrt(X.shape[1])).sum())/X.shape[0]
+    attack = epsilon/np.sqrt(X.shape[1]) * ( w.dot(Sigma_delta@w) / np.sqrt(w@w)  )
+    return (adversarial_loss(y,z,attack).sum())/X.shape[0]
 
 def stable_cosh(x):
     out = np.zeros_like(x)

@@ -8,13 +8,15 @@ from data_model import DataModelType
 from experiment_information import NumpyEncoder, ExperimentInformation
 import json
 import numpy as np
+from util import *
+
 # # Create a SweepExperiment
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
     alphas: np.ndarray = np.linspace(0.1,6,3)
     epsilons: np.ndarray = np.array([0.0,0.5]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
-    lambdas: np.ndarray = np.array([0.1,1.0,10.0])
+    lambdas: np.ndarray = np.array([0.1])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 
     dp: float = 0.01
@@ -34,9 +36,20 @@ logger = logging.getLogger()
 logger.addHandler(logging.StreamHandler())
 logger.setLevel(logging.INFO)
 
+
+Sigma_w = power_law_diagonal_matrix(experiment.d, 1.4)
+# Sigma_w = np.eye(experiment.d)*5
+Sigma_delta = power_law_diagonal_matrix(experiment.d, 1.2)
+# inverse the order of sigma_delta
+Sigma_delta = Sigma_delta[::-1]
+
+# Sigma_delta = np.eye(experiment.d) * 5
+
 # Force a creation of a new data_model
-experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True)
-# # use json dump to save the experiment parameters
+experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)
+
+
+# use json dump to save the experiment parameters
 with open("sweep_experiment.json","w") as f:
     # use the NumpyEncoder to encode numpy arrays
     # Let's produce some json
@@ -44,10 +57,8 @@ with open("sweep_experiment.json","w") as f:
     # now write it
     f.write(json_string)
 
-# Start the MPI
-
-import subprocess
-
-# Run this command
-# mpiexec -n 2 python sweep.py sweep_experiment.json
+# # Start the MPI
+# import subprocess
+# # Run this command
+# # mpiexec -n 2 python sweep.py sweep_experiment.json
 # subprocess.run(["mpiexec","-n","4","python","sweep.py","sweep_experiment.json"])

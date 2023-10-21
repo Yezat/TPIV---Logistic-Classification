@@ -267,7 +267,7 @@ def var_func(m_hat, q_hat, sigma_hat, A_hat, N_hat,a_hat, n_hat, rho, lam, data_
 
     Lambda_clean = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x 
     H_clean = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit 
-    
+
     Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x + C * data_model.spec_Sigma_delta + M * np.ones(data_model.d)
     H = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit + a_hat * data_model.spec_Sigma_delta + n_hat * np.ones(data_model.d)  
 

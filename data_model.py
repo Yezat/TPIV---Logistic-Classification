@@ -70,11 +70,10 @@ class AbstractDataModel(ABC):
         returns a json with all the information about the model
     ----------
     """
-    def __init__(self, d, logger, source_pickle_path="../", delete_existing = False) -> None:
+    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../") -> None:
         self.d = d
         self.logger = logger
         self.source_pickle_path = source_pickle_path
-        self.delete_existing = delete_existing
 
         self.gamma = 1
 
@@ -82,32 +81,32 @@ class AbstractDataModel(ABC):
         if not hasattr(self, 'model_type'):
             self.model_type = DataModelType.AbstractModel
 
-        self.loaded_self_from_pickle = False
 
         # check if a pickle exists
         self.source_pickle = f"{source_pickle_path}data/data_model_{self.model_type.name}_{d}.pkl"
         if os.path.isfile(self.source_pickle) and not delete_existing:
-        
             # load self from pickle 
             with open(self.source_pickle, 'rb') as f:
                 # assign all the attributes of the pickle to self
                 tmp_dict = pickle.load(f)
                 for key in [a for a in dir(tmp_dict) if not a.startswith('__') and not a == "get_data" and not a == "logger" and not a == "get_info"]:
                     value = getattr(tmp_dict, key)
-                    # print("setting " + key + " to " + str(value) + " from pickle")
                     setattr(self, key, value)
-                self.loaded_self_from_pickle = True
+                self.loaded_from_pickle = True
                 self.logger.info("loaded self from pickle")
-
+        else:
+            self.loaded_from_pickle = False
+            self.logger.info("no pickle found")
+        
     def _finish_initialization(self):
         """
         computes the spectra and stores the pickle
         """
+        self.logger.info("Finishing initialization")
         assumption_1 = self.Sigma_x - self.Sigma_x.T @ np.linalg.inv(self.Sigma_x) @ self.Sigma_x
         min_eigval = np.min(np.linalg.eigvalsh(assumption_1))
         if min_eigval < 0:
             self.logger.warning(f"Assumption on Schur Complement failed: Matrix was not positive semi-definite; min eigval: {min_eigval}")
-
 
         # compute the spectra
         self.spec_PhiPhit = np.linalg.eigvalsh(self.PhiPhiT)
@@ -154,20 +153,26 @@ class AbstractDataModel(ABC):
 """
 
 class VanillaGaussianDataModel(AbstractDataModel):
-    def __init__(self, d, logger, source_pickle_path="../", delete_existing=False) -> None:
+    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None) -> None:
         self.model_type = DataModelType.VanillaGaussian
-        super().__init__(d, logger, source_pickle_path, delete_existing)
+        super().__init__(d, logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path)
 
+        if not self.loaded_from_pickle:
 
-        self.Sigma_x = np.eye(self.d)
-        self.Sigma_theta = np.eye(self.d)
-        self.Sigma_w = np.eye(self.d)
-        self.Sigma_delta = np.eye(self.d)
+            self.Sigma_x = np.eye(self.d)
+            self.Sigma_theta = np.eye(self.d)
 
-        self.rho = 1
-        self.PhiPhiT = np.eye(self.d)
+            self.Sigma_w = Sigma_w
+            self.Sigma_delta = Sigma_delta
+            if self.Sigma_w is None:
+                self.Sigma_w = np.eye(self.d)
+            if self.Sigma_delta is None:
+                self.Sigma_delta = np.eye(self.d)
 
-        self._finish_initialization()
+            self.rho = 1
+            self.PhiPhiT = np.eye(self.d)
+
+            self._finish_initialization()
 
     def generate_data(self, n, tau):
         the = np.random.normal(0,1, self.d)
@@ -180,27 +185,34 @@ class VanillaGaussianDataModel(AbstractDataModel):
         return X, y, X_test, y_test, the
     
 class SourceCapacityDataModel(AbstractDataModel):
-    def __init__(self, d,logger, source_pickle_path="../",delete_existing=False)->None:
-        
+    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None)->None:
+
         self.model_type = DataModelType.SourceCapacity
-        super().__init__(d,logger, source_pickle_path,delete_existing)
+        super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path)
 
-        alph = 1.2
-        r = 0.3
+        if not self.loaded_from_pickle:
 
-        spec_Omega0 = np.array([self.d/(k+1)**alph for k in range(self.d)])
-        self.Sigma_x=np.diag(spec_Omega0)
+            alph = 1.2
+            r = 0.3
 
-        self.theta = np.sqrt(np.array([1/(k+1)**((1+alph*(2*r-1))) for k in range(self.d)]))
+            spec_Omega0 = np.array([self.d/(k+1)**alph for k in range(self.d)])
+            self.Sigma_x=np.diag(spec_Omega0)
 
-        self.rho = np.mean(spec_Omega0 * self.theta**2) 
-        self.PhiPhiT = np.diag(spec_Omega0**2 * self.theta**2)
+            self.theta = np.sqrt(np.array([1/(k+1)**((1+alph*(2*r-1))) for k in range(self.d)]))
 
-        self.Sigma_delta = np.eye(self.d)        
-        self.Sigma_theta = np.diag(self.theta**2)
-        self.Sigma_w  = np.eye(self.d)
+            self.rho = np.mean(spec_Omega0 * self.theta**2) 
+            self.PhiPhiT = np.diag(spec_Omega0**2 * self.theta**2)
+            self.Sigma_theta = np.diag(self.theta**2)
 
-        self._finish_initialization()
+
+            self.Sigma_w = Sigma_w
+            self.Sigma_delta = Sigma_delta
+            if self.Sigma_w is None:
+                self.Sigma_w = np.eye(self.d)
+            if self.Sigma_delta is None:
+                self.Sigma_delta = np.eye(self.d)
+
+            self._finish_initialization()
 
 
     def generate_data(self, n, tau):

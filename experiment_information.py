@@ -42,13 +42,30 @@ class ExperimentInformation:
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
     
-    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False):
+    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None):
+        """
+        Instantiates a data model of the type specified in self.data_model_type and stores it to source_pickle_path,
+        custom student prior covariances and adversarial training covariances can be specified
+        parameters:
+        logger: a logger object
+        source_pickle_path: the path where the data model should be stored
+        delete_existing: if true, the data model will be recomputed even if a pickle exists
+        Sigma_w: the covariance matrix of the student prior
+        Sigma_delta: the covariance matrix of the adversarial training 
+        ----------------
+        Both Sigma_w and Sigma_delta only have effect if the data model is newly created, that is either no pickle exists or delete_existing is True
+        ----------------
+        returns:
+        the data model
+        """
+        data_model = None
         if self.data_model_type == DataModelType.VanillaGaussian:
-            return VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing)
+            data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)
         elif self.data_model_type == DataModelType.SourceCapacity:
-            return SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing)
+            data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
+        return data_model
 
 class CalibrationResults:
     def __init__(self, ps: np.ndarray, calibrations: np.ndarray, dp: float):
@@ -98,12 +115,12 @@ class StateEvolutionExperimentInformation:
         self.A_hat : float = A_hat
         self.N_hat : float = N_hat
         self.a: float = a
-        self.n: float = a
+        self.n: float = n
         self.a_hat: float = a_hat
         self.n_hat: float = n_hat
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray, A: float, N: float, compute_hessian: bool):
+    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray, A: float, N: float, compute_hessian: bool, Sigma_delta: np.ndarray):
         self.id: str = str(uuid.uuid4())
         self.duration : float = duration
         self.code_version: str = __version__
@@ -119,12 +136,12 @@ class ERMExperimentInformation:
         self.generalization_error_erm: float = error(ytest,yhat_gd)
         self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon)
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
-        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,tau,epsilon)
+        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,tau,epsilon * A / np.sqrt(N))
         yhat_gd_train = theoretical.predict_erm(Xtrain,w_gd)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
         self.training_error: float = error(y,yhat_gd_train)
-        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,epsilon)
+        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,epsilon,Sigma_delta=Sigma_delta)
         self.d: int = d
         self.tau: float = tau
         self.alpha: float = n/d
@@ -134,7 +151,7 @@ class ERMExperimentInformation:
         self.analytical_calibrations: CalibrationResults = analytical_calibrations
         self.erm_calibrations: CalibrationResults = erm_calibrations
 
-        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,epsilon)
+        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,epsilon, Sigma_delta=Sigma_delta)
         if compute_hessian:
             self.test_set_min_eigenvalue_hessian = min_eigenvalue_hessian(Xtest,ytest,w_gd,epsilon,lam,Sigma_w)
             self.test_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(Xtest,ytest,w,epsilon,lam,Sigma_w)
