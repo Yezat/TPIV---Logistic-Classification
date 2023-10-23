@@ -132,7 +132,7 @@ class ERMExperimentInformation:
         n: int = Xtrain.shape[0]
         yhat_gd = predict_erm(Xtest,w_gd)
         self.generalization_error_erm: float = error(ytest,yhat_gd)
-        self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon)
+        self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon, Sigma_delta)
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
         self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,tau,epsilon * A / np.sqrt(N))
         yhat_gd_train = predict_erm(Xtrain,w_gd)

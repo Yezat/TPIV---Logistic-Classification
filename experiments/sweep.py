@@ -72,12 +72,11 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
         m = w_gd.dot(data_model.Sigma_x@w) / d
         
 
-        # We cannot compute the calibration if we don't know the ground truth.
-        if tau != 0: # TODO is there a point in computing the calibration if tau is zero?
-            for p in ps:
-            
-                analytical_calibrations.append(overlap_calibration(rho,p,m,q_erm,tau))        
-                erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
+        # We cannot compute the calibration if we don't know the ground truth.    
+        for p in ps:
+        
+            analytical_calibrations.append(overlap_calibration(rho,p,m,q_erm,tau))        
+            erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
 
     analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
     erm_calibrations_result = CalibrationResults(ps,erm_calibrations,dp)

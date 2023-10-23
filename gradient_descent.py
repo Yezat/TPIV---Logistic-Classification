@@ -208,9 +208,11 @@ def min_eigenvalue_hessian(X,y,theta,epsilon, lam, Sigma_w):
 def error(y, yhat):
     return 0.25*np.mean((y-yhat)**2)
 
-def adversarial_error(y, Xtest, w_gd, epsilon):
+def adversarial_error(y, Xtest, w_gd, epsilon, Sigma_delta):
     d = Xtest.shape[1]
-    y_hat = np.sign( sigmoid( Xtest@w_gd - y*epsilon * np.sqrt( w_gd@w_gd /d)  ) - 0.5)
+    wSw = w_gd.dot(Sigma_delta@w_gd)
+    nww = np.sqrt(w_gd@w_gd)
+    y_hat = np.sign( sigmoid( Xtest@w_gd/np.sqrt(d) - y*epsilon/np.sqrt(d) * wSw/nww  ) - 0.5)
 
     # y_hat_prime = np.sign(-Xtest @ w_gd + y * epsilon * np.sqrt(np.linalg.norm(w_gd, 2) / d))
 
@@ -231,15 +233,30 @@ def compute_experimental_teacher_calibration(p, w, werm, Xtest, sigma):
         # size of bins where we put the probas
         n, d = Xtest.shape
         dp = 0.025
-        sigmoid = np.vectorize(lambda x : 1. / (1. + np.exp( -x )))
-        Ypred = sigmoid(Xtest @ werm)
-
-        index = [i for i in range(n) if p - dp <= Ypred[i] <= p + dp]
+        
         def probit(lf, sigma):
             return 0.5 * erfc(- lf / np.sqrt(2 * sigma**2))
+        
 
-        return p - np.mean([probit(w @ Xtest[i], sigma) for i in index])
+        Ypred = sigmoid(Xtest @ werm / np.sqrt(d))
+        
+
+        index = [i for i in range(n) if p - dp <= Ypred[i] <= p + dp]
+        
+
+        if sigma == 0:
+            teacher_probabilities = np.array([np.sign(Xtest[i] @ w / np.sqrt(d)) for i in index])
+        else:
+            teacher_probabilities = np.array([probit(Xtest[i] @ w / np.sqrt(d),sigma) for i in index]) 
+
+        if len(teacher_probabilities) == 0:
+            return p
+
+        return p - np.mean(teacher_probabilities)
+    
+
     except Exception as e:
+        # probably a mean of empty slice... is it an exception though?
         print(e)
         return np.nan
     
@@ -252,6 +269,6 @@ def predict_erm(X,weights):
     return np.sign(predict_erm_probability(X,weights) - 0.5)
 
 def predict_erm_probability(X,weights):
-    argument = X@weights
+    argument = X@weights/np.sqrt(X.shape[1])
     
     return sigmoid(argument)

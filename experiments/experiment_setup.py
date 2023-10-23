@@ -40,7 +40,7 @@ logger.setLevel(logging.INFO)
 Sigma_w = power_law_diagonal_matrix(experiment.d, 1.4)
 # Sigma_w = np.eye(experiment.d)
 Sigma_delta = power_law_diagonal_matrix(experiment.d, 1.2)
-Sigma_delta = np.eye(experiment.d) * 3
+Sigma_delta = np.eye(experiment.d)
 
 # Force a creation of a new data_model
 experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)
