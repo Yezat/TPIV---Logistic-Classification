@@ -253,9 +253,9 @@ def compute_experimental_teacher_calibration(p, w, werm, Xtest, sigma):
         
 
         if sigma == 0:
-            sigma = 1e-10
-        
-        teacher_probabilities = np.array([probit(Xtest[i] @ w / np.sqrt(d),sigma) for i in index]) 
+            teacher_probabilities = np.array([np.heaviside(Xtest[i] @ w / np.sqrt(d),0.5) for i in index]) 
+        else:
+            teacher_probabilities = np.array([probit(Xtest[i] @ w / np.sqrt(d),sigma) for i in index]) 
 
         if len(teacher_probabilities) == 0:
             return p
