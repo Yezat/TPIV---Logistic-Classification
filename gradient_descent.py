@@ -1,22 +1,25 @@
 """
-This module contains code for custom gradient descent
+This module contains code for obtaining the loss, the gradient and the hessian of a given problem and an ERM estimator.
 """
 import numpy as np
-import logging
-import time
-import numpy as np
-from data import *
 from scipy.optimize import minimize
 from sklearn.utils.validation import check_array, check_consistent_length
-from scipy.linalg import norm
-from scipy.linalg import eigvalsh
 from scipy.sparse.linalg import eigsh
-import mpmath
+from helpers import sigmoid, log1pexp, stable_cosh_squared, adversarial_loss
+from scipy.special import erfc
 
 """
-sklearn - expects labels as -1 and 1.
+------------------------------------------------------------------------------------------------------------------------
+    Optimizer
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
+"""
+Preprocesses the data for the sklearn optimizer.
 """
 def preprocessing(coef, X, y, lam, epsilon):
+    # sklearn - expects labels as -1 and 1.
     # heavily inspired by the sklearn code, with hopefully all the relevant bits copied over to make it work using lbfgs
     solver = "lbfgs"
     X = check_array(
@@ -73,40 +76,6 @@ def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None, sigma_delta 
     return w0
 
 
-def log1pexp(x):
-    out = np.zeros_like(x)
-    idx0 = x <= -37
-    out[idx0] = np.exp(x[idx0])
-    idx1 = (x > -37) & (x <= -2)
-    out[idx1] = np.log1p(np.exp(x[idx1]))
-    idx2 = (x > -2) & (x <= 18)
-    out[idx2] = np.log(1. + np.exp(x[idx2]))
-    idx3 = (x > 18) & (x <= 33.3)
-    out[idx3] = x[idx3] + np.exp(-x[idx3])
-    idx4 = x > 33.3
-    out[idx4] = x[idx4]
-    return out
-
-def stable_loss(z,e,y):
-    return -y*z + y*e + (1-y)*log1pexp(z+e) + y*log1pexp(z-e)
-
-def stable_sigmoid(x):
-    out = np.zeros_like(x)
-    idx = x <= 0
-    out[idx] = np.exp(x[idx]) / (1 + np.exp(x[idx]))
-    idx = x > 0
-    out[idx] = 1 / (1 + np.exp(-x[idx]))
-    return out
-
-def stable_gradient(z,e,y):
-    opt_attack_term = (1-y)*stable_sigmoid(z+e) + y*stable_sigmoid(-z+e)
-    data_term = (1-y)*stable_sigmoid(z+e) - y*stable_sigmoid(-z+e)
-    return opt_attack_term, data_term
-
-
-
-
-
 def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta):
     n_features = X.shape[1]
     weights = coef
@@ -119,12 +88,12 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_d
 
     optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
 
-    loss = stable_loss(raw_prediction,optimal_attack,y)
+    loss = compute_loss(raw_prediction,optimal_attack,y)
     loss = loss.sum()
     loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
 
 
-    epsilon_gradient_per_sample,gradient_per_sample = stable_gradient(raw_prediction,optimal_attack,y)   
+    epsilon_gradient_per_sample,gradient_per_sample = compute_gradient(raw_prediction,optimal_attack,y)   
 
     derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
 
@@ -141,26 +110,47 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_d
 
     return loss, grad
 
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Loss
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
+def compute_loss(z,e,y):
+    return -y*z + y*e + (1-y)*log1pexp(z+e) + y*log1pexp(z-e)
+
 def training_loss(w,X,y,lam,epsilon,covariance_prior = None):
-    from state_evolution import adversarial_loss
     z = X@w
     if covariance_prior is None:
         covariance_prior = np.eye(X.shape[1])
     return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() + 0.5 * lam * w@covariance_prior@w )/X.shape[0]
 
 def pure_training_loss(w,X,y,epsilon, Sigma_delta):
-    from state_evolution import adversarial_loss
     z = X@w/np.sqrt(X.shape[1])
     attack = epsilon/np.sqrt(X.shape[1]) * ( w.dot(Sigma_delta@w) / np.sqrt(w@w)  )
     return (adversarial_loss(y,z,attack).sum())/X.shape[0]
 
-def stable_cosh(x):
-    out = np.zeros_like(x)
-    idx = x <= 0
-    out[idx] = np.exp(x[idx]) / (1 + np.exp(2*x[idx]) + 2*np.exp(x[idx]))
-    idx = x > 0
-    out[idx] = np.exp(-x[idx]) / (1 + np.exp(-2*x[idx]) + 2*np.exp(-x[idx]))
-    return out
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Gradient
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
+def compute_gradient(z,e,y):
+    opt_attack_term = (1-y)*sigmoid(z+e) + y*sigmoid(-z+e)
+    data_term = (1-y)*sigmoid(z+e) - y*sigmoid(-z+e)
+    return opt_attack_term, data_term
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Hessian
+------------------------------------------------------------------------------------------------------------------------
+"""
+
 
 def compute_hessian(X,y,theta,epsilon, lam, Sigma_w):
     X = X / np.sqrt(X.shape[1])
@@ -180,12 +170,12 @@ def compute_hessian(X,y,theta,epsilon, lam, Sigma_w):
     dH = np.eye(X.shape[1]) * epsilon / (np.linalg.norm(theta) * np.sqrt(X.shape[1])) - epsilon*np.outer(theta, theta) / (np.linalg.norm(theta) ** 3 * np.sqrt(X.shape[1]))
 
     # dH term
-    vec = (1-y) * stable_sigmoid(C) + y * stable_sigmoid(-C_prime) # (n,)
+    vec = (1-y) * sigmoid(C) + y * sigmoid(-C_prime) # (n,)
     hessian = vec.sum() * dH
 
     # dC term and dC_prime term
-    vecC = (1-y) * stable_cosh(C) # (n,)
-    vecC_prime = y * stable_cosh(C_prime) # (n,)
+    vecC = (1-y) * stable_cosh_squared(C) # (n,)
+    vecC_prime = y * stable_cosh_squared(C_prime) # (n,)
 
     # Shift X by H
     X_plus = X + H
@@ -209,3 +199,59 @@ def min_eigenvalue_hessian(X,y,theta,epsilon, lam, Sigma_w):
     # return np.min(eigvalsh(hessian))
     return eigsh(hessian, k=1, which='SA')[0][0]
 
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Errors
+------------------------------------------------------------------------------------------------------------------------
+"""
+def error(y, yhat):
+    return 0.25*np.mean((y-yhat)**2)
+
+def adversarial_error(y, Xtest, w_gd, epsilon):
+    d = Xtest.shape[1]
+    y_hat = np.sign( sigmoid( Xtest@w_gd - y*epsilon * np.sqrt( w_gd@w_gd /d)  ) - 0.5)
+
+    # y_hat_prime = np.sign(-Xtest @ w_gd + y * epsilon * np.sqrt(np.linalg.norm(w_gd, 2) / d))
+
+    # assert np.all(y_hat == y_hat_prime)
+
+    return error(y, y_hat)
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Calibration
+------------------------------------------------------------------------------------------------------------------------
+"""
+def compute_experimental_teacher_calibration(p, w, werm, Xtest, sigma):
+    try:
+
+        
+        # size of bins where we put the probas
+        n, d = Xtest.shape
+        dp = 0.025
+        sigmoid = np.vectorize(lambda x : 1. / (1. + np.exp( -x )))
+        Ypred = sigmoid(Xtest @ werm)
+
+        index = [i for i in range(n) if p - dp <= Ypred[i] <= p + dp]
+        def probit(lf, sigma):
+            return 0.5 * erfc(- lf / np.sqrt(2 * sigma**2))
+
+        return p - np.mean([probit(w @ Xtest[i], sigma) for i in index])
+    except Exception as e:
+        print(e)
+        return np.nan
+    
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Predictions
+------------------------------------------------------------------------------------------------------------------------
+"""
+def predict_erm(X,weights):
+    return np.sign(predict_erm_probability(X,weights) - 0.5)
+
+def predict_erm_probability(X,weights):
+    argument = X@weights
+    
+    return sigmoid(argument)

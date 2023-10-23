@@ -2,13 +2,15 @@ import numpy as np
 from typing import Tuple
 from scipy.integrate import quad
 from scipy.special import erfc
-from util import *
+from helpers import *
 from data_model import *
 from scipy.optimize import root_scalar
-import mygrad as mg
+from scipy.special import logit
 
 """
-Proximal from root scalar logistic
+------------------------------------------------------------------------------------------------------------------------
+    Proximals
+------------------------------------------------------------------------------------------------------------------------
 """
 def optim(z,y,V,w_prime):
     a = y*z
@@ -30,79 +32,12 @@ def proximal_logistic_root_scalar(V: float, y: float, epsilon_term: float, w:flo
         print("V: ", V, "y: ", y, "epsilon_term:", epsilon_term, "w: ", w)
         raise e
 
-def log1pexp(x):
-    """Compute log(1+exp(x)) componentwise."""
-    # inspired from sklearn and https://cran.r-project.org/web/packages/Rmpfr/vignettes/log1mexp-note.pdf
-    # and http://fa.bianp.net/blog/2019/evaluate_logistic/
-    out = np.zeros_like(x)
-    idx0 = x <= -37
-    out[idx0] = np.exp(x[idx0])
-    idx1 = (x > -37) & (x <= -2)
-    out[idx1] = np.log1p(np.exp(x[idx1]))
-    idx2 = (x > -2) & (x <= 18)
-    out[idx2] = np.log(1. + np.exp(x[idx2]))
-    idx3 = (x > 18) & (x <= 33.3)
-    out[idx3] = np.exp(-x[idx3]) + x[idx3]
-    idx4 = x > 33.3
-    out[idx4] = x[idx4]
-    return out
-
-def stable_sigmoid(x):
-    out = np.zeros_like(x)
-    idx = x <= 0
-    out[idx] = np.exp(x[idx]) / (1 + np.exp(x[idx]))
-    idx = x > 0
-    out[idx] = 1 / (1 + np.exp(-x[idx]))
-    return out
-
-def adversarial_loss(y,z, epsilon_term):
-    return log1pexp(-y*z + epsilon_term)
-
-def stable_cosh(x):
-    out = np.zeros_like(x)
-    idx = x <= 0
-    out[idx] = np.exp(x[idx]) / (1 + np.exp(2*x[idx]))
-    idx = x > 0
-    out[idx] = np.exp(-x[idx]) / (1 + np.exp(-2*x[idx]))
-    return out
-
-def second_derivative_loss(y: float, z: float, epsilon_term: float) -> float:
-    return y**2 * stable_cosh(0.5*y*z - 0.5*epsilon_term)**(2)
-
-def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
-    '''
-    Gaussian measure
-    '''
-    return np.exp(-.5 * (x-mean)**2 / var)/np.sqrt(2*np.pi*var)
-
-def moreau_envelope(sigma: float, z:float, y: float, epsilon_term: float, w: float) -> float:
-    return adversarial_loss(y,z,epsilon_term) + ((z-w)**2)/(2*sigma)
-
-def moreau_derivative(sigma: float,y: float,epsilon_term: float,w: float) -> float:
-    lim = 1
-    evaluations = 10
-    epsilon_range = np.linspace(epsilon_term -lim, epsilon_term+lim,evaluations)
-    # get the index of the actual epsilon_term
-    index = evaluations // 2
-    zs = np.array([ proximal_logistic_root_scalar(sigma,y,e,w) for e in epsilon_range])
-    values = moreau_envelope(sigma,zs,y,epsilon_range,w)
-    gradients = np.gradient(values)
-    return gradients[index]
-    # eps_tensor = np.linspace(epsilon_term -lim, epsilon_term+lim,evaluations)
-    # eps_tensor = mg.tensor([epsilon_term])
-    # def f(eps):
-    #     zs = np.array([ proximal_logistic_root_scalar(sigma,y,e,w) for e in eps])
-    #     values = moreau_envelope(sigma,zs,y,eps,w)
-    #     return values
-    # k = f(eps_tensor)
-    # k.backward()
-    # return eps_tensor.grad[0]
-
-    
 
 
 """
----------------------- Hat Equations ----------------------
+------------------------------------------------------------------------------------------------------------------------
+    Hat Overlap Equations
+------------------------------------------------------------------------------------------------------------------------
 """
 
 def m_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:float, rho: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
@@ -135,11 +70,6 @@ def q_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:
         w = np.sqrt(q) * xi
         proximal = proximal_logistic_root_scalar(sigma,y,epsilon*a/np.sqrt(n),w)
         partial_proximal = ( proximal - w ) ** 2
-
-
-        # m_derivative = moreau_derivative(sigma,y,epsilon*a/np.sqrt(n),w)
-        # m_derivative *= epsilon*a/np.sqrt(n)
-
 
         return z_0 * (partial_proximal/ (sigma ** 2) ) * gaussian(xi)
 
@@ -191,16 +121,11 @@ def a_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:
 
         w = np.sqrt(q) * xi
 
-        # m_derivative = moreau_derivative(sigma,y,epsilon*a/np.sqrt(n),w)
-        # m_derivative *= epsilon/np.sqrt(n)
-
         z_star = proximal_logistic_root_scalar(sigma,y,epsilon*a/np.sqrt(n),w)
-        # m_derivative = moreau_envelope(sigma,z_star,y,epsilon*a/np.sqrt(n),w)
         
         arg = y*z_star - epsilon * a/np.sqrt(n)
-        m_derivative = stable_sigmoid(-arg)
-        
-        # m_derivative = (stable_sigmoid(-y*z_star + epsilon * a / np.sqrt(n)) + (z_star-w)/sigma)
+        m_derivative = sigmoid(-arg)
+    
 
         m_derivative *= epsilon / np.sqrt(n)
 
@@ -222,17 +147,11 @@ def n_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:
 
         w = np.sqrt(q) * xi
 
-        # m_derivative = moreau_derivative(sigma,y,epsilon*a/np.sqrt(n),w)
-        # m_derivative *= -0.5*epsilon*a/(n**(3/2))
-
         z_star = proximal_logistic_root_scalar(sigma,y,epsilon*a/np.sqrt(n),w)
-        # m_derivative = moreau_envelope(sigma,z_star,y,epsilon*a/np.sqrt(n),w)
         
 
         arg = y*z_star - epsilon * a/np.sqrt(n)
-        m_derivative = stable_sigmoid(-arg)
-
-        # m_derivative = (stable_sigmoid(-y*z_star + epsilon * a / np.sqrt(n)) + (z_star-w)/sigma)
+        m_derivative = sigmoid(-arg)
 
         m_derivative *= -0.5*epsilon*a/(n**(3/2))
 
@@ -256,50 +175,38 @@ def var_hat_func(m, q, sigma, A, N,a,n, rho_w_star, alpha, epsilon, tau, lam, in
 
 
 """
----------------------- Overlap Equations ----------------------
+------------------------------------------------------------------------------------------------------------------------
+    Overlap Equations
+------------------------------------------------------------------------------------------------------------------------
 """
-
 def var_func(m_hat, q_hat, sigma_hat, A_hat, N_hat,a_hat, n_hat, rho, lam, data_model, logger):
 
-    
     C = A_hat + a_hat
     M = N_hat + n_hat
 
-    Lambda_clean = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x 
-    H_clean = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit 
-
     Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x + C * data_model.spec_Sigma_delta + M * np.ones(data_model.d)
-    H = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit + a_hat * data_model.spec_Sigma_delta + n_hat * np.ones(data_model.d)  
+    H = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit 
 
     
     sigma = np.mean(data_model.spec_Sigma_x/Lambda)       
-    q = np.mean((H_clean * data_model.spec_Sigma_x) / Lambda**2) 
+    q = np.mean((H * data_model.spec_Sigma_x) / Lambda**2) 
     m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
     
     
-    
-    Lambda_a = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x 
-    H_a = data_model.spec_Sigma_delta * q_hat + m_hat**2 * data_model.spec_PhiPhit 
-    
-    a = np.mean( H_clean * data_model.spec_Sigma_delta / Lambda**2)
+    a = np.mean( H * data_model.spec_Sigma_delta / Lambda**2)
     A = a - np.mean( data_model.spec_Sigma_delta / Lambda)
-
     
-    
-    Lambda_n = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x 
-    H_n = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit 
-    
-    n = np.mean( H_clean * np.ones(data_model.d) / Lambda**2)
+    n = np.mean( H * np.ones(data_model.d) / Lambda**2)
     N = n - np.mean( np.ones(data_model.d) / Lambda)
 
 
     return m, q, sigma, A, N, a, n
 
-
 """
----------------------- Observables ----------------------
+------------------------------------------------------------------------------------------------------------------------
+    Observables
+------------------------------------------------------------------------------------------------------------------------
 """
-
 def training_loss_logistic(m: float, q: float, sigma: float, A: float, N:float, rho: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
     return pure_training_loss_logistic(m,q,sigma,A,N,rho,alpha,tau,epsilon,lam,int_lims) + (lam/(2*alpha)) * q
 
@@ -364,6 +271,41 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho: float, ta
     return (Iplus + Iminus) * 0.5
 
 
+def generalization_error(rho_w_star,m,q, tau):
+    """
+    Returns the generalization error in terms of the overlaps
+    """
+    return np.arccos(m / np.sqrt( (rho_w_star + tau**2 ) * q ) )/np.pi
+
+
+def overlap_calibration(rho,p,m,q_erm,tau, debug = False):
+    """
+    Analytical calibration for a given probability p, overlaps m and q and a given noise level tau
+    Given by equation 23 in 2202.03295.
+    Returns the calibration value.
+
+    p: probability between 0 and 1
+    m: overlap between teacher and student
+    q_erm: student overlap
+    tau: noise level
+    """
+    logi = logit(p)
+    m_q_ratio = m/(q_erm )
+
+    num = (logi )* m_q_ratio 
+    if debug:
+        print("tau",tau,"m**2",m**2,"q_erm",q_erm,"m**2/q_erm",m**2/q_erm)
+    denom = np.sqrt(rho - (m**2)/(q_erm) + (tau)**2)
+    if debug:
+        print("logi",logi,"m_q_ratio",m_q_ratio,"num",num,"denom",denom)
+    return p - sigma_star( ( num ) / ( denom )  )
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Fixed Point Iteration
+------------------------------------------------------------------------------------------------------------------------
+"""
 
 def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
@@ -390,8 +332,6 @@ def fixed_point_finder(
     blend_fpe: float = BLEND_FPE,
     int_lims: float = INT_LIMS,
     initial_condition: Tuple[float, float, float] = INITIAL_CONDITION,
-    log = True,
-
 ):
     rho_w_star = my_data_model.rho
     gamma = my_data_model.gamma
@@ -406,7 +346,7 @@ def fixed_point_finder(
     a_hat = 0
     n_hat = 0
     while err > abs_tol or iter_nb < min_iter:
-        if iter_nb % 10 == 0 and log:
+        if iter_nb % 10 == 0:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             logger.info(f"m: {m}, q: {q}, sigma: {sigma}, A: {A}, N: {N}, a: {a}, n: {n}")
             logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}, A_hat: {A_hat}, N_hat: {N_hat}, a_hat: {a_hat}, n_hat: {n_hat}")

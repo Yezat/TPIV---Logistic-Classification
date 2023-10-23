@@ -232,6 +232,8 @@ class RandomCovariateDataModel(AbstractDataModel):
         self.model_type = DataModelType.RandomCovariate
         super().__init__(d,logger, source_pickle_path,delete_existing)
 
+        raise NotImplementedError("RandomCovariateDataModel is only partially implemented, do not use it yet.")
+
 
         self.Sigma_x = np.random.normal(0,0.5,(self.d,self.d))
         self.Sigma_x = self.Sigma_x.T @ self.Sigma_x + np.eye(self.d)

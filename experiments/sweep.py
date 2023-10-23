@@ -11,10 +11,10 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 from _version import __version__
 from experiment_information import *
-from state_evolution import fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
-from gradient_descent import sklearn_optimize
-from calibration import calc_calibration_analytical,compute_experimental_teacher_calibration
+from state_evolution import overlap_calibration, fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
+from gradient_descent import sklearn_optimize, compute_experimental_teacher_calibration, predict_erm
 from data_model import *
+import logging
 
 
 class Task:
@@ -58,7 +58,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
     analytical_calibrations = []
     erm_calibrations = []
 
-    yhat_gd = theoretical.predict_erm(Xtest,w_gd)
+    yhat_gd = predict_erm(Xtest,w_gd)
 
     gen_err = error(ytest,yhat_gd)
 
@@ -76,7 +76,7 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
         if tau != 0: # TODO is there a point in computing the calibration if tau is zero?
             for p in ps:
             
-                analytical_calibrations.append(calc_calibration_analytical(rho,p,m,q_erm,tau))        
+                analytical_calibrations.append(overlap_calibration(rho,p,m,q_erm,tau))        
                 erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
 
     analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
@@ -94,15 +94,14 @@ def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, 
 
     return erm_information
 
-def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,data_model, log = True):
+def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,data_model):
     """
     Starts the state evolution and saves the results to the database
     """
 
-    if log:
-        logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
+    logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
     start = time.time()
-    m,q,sigma,A,N,a,n, sigma_hat, q_hat, m_hat,A_hat, N_hat,a_hat,n_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION, log = log)
+    m,q,sigma,A,N,a,n, sigma_hat, q_hat, m_hat,A_hat, N_hat,a_hat,n_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
 
     end = time.time()
     experiment_duration = end-start
@@ -111,16 +110,16 @@ def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,da
     calibrations = []
     if ps is not None:
         for p in ps:
-            calibrations.append(calc_calibration_analytical(data_model.rho,p,m,q,tau))
+            calibrations.append(overlap_calibration(data_model.rho,p,m,q,tau))
     calibration_results = CalibrationResults(ps,calibrations,None)
 
     st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat,data_model.rho,A,N,A_hat,N_hat,a,n,a_hat,n_hat,d)
 
-    if log:
-        logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
-        # lof the overlaps we found
-        logger.info(f"m={m}, q={q}, sigma={sigma}, A={A}, N={N}, a={a}, n={n}")
-        logger.info(f"m_hat={m_hat}, q_hat={q_hat}, sigma_hat={sigma_hat}, A_hat={A_hat}, N_hat={N_hat}, a_hat={a_hat}, n_hat={n_hat}")
+    
+    logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
+    # lof the overlaps we found
+    logger.info(f"m={m}, q={q}, sigma={sigma}, A={A}, N={N}, a={a}, n={n}")
+    logger.info(f"m_hat={m_hat}, q_hat={q_hat}, sigma_hat={sigma_hat}, A_hat={A_hat}, N_hat={N_hat}, a_hat={a_hat}, n_hat={n_hat}")
 
     return st_exp_info
 

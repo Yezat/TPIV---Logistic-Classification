@@ -8,7 +8,7 @@ from data_model import DataModelType
 from experiment_information import NumpyEncoder, ExperimentInformation
 import json
 import numpy as np
-from util import *
+from helpers import *
 
 # # Create a SweepExperiment
 def get_default_experiment():
@@ -38,12 +38,9 @@ logger.setLevel(logging.INFO)
 
 
 Sigma_w = power_law_diagonal_matrix(experiment.d, 1.4)
-# Sigma_w = np.eye(experiment.d)*5
+# Sigma_w = np.eye(experiment.d)
 Sigma_delta = power_law_diagonal_matrix(experiment.d, 1.2)
-# inverse the order of sigma_delta
-Sigma_delta = Sigma_delta[::-1]
-
-# Sigma_delta = np.eye(experiment.d) * 5
+Sigma_delta = np.eye(experiment.d) * 3
 
 # Force a creation of a new data_model
 experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)

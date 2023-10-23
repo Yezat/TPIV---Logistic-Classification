@@ -1,18 +1,16 @@
 from gradient_descent import pure_training_loss, min_eigenvalue_hessian
-import theoretical
-from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic
-from util import error, adversarial_error
+from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error
+from helpers import *
+from gradient_descent import predict_erm, error, adversarial_error
 import numpy as np
 from _version import __version__
 from typing import Tuple
-from util import generalization_error
 import datetime
 import uuid
 from data import *
 import json
 import sqlite3
 import pandas as pd
-import logging
 from data_model import *
 
 class ExperimentInformation:
@@ -132,12 +130,12 @@ class ERMExperimentInformation:
         self.epsilon: float = epsilon
         self.lam: float = lam
         n: int = Xtrain.shape[0]
-        yhat_gd = theoretical.predict_erm(Xtest,w_gd)
+        yhat_gd = predict_erm(Xtest,w_gd)
         self.generalization_error_erm: float = error(ytest,yhat_gd)
         self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon)
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
         self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,tau,epsilon * A / np.sqrt(N))
-        yhat_gd_train = theoretical.predict_erm(Xtrain,w_gd)
+        yhat_gd_train = predict_erm(Xtrain,w_gd)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = minimizer_name
         self.training_error: float = error(y,yhat_gd_train)
@@ -479,28 +477,4 @@ class NumpyDecoder(json.JSONDecoder):
             obj['data_model_type'] = data_model_type
 
         return obj
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    with DatabaseHandler(logging) as dbHandler:
-        # create random experiment information
-        experiment_information = ExperimentInformation(5,5,[0.1,0.2,0.4],[0.1,0.2,0.4],[0.1,0.2,0.4],0.1,10,["test","test2"],"test")
-        id = experiment_information.experiment_id
-        dbHandler.insert_experiment(experiment_information)
-        # create random state evolution experiment information
-        state_evolution_exp = StateEvolutionExperimentInformation(id,100,0.1,0.1,0.1,(0.1,0.1,0.1),0.1,0.1,0.1,0.1,0.1,0,0,0,0)
-        dbHandler.insert_state_evolution(state_evolution_exp)
-
-        # create random erm experiment information
-        # sample test data
-        w = sample_weights(10)
-        X, y = sample_training_data(w,10,100,2)
-        w2 = sample_weights(10)
-        X2, y2 = sample_training_data(w2,10,100,2)
-        erm_exp = ERMExperimentInformation(id,100,X2,w2,0.1,y,X,w,y2,10,"test",0.1,0.1)
-        dbHandler.insert_erm(erm_exp)
-
-        # set experiment to completed
-        # dbHandler.complete_experiment(id,100)
-        dbHandler.delete_incomplete_experiments()
 
