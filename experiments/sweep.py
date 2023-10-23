@@ -11,129 +11,69 @@ parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 from _version import __version__
 from experiment_information import *
-from state_evolution import overlap_calibration, fixed_point_finder, INITIAL_CONDITION, MIN_ITER_FPE, MAX_ITER_FPE, TOL_FPE, BLEND_FPE, INT_LIMS
-from gradient_descent import sklearn_optimize, compute_experimental_teacher_calibration, predict_erm
+from state_evolution import overlap_calibration, fixed_point_finder
+from gradient_descent import sklearn_optimize, compute_experimental_teacher_calibration, run_optimizer
 from data_model import *
+from helpers import Task
 import logging
 
 
-class Task:
-    def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType):
-        self.id = id
-        self.experiment_id = experiment_id
-        self.method = method
-        self.alpha = alpha
-        self.epsilon = epsilon
-        self.lam = lam
-        self.tau = tau
-        self.d = d
-        self.result = None
-        self.ps = ps
-        self.dp = dp
-        self.data_model_type: DataModelType = data_model_type
 
-
-def run_erm(logger, experiment_id, method, alpha, epsilon, lam, tau, d, ps, dp, data_model, compute_hessian):
+def run_erm(logger, task, data_model):
     """
     Generate Data, run ERM and save the results to the database
     """
-    logger.info(f"Starting ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method}")
+    logger.info(f"Starting ERM {task}")
     start = time.time()
 
-    Xtrain, y, Xtest, ytest, w = data_model.generate_data(int(alpha * d), tau)
-    if w is not None:
-        rho = w.dot(data_model.Sigma_x@w) / d
-    else:
-        rho = data_model.rho
-        m = None
+    data = data_model.generate_data(int(task.alpha * task.d), task.tau)
 
-    if method == "sklearn":
-        w_gd = sklearn_optimize(np.random.normal(0,1,(d,)),Xtrain,y,lam,epsilon, data_model.Sigma_w, data_model.Sigma_delta, logger)
-    else:
-        raise Exception(f"Method {method} not implemented")
-        # TODO there is no point anymore for method..
-
-
-    # let's calculate the calibration
-    analytical_calibrations = []
-    erm_calibrations = []
-
-    yhat_gd = predict_erm(Xtest,w_gd)
-
-    gen_err = error(ytest,yhat_gd)
-
-    # Log the generalizaton error
-    logger.info(f"Generalization error: {gen_err}")
+    weights_erm = run_optimizer(task, data_model, data, logger)
     
-    q_erm = w_gd.dot(data_model.Sigma_x@w_gd) / d
-
-    if w is not None:
-        
-        m = w_gd.dot(data_model.Sigma_x@w) / d
-        
-
-        # We cannot compute the calibration if we don't know the ground truth.    
-        for p in ps:
-        
-            analytical_calibrations.append(overlap_calibration(rho,p,m,q_erm,tau))        
-            erm_calibrations.append(compute_experimental_teacher_calibration(p,w,w_gd,Xtest,tau))
-
-    analytical_calibrations_result = CalibrationResults(ps,analytical_calibrations,None)
-    erm_calibrations_result = CalibrationResults(ps,erm_calibrations,dp)
-
-    A = w_gd @ data_model.Sigma_delta @ w_gd / d
-    N = w_gd @ w_gd / d    
+    erm_information = ERMExperimentInformation(task, data_model, data, weights_erm)
 
     end = time.time()
-    duration = end - start
-    erm_information = ERMExperimentInformation(experiment_id,duration,Xtest,w_gd,tau,y,Xtrain,w,ytest,d,method,epsilon,lam,analytical_calibrations_result,erm_calibrations_result, m, q_erm,rho,data_model.Sigma_w,A,N, compute_hessian, data_model.Sigma_delta)
-
-
-    logger.info(f"Finished ERM with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}, method={method} in {end-start} seconds")
+    erm_information.duration = end - start
+    
+    logger.info(f"Finished ERM {task}")
 
     return erm_information
 
-def run_state_evolution(logger,experiment_id, alpha, epsilon, lam, tau, d, ps,data_model):
+def run_state_evolution(logger,task, data_model):
     """
     Starts the state evolution and saves the results to the database
     """
 
-    logger.info(f"Starting State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")
+    logger.info(f"Starting State Evolution {task}")
     start = time.time()
-    m,q,sigma,A,N,a,n, sigma_hat, q_hat, m_hat,A_hat, N_hat,a_hat,n_hat = fixed_point_finder(logger, data_model,rho_w_star=data_model.rho,alpha=alpha,epsilon=epsilon,tau=tau,lam=lam,abs_tol=TOL_FPE,min_iter=MIN_ITER_FPE,max_iter=MAX_ITER_FPE,blend_fpe=BLEND_FPE,int_lims=INT_LIMS,initial_condition=INITIAL_CONDITION)
+
+    overlaps = fixed_point_finder(logger, data_model, task)
+
+    st_exp_info = StateEvolutionExperimentInformation(task,overlaps, data_model)
+
 
     end = time.time()
     experiment_duration = end-start
-
-    # let's compute and store the calibrations
-    calibrations = []
-    if ps is not None:
-        for p in ps:
-            calibrations.append(overlap_calibration(data_model.rho,p,m,q,tau))
-    calibration_results = CalibrationResults(ps,calibrations,None)
-
-    st_exp_info = StateEvolutionExperimentInformation(experiment_id,experiment_duration,sigma,q,m,INITIAL_CONDITION,alpha,epsilon,tau,lam,calibration_results,TOL_FPE,MIN_ITER_FPE,MAX_ITER_FPE,BLEND_FPE,INT_LIMS,sigma_hat,q_hat,m_hat,data_model.rho,A,N,A_hat,N_hat,a,n,a_hat,n_hat,d)
+    st_exp_info.duration = experiment_duration
 
     
-    logger.info(f"Finished State Evolution with alpha={alpha}, epsilon={epsilon}, lambda={lam}, tau={tau}, d={d}")   
-    # lof the overlaps we found
-    logger.info(f"m={m}, q={q}, sigma={sigma}, A={A}, N={N}, a={a}, n={n}")
-    logger.info(f"m_hat={m_hat}, q_hat={q_hat}, sigma_hat={sigma_hat}, A_hat={A_hat}, N_hat={N_hat}, a_hat={a_hat}, n_hat={n_hat}")
+    logger.info(f"Finished State Evolution {task}")   
+    overlaps.log_overlaps(logger)
 
     return st_exp_info
 
 
 # Define a function to process a task
-def process_task(task, logger, data_model, compute_hessian):
+def process_task(task, logger, data_model):
     
     try:
         
-        logger.info(f"Starting task {task.id} with method {task.method} and alpha={task.alpha}, epsilon={task.epsilon}, lambda={task.lam}, tau={task.tau}, d={task.d}, and data model {task.data_model_type.name}")
+        logger.info(f"Starting task {task.id}")
 
         if task.method == "state_evolution":
-            task.result = run_state_evolution(logger,task.experiment_id,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, data_model)
+            task.result = run_state_evolution(logger,task, data_model)
         else:
-            task.result = run_erm(logger,task.experiment_id,task.method,task.alpha,task.epsilon,task.lam,task.tau,task.d, task.ps, task.dp, data_model, compute_hessian)
+            task.result = run_erm(logger,task, data_model)
     except Exception as e:
         # log the exception
         logger.exception(e)
@@ -143,7 +83,7 @@ def process_task(task, logger, data_model, compute_hessian):
     return task
 
 # Define the worker function
-def worker(logger, data_model, compute_hessian):
+def worker(logger, data_model):
     # get the rank
     rank = MPI.COMM_WORLD.Get_rank()   
 
@@ -156,7 +96,7 @@ def worker(logger, data_model, compute_hessian):
                 logger.info(f"Received exit signal - my rank is {rank}")
                 break
             # Process the task
-            result = process_task(task, logger, data_model, compute_hessian)
+            result = process_task(task, logger, data_model)
             # Send the result to the master
             MPI.COMM_WORLD.send(result, dest=0, tag=task.id)
         except Exception as e:
@@ -300,9 +240,9 @@ def master(num_processes, logger, experiment):
                 with DatabaseHandler(logger) as db:
                     db.insert_erm(result)
 
-            logger.info(f"Saved {task.method} to db with alpha={task.alpha}, epsilon={task.epsilon}, lambda={task.lam}, tau={task.tau}, d={task.d}")
+            logger.info(f"Saved {task}")
         else:
-            logger.error(f"Error in {task.method} with alpha={task.alpha}, epsilon={task.epsilon}, lambda={task.lam}, tau={task.tau}, d={task.d}")
+            logger.error(f"Error {task}")
 
         # Update the progress bar
         pbar.update(1)
@@ -362,7 +302,7 @@ if __name__ == "__main__":
         
     else:
         # run the worker
-        worker(logger, experiment.get_data_model(logger,delete_existing=False), experiment.compute_hessian)
+        worker(logger, experiment.get_data_model(logger,delete_existing=False))
 
     MPI.Finalize()
     

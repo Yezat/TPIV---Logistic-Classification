@@ -9,6 +9,66 @@ from scipy.special import logit
 
 """
 ------------------------------------------------------------------------------------------------------------------------
+    Helper Classes
+------------------------------------------------------------------------------------------------------------------------
+"""
+class OverlapSet():
+    def __init__(self) -> None:
+        self.INITIAL_CONDITION = (0.1,0.1,0.5,0.1,0.1,0.1,0.1)
+
+        self.m = self.INITIAL_CONDITION[0]
+        self.q = self.INITIAL_CONDITION[1]
+        self.sigma = self.INITIAL_CONDITION[2]
+        self.A = self.INITIAL_CONDITION[3]
+        self.N = self.INITIAL_CONDITION[4]
+        self.a = self.INITIAL_CONDITION[5]
+        self.n = self.INITIAL_CONDITION[6]
+        
+        self.m_hat = 0
+        self.q_hat = 0
+        self.sigma_hat = 0
+        self.A_hat = 0
+        self.N_hat = 0
+        self.a_hat = 0
+        self.n_hat = 0
+
+        self.BLEND_FPE = 0.75
+        self.TOL_FPE = 1e-4
+        self.MIN_ITER_FPE = 10
+        self.MAX_ITER_FPE = 5000
+        self.INT_LIMS = 10.0
+
+    def log_overlaps(self, logger):
+        logger.info(f"m: {self.m}, q: {self.q}, sigma: {self.sigma}, A: {self.A}, N: {self.N}, a: {self.a}, n: {self.n}")
+        logger.info(f"m_hat: {self.m_hat}, q_hat: {self.q_hat}, sigma_hat: {self.sigma_hat}, A_hat: {self.A_hat}, N_hat: {self.N_hat}, a_hat: {self.a_hat}, n_hat: {self.n_hat}")
+
+    def update_overlaps(self, m,q,sigma,A,N,a,n):
+        self.n_m = damped_update(m, self.m, self.BLEND_FPE)
+        self.n_q = damped_update(q, self.q, self.BLEND_FPE)
+        self.n_sigma = damped_update(sigma, self.sigma, self.BLEND_FPE)
+        self.n_A = damped_update(A, self.A, self.BLEND_FPE)
+        self.n_N = damped_update(N, self.N, self.BLEND_FPE)
+        self.n_a = damped_update(a, self.a, self.BLEND_FPE)
+        self.n_n = damped_update(n, self.n, self.BLEND_FPE)
+
+        # Compute the error
+        err = max([abs(self.n_m - self.m), abs(self.n_q - self.q), abs(self.n_sigma - self.sigma), abs(self.n_A - self.A), abs(self.n_N - self.N), abs(self.n_a - self.a), abs(self.n_n - self.n)])
+
+        # Update the overlaps
+        self.m = self.n_m
+        self.q = self.n_q
+        self.sigma = self.n_sigma
+        self.A = self.n_A
+        self.N = self.n_N
+        self.a = self.n_a
+        self.n = self.n_n
+
+        return err
+        
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
     Proximals
 ------------------------------------------------------------------------------------------------------------------------
 """
@@ -162,15 +222,15 @@ def n_hat_func(m: float, q: float, sigma: float, A: float, N: float, a:float, n:
 
     return alpha * (Iplus + Iminus)
 
-def var_hat_func(m, q, sigma, A, N,a,n, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=None):
-    m_hat = m_hat_func(m, q, sigma, A, N,a,n,rho_w_star,alpha,epsilon,tau,lam,int_lims)/np.sqrt(gamma)
-    q_hat = q_hat_func(m, q, sigma, A, N,a,n, rho_w_star,alpha,epsilon,tau,lam,int_lims)
-    sigma_hat = sigma_hat_func(m, q, sigma, A, N,a,n,rho_w_star,alpha,epsilon,tau,lam,int_lims,logger=logger)
-    A_hat = A_hat_func(m, q, sigma, A, N,a,n,rho_w_star,alpha,epsilon,tau,lam,int_lims)
-    N_hat = N_hat_func(m, q, sigma, A, N,a,n,rho_w_star,alpha,epsilon,tau,lam,int_lims)
-    a_hat = a_hat_func(m, q, sigma, A, N,a,n,rho_w_star,alpha,epsilon,tau,lam,int_lims)
-    n_hat = n_hat_func(m, q, sigma, A, N,a,n,rho_w_star,alpha,epsilon,tau,lam,int_lims)
-    return m_hat, q_hat, sigma_hat, A_hat, N_hat, a_hat, n_hat
+def var_hat_func(task, overlaps, data_model, logger=None):
+    overlaps.m_hat = m_hat_func(overlaps.m, overlaps.q, overlaps.sigma, overlaps.A, overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)/np.sqrt(data_model.gamma)
+    overlaps.q_hat = q_hat_func(overlaps.m, overlaps.q, overlaps.sigma, overlaps.A, overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
+    overlaps.sigma_hat = sigma_hat_func(overlaps.m, overlaps.q, overlaps.sigma, overlaps.A, overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS,logger=logger)
+    overlaps.A_hat = A_hat_func(overlaps.m, overlaps.q, overlaps.sigma, overlaps.A, overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
+    overlaps.N_hat = N_hat_func(overlaps.m, overlaps.q, overlaps.sigma, overlaps.A, overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
+    overlaps.a_hat = a_hat_func(overlaps.m, overlaps.q, overlaps.sigma, overlaps.A, overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
+    overlaps.n_hat = n_hat_func(overlaps.m, overlaps.q, overlaps.sigma, overlaps.A, overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
+    return overlaps
 
 
 
@@ -179,18 +239,18 @@ def var_hat_func(m, q, sigma, A, N,a,n, rho_w_star, alpha, epsilon, tau, lam, in
     Overlap Equations
 ------------------------------------------------------------------------------------------------------------------------
 """
-def var_func(m_hat, q_hat, sigma_hat, A_hat, N_hat,a_hat, n_hat, rho, lam, data_model, logger):
+def var_func(task, overlaps, data_model, logger):
 
-    C = A_hat + a_hat
-    M = N_hat + n_hat
+    C = overlaps.A_hat + overlaps.a_hat
+    M = overlaps.N_hat + overlaps.n_hat
 
-    Lambda = lam * data_model.spec_Sigma_w + sigma_hat * data_model.spec_Sigma_x + C * data_model.spec_Sigma_delta + M * np.ones(data_model.d)
-    H = data_model.spec_Sigma_x * q_hat + m_hat**2 * data_model.spec_PhiPhit 
+    Lambda = task.lam * data_model.spec_Sigma_w + overlaps.sigma_hat * data_model.spec_Sigma_x + C * data_model.spec_Sigma_delta + M * np.ones(data_model.d)
+    H = data_model.spec_Sigma_x * overlaps.q_hat + overlaps.m_hat**2 * data_model.spec_PhiPhit 
 
     
     sigma = np.mean(data_model.spec_Sigma_x/Lambda)       
     q = np.mean((H * data_model.spec_Sigma_x) / Lambda**2) 
-    m = m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
+    m = overlaps.m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
     
     
     a = np.mean( H * data_model.spec_Sigma_delta / Lambda**2)
@@ -310,67 +370,36 @@ def overlap_calibration(rho,p,m,q_erm,tau, debug = False):
 def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
 
-BLEND_FPE = 0.75
-TOL_FPE = 1e-4
-MIN_ITER_FPE = 10
-MAX_ITER_FPE = 5000
-INT_LIMS = 10.0
-INITIAL_CONDITION = (0.1,0.1,0.5,0.1,0.1,0.1,0.1)
+
 
 
 def fixed_point_finder(
     logger,
     my_data_model: AbstractDataModel,
-    rho_w_star: float,
-    alpha: float,
-    epsilon: float,
-    tau: float,
-    lam: float,
-    abs_tol: float = TOL_FPE,
-    min_iter: int = MIN_ITER_FPE,
-    max_iter: int = MAX_ITER_FPE,
-    blend_fpe: float = BLEND_FPE,
-    int_lims: float = INT_LIMS,
-    initial_condition: Tuple[float, float, float] = INITIAL_CONDITION,
+    task: Task
 ):
-    rho_w_star = my_data_model.rho
-    gamma = my_data_model.gamma
-    m, q, sigma, A, N, a, n = initial_condition[0], initial_condition[1], initial_condition[2], initial_condition[3], initial_condition[4], initial_condition[5], initial_condition[6]
+    
+    overlaps = OverlapSet()  
+
+    
     err = 1.0
     iter_nb = 0
-    m_hat = 0
-    q_hat = 0
-    sigma_hat = 0
-    A_hat = 0
-    N_hat = 0
-    a_hat = 0
-    n_hat = 0
-    while err > abs_tol or iter_nb < min_iter:
+    
+    while err > overlaps.TOL_FPE or iter_nb < overlaps.MIN_ITER_FPE:
         if iter_nb % 10 == 0:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
-            logger.info(f"m: {m}, q: {q}, sigma: {sigma}, A: {A}, N: {N}, a: {a}, n: {n}")
-            logger.info(f"m_hat: {m_hat}, q_hat: {q_hat}, sigma_hat: {sigma_hat}, A_hat: {A_hat}, N_hat: {N_hat}, a_hat: {a_hat}, n_hat: {n_hat}")
+            overlaps.log_overlaps(logger)
 
 
-        m_hat, q_hat, sigma_hat, A_hat, N_hat, a_hat, n_hat = var_hat_func(m, q, sigma, A, N, a, n, rho_w_star, alpha, epsilon, tau, lam, int_lims, gamma, logger=logger)
+        overlaps = var_hat_func(task, overlaps, my_data_model, logger)
 
-        new_m, new_q, new_sigma, new_A, new_N, new_a, new_n = var_func(m_hat, q_hat, sigma_hat, A_hat, N_hat,a_hat,n_hat, rho_w_star, lam, my_data_model, logger)
+        new_m, new_q, new_sigma, new_A, new_N, new_a, new_n = var_func(task, overlaps, my_data_model, logger)
 
+        err = overlaps.update_overlaps(new_m, new_q, new_sigma, new_A, new_N, new_a, new_n)
 
-        n_m = damped_update(new_m, m, blend_fpe)
-        n_q = damped_update(new_q, q, blend_fpe)
-        n_sigma = damped_update(new_sigma, sigma, blend_fpe)
-        n_A = damped_update(new_A, A, blend_fpe)
-        n_N = damped_update(new_N, N, blend_fpe)
-        n_a = damped_update(new_a, a, blend_fpe)
-        n_n = damped_update(new_n, n, blend_fpe)
-
-
-        err = max([abs(n_m - m), abs(n_q - q), abs(n_sigma - sigma), abs(n_A - A), abs(n_N - N), abs(n_a - a), abs(n_n - n)])
-        m, q, sigma, A, N, a, n = n_m, n_q, n_sigma, n_A, n_N, n_a, n_n
 
         iter_nb += 1
-        if iter_nb > max_iter:
+        if iter_nb > overlaps.MAX_ITER_FPE:
             raise Exception("fixed_point_finder - reached max_iterations")
-    return m, q, sigma, A, N, a, n, sigma_hat, q_hat, m_hat, A_hat, N_hat, a_hat, n_hat
+    return overlaps
 

@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import erfc
+from data_model import DataModelType
 
 
 """
@@ -90,7 +91,30 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
     return np.exp(-.5 * (x-mean)**2 / var)/np.sqrt(2*np.pi*var)
     
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Helper Classes
+------------------------------------------------------------------------------------------------------------------------
+"""
 
 
 
+class Task:
+    def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, compute_hessian: bool = False):
+        self.id = id
+        self.experiment_id = experiment_id
+        self.method = method
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.lam = lam
+        self.tau = tau
+        self.d = d
+        self.gamma = 1
+        self.result = None
+        self.ps = ps
+        self.dp = dp
+        self.data_model_type: DataModelType = data_model_type
+        self.compute_hessian: bool = compute_hessian
 
+    def __str__(self):
+        return f"Task {self.id} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"

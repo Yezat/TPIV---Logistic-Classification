@@ -1,5 +1,5 @@
-from gradient_descent import pure_training_loss, min_eigenvalue_hessian
-from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error
+from gradient_descent import pure_training_loss, min_eigenvalue_hessian, compute_experimental_teacher_calibration
+from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error, overlap_calibration
 from helpers import *
 from gradient_descent import predict_erm, error, adversarial_error
 import numpy as np
@@ -78,83 +78,121 @@ class CalibrationResults:
 
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
-    def __init__(self, experiment_id: str, duration: float, sigma: float, q: float, m: float, initial_condition: Tuple[float, float, float],alpha:float,epsilon:float,tau:float,lam:float,calibrations:CalibrationResults,abs_tol:float,min_iter:int,max_iter:int,blend_fpe:float,int_lims:float, sigma_hat: float, q_hat: float, m_hat: float, rho: float, A: float, N: float, A_hat: float, N_hat: float, a: float, n: float, a_hat: float, n_hat: float, d: float):
+    def __init__(self, task,overlaps, data_model):
+
+        # let's compute and store the calibrations
+        calibrations = []
+        if task.ps is not None:
+            for p in task.ps:
+                calibrations.append(overlap_calibration(data_model.rho,p,overlaps.m,overlaps.q,task.tau))
+        calibration_results = CalibrationResults(task.ps,calibrations,None)
+
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
-        self.duration: float = duration
-        self.experiment_id: str = experiment_id
-        self.generalization_error: float = generalization_error(rho, m, q, tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(m,q,rho,tau, epsilon * a / np.sqrt(n))
-        self.training_loss: float = pure_training_loss_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon, lam)
-        self.training_error: float = training_error_logistic(m,q,sigma,A,N,a,n,rho,alpha,tau,epsilon, lam)
+        self.duration: float = None
+        self.experiment_id: str = task.experiment_id
+        self.generalization_error: float = generalization_error(data_model.rho, overlaps.m, overlaps.q, task.tau)
+        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.epsilon * overlaps.a / np.sqrt(overlaps.n))
+        self.training_loss: float = pure_training_loss_logistic(overlaps.m,overlaps.q,overlaps.sigma,overlaps.A,overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
+        self.training_error: float = training_error_logistic(overlaps.m,overlaps.q,overlaps.sigma,overlaps.A,overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.sigma: float = sigma
-        self.q: float = q
-        self.Q_self: float = sigma + q
-        self.m: float = m
-        self.cosb: float = self.m / np.sqrt((self.q)*rho)
-        self.initial_condition: Tuple[float, float, float] = initial_condition
-        self.rho: float = rho
-        self.alpha: float = alpha
-        self.epsilon: float = epsilon
-        self.tau: float = tau
-        self.lam: float = lam
-        self.calibrations: CalibrationResults = calibrations
-        self.abs_tol: float = abs_tol
-        self.min_iter: int = min_iter
-        self.max_iter: int = max_iter
-        self.blend_fpe: float = blend_fpe
-        self.int_lims: float = int_lims
-        self.sigma_hat : float = sigma_hat
-        self.q_hat : float = q_hat
-        self.m_hat : float = m_hat
-        self.A : float = A
-        self.N : float = N
-        self.A_hat : float = A_hat
-        self.N_hat : float = N_hat
-        self.a: float = a
-        self.n: float = n
-        self.a_hat: float = a_hat
-        self.n_hat: float = n_hat
+        self.sigma: float = overlaps.sigma
+        self.q: float = overlaps.q
+        self.Q_self: float = overlaps.sigma + overlaps.q
+        self.m: float = overlaps.m
+        self.cosb: float = self.m / np.sqrt((self.q)*data_model.rho)
+        self.initial_condition: Tuple[float, float, float] = overlaps.INITIAL_CONDITION
+        self.rho: float = data_model.rho
+        self.alpha: float = task.alpha
+        self.epsilon: float = task.epsilon
+        self.tau: float = task.tau
+        self.lam: float = task.lam
+        self.calibrations: CalibrationResults = calibration_results
+        self.abs_tol: float = overlaps.TOL_FPE
+        self.min_iter: int = overlaps.MIN_ITER_FPE
+        self.max_iter: int = overlaps.MAX_ITER_FPE
+        self.blend_fpe: float = overlaps.BLEND_FPE
+        self.int_lims: float = overlaps.INT_LIMS
+        self.sigma_hat : float = overlaps.sigma_hat
+        self.q_hat : float = overlaps.q_hat
+        self.m_hat : float = overlaps.m_hat
+        self.A : float = overlaps.A
+        self.N : float = overlaps.N
+        self.A_hat : float = overlaps.A_hat
+        self.N_hat : float = overlaps.N_hat
+        self.a: float = overlaps.a
+        self.n: float = overlaps.n
+        self.a_hat: float = overlaps.a_hat
+        self.n_hat: float = overlaps.n_hat
 
 class ERMExperimentInformation:
-    def __init__(self, experiment_id: str, duration: float, Xtest: np.ndarray, w_gd: np.ndarray, tau: float, y: np.ndarray, Xtrain: np.ndarray, w: np.ndarray, ytest: np.ndarray, d: int, minimizer_name: str, epsilon: float, lam: float, analytical_calibrations: CalibrationResults, erm_calibrations: CalibrationResults, m: float, Q: float, rho: float, Sigma_w: np.ndarray, A: float, N: float, compute_hessian: bool, Sigma_delta: np.ndarray):
+    def __init__(self, task, data_model, data: DataSet, weights):
+
+        # let's calculate the calibration
+        analytical_calibrations = []
+        erm_calibrations = []
+        
+        self.Q = weights.dot(data_model.Sigma_x@weights) / task.d
+        self.m = weights.dot(data_model.Sigma_x@data.theta) / task.d
+
+        if data.theta is not None:
+            
+            
+            self.rho: float = data.theta.dot(data_model.Sigma_x@data.theta) / task.d
+
+            # We cannot compute the calibration if we don't know the ground truth.    
+            for p in task.ps:
+            
+                analytical_calibrations.append(overlap_calibration(data_model.rho,p,self.m,self.Q,task.tau))        
+                erm_calibrations.append(compute_experimental_teacher_calibration(p,data.theta,weights,data.X_test,task.tau))
+        else:
+            self.rho: float = data_model.rho
+            self.m: float = None
+
+        analytical_calibrations_result = CalibrationResults(task.ps,analytical_calibrations,None)
+        erm_calibrations_result = CalibrationResults(task.ps,erm_calibrations,task.dp)
+
         self.id: str = str(uuid.uuid4())
-        self.duration : float = duration
+        self.duration : float = None
         self.code_version: str = __version__
-        self.experiment_id: str = experiment_id
-        self.Q: float= Q
-        self.m: float = m
-        self.rho: float = rho
+        self.experiment_id: str = task.experiment_id
+
+        
+
         self.cosb: float = self.m / np.sqrt(self.Q*self.rho)
-        self.epsilon: float = epsilon
-        self.lam: float = lam
-        n: int = Xtrain.shape[0]
-        yhat_gd = predict_erm(Xtest,w_gd)
-        self.generalization_error_erm: float = error(ytest,yhat_gd)
-        self.adversarial_generalization_error_erm: float = adversarial_error(ytest,Xtest,w_gd,epsilon, Sigma_delta)
-        self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, tau)
-        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,tau,epsilon * A / np.sqrt(N))
-        yhat_gd_train = predict_erm(Xtrain,w_gd)
+        self.epsilon: float = task.epsilon
+        self.lam: float = task.lam
+        n: int = data.X.shape[0]
+        yhat_gd = predict_erm(data.X_test,weights)
+        self.generalization_error_erm: float = error(data.y_test,yhat_gd)
+        self.adversarial_generalization_error_erm: float = adversarial_error(data.y_test,data.X_test,weights,task.epsilon, data_model.Sigma_delta)
+
+        self.A: float = weights.dot(data_model.Sigma_delta @ weights) / task.d
+        self.N: float = weights.dot(weights) / task.d
+
+        self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, task.tau)
+        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,
+        self.rho,task.tau,task.epsilon * self.A / np.sqrt(self.N))
+        yhat_gd_train = predict_erm(data.X,weights)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.chosen_minimizer: str = minimizer_name
-        self.training_error: float = error(y,yhat_gd_train)
-        self.training_loss: float = pure_training_loss(w_gd,Xtrain,y,epsilon,Sigma_delta=Sigma_delta)
-        self.d: int = d
-        self.tau: float = tau
-        self.alpha: float = n/d
-        self.A: float = A
-        self.N: float = N
+        self.chosen_minimizer: str = "sklearn"
+        self.training_error: float = error(data.y,yhat_gd_train)
+        self.training_loss: float = pure_training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)
+        self.d: int = task.d
+        self.tau: float = task.tau
+        self.alpha: float = n/task.d
+        
 
-        self.analytical_calibrations: CalibrationResults = analytical_calibrations
-        self.erm_calibrations: CalibrationResults = erm_calibrations
+        self.analytical_calibrations: CalibrationResults = analytical_calibrations_result
+        self.erm_calibrations: CalibrationResults = erm_calibrations_result
 
-        self.test_loss: float = pure_training_loss(w_gd,Xtest,ytest,epsilon, Sigma_delta=Sigma_delta)
-        if compute_hessian:
-            self.test_set_min_eigenvalue_hessian = min_eigenvalue_hessian(Xtest,ytest,w_gd,epsilon,lam,Sigma_w)
-            self.test_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(Xtest,ytest,w,epsilon,lam,Sigma_w)
-            self.train_set_min_eigenvalue_hessian = min_eigenvalue_hessian(Xtrain,y,w_gd,epsilon,lam,Sigma_w)
-            self.train_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(Xtrain,y,w,epsilon,lam,Sigma_w)
+        self.test_loss: float = pure_training_loss(weights,data.X_test,data.y_test,task.epsilon, Sigma_delta=data_model.Sigma_delta)
+        
+        if task.compute_hessian:
+            self.test_set_min_eigenvalue_hessian = min_eigenvalue_hessian(data.X_test,data.y_test,weights,task.epsilon,task.lam,data_model.Sigma_w)
+            self.test_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(data.X_test,data.y_test,data.theta,task.epsilon,task.lam,data_model.Sigma_w)
+            self.train_set_min_eigenvalue_hessian = min_eigenvalue_hessian(data.X,data.y,weights,task.epsilon,task.lam,data_model.Sigma_w)
+            self.train_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(data.X,data.y,data.theta,task.epsilon,task.lam,data_model.Sigma_w)
         else:
             self.test_set_min_eigenvalue_hessian = None
             self.test_set_min_eigenvalue_hessian_teacher_weights = None

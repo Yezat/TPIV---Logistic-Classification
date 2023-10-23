@@ -24,7 +24,7 @@ def get_default_experiment():
     p: int = 1000
     erm_methods: list = ["sklearn"] #"optimal_lambda"
     experiment_name: str = "Vanilla Strong Weak Trials"
-    data_model_type: DataModelType = DataModelType.SourceCapacity
+    data_model_type: DataModelType = DataModelType.VanillaGaussian
     compute_hessian: bool = False
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,p, experiment_name,compute_hessian)
     return experiment
@@ -38,7 +38,7 @@ logger.setLevel(logging.INFO)
 
 
 Sigma_w = power_law_diagonal_matrix(experiment.d, 1.4)
-# Sigma_w = np.eye(experiment.d)
+Sigma_w = np.eye(experiment.d)
 Sigma_delta = power_law_diagonal_matrix(experiment.d, 1.2)
 Sigma_delta = np.eye(experiment.d)
 

@@ -149,6 +149,18 @@ class AbstractDataModel(ABC):
 
 
 """
+-------------------- DataSet --------------------
+"""
+class DataSet():
+    def __init__(self, X, y, X_test, y_test, theta) -> None:
+        self.X = X
+        self.y = y
+        self.X_test = X_test
+        self.y_test = y_test
+        self.theta = theta
+
+
+"""
 -------------------- Vanilla Gaussian Data Model --------------------
 """
 
@@ -174,7 +186,7 @@ class VanillaGaussianDataModel(AbstractDataModel):
 
             self._finish_initialization()
 
-    def generate_data(self, n, tau):
+    def generate_data(self, n, tau) -> DataSet:
         the = np.random.normal(0,1, self.d)
         c = np.random.normal(0,1,(n,self.d))
         u = c
@@ -182,7 +194,7 @@ class VanillaGaussianDataModel(AbstractDataModel):
         X = u
         X_test = np.random.normal(0,1,(100000,self.d))
         y_test = np.sign(X_test @ the  / np.sqrt(self.d) + tau * np.random.normal(0,1,(100000,)))
-        return X, y, X_test, y_test, the
+        return DataSet(X, y, X_test, y_test, the)
     
 class SourceCapacityDataModel(AbstractDataModel):
     def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None)->None:
@@ -215,7 +227,7 @@ class SourceCapacityDataModel(AbstractDataModel):
             self._finish_initialization()
 
 
-    def generate_data(self, n, tau):
+    def generate_data(self, n, tau) -> DataSet:
 
         X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
         
@@ -224,7 +236,7 @@ class SourceCapacityDataModel(AbstractDataModel):
         X_test = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, 10000, method="cholesky") 
         y_test = np.sign(X_test @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
 
-        return X, y, X_test, y_test, self.theta
+        return DataSet(X, y, X_test, y_test, self.theta)
     
 
 class RandomCovariateDataModel(AbstractDataModel):
@@ -255,7 +267,7 @@ class RandomCovariateDataModel(AbstractDataModel):
 
         self._finish_initialization()
 
-    def generate_data(self, n, tau):
+    def generate_data(self, n, tau) -> DataSet:
         the = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_theta, method="cholesky")
         
         X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")            
@@ -264,4 +276,4 @@ class RandomCovariateDataModel(AbstractDataModel):
         X_test = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, 10000, method="cholesky") 
         
         y_test = np.sign(X_test @ the / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
-        return X, y, X_test, y_test, the
+        return DataSet(X, y, X_test, y_test, the)

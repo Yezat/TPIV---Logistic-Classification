@@ -5,14 +5,22 @@ import numpy as np
 from scipy.optimize import minimize
 from sklearn.utils.validation import check_array, check_consistent_length
 from scipy.sparse.linalg import eigsh
-from helpers import sigmoid, log1pexp, stable_cosh_squared, adversarial_loss
+from helpers import sigmoid, log1pexp, stable_cosh_squared, adversarial_loss, Task
 from scipy.special import erfc
+from data_model import *
+
 
 """
 ------------------------------------------------------------------------------------------------------------------------
     Optimizer
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+def run_optimizer(task : Task, data_model: AbstractDataModel, data:DataSet, logger):
+    
+    w_gd = sklearn_optimize(np.random.normal(0,1,(task.d,)),data.X,data.y,task.lam,task.epsilon, data_model.Sigma_w, data_model.Sigma_delta, logger)
+
+    return w_gd
 
 
 """
@@ -245,9 +253,9 @@ def compute_experimental_teacher_calibration(p, w, werm, Xtest, sigma):
         
 
         if sigma == 0:
-            teacher_probabilities = np.array([np.sign(Xtest[i] @ w / np.sqrt(d)) for i in index])
-        else:
-            teacher_probabilities = np.array([probit(Xtest[i] @ w / np.sqrt(d),sigma) for i in index]) 
+            sigma = 1e-10
+        
+        teacher_probabilities = np.array([probit(Xtest[i] @ w / np.sqrt(d),sigma) for i in index]) 
 
         if len(teacher_probabilities) == 0:
             return p
