@@ -60,10 +60,6 @@ def preprocessing(coef, X, y, lam, epsilon):
 def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None, sigma_delta = None, logger = None):
     w0, X,target, lam, epsilon = preprocessing(coef, X, y, lam, epsilon)
 
-    func = loss_gradient 
-
-    l2_reg_strength = lam
-
     if covariance_prior is None:
         covariance_prior = np.eye(X.shape[1])
     if sigma_delta is None:
@@ -72,11 +68,11 @@ def sklearn_optimize(coef,X,y,lam,epsilon, covariance_prior = None, sigma_delta 
     method = "L-BFGS-B"    
 
     opt_res = minimize(
-                func,
+                loss_gradient,
                 w0,
                 method=method,
                 jac=True,
-                args=(X, target, l2_reg_strength, epsilon,covariance_prior, sigma_delta),
+                args=(X, target, lam, epsilon,covariance_prior, sigma_delta),
                 options={"maxiter": 1000, "disp": False},
             )
     
@@ -128,11 +124,13 @@ def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_d
 def compute_loss(z,e,y):
     return -y*z + y*e + (1-y)*log1pexp(z+e) + y*log1pexp(z-e)
 
+
 def training_loss(w,X,y,lam,epsilon,covariance_prior = None):
     z = X@w
     if covariance_prior is None:
         covariance_prior = np.eye(X.shape[1])
     return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() + 0.5 * lam * w@covariance_prior@w )/X.shape[0]
+
 
 def pure_training_loss(w,X,y,epsilon, Sigma_delta):
     z = X@w/np.sqrt(X.shape[1])

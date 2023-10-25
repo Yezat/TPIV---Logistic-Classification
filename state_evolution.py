@@ -289,7 +289,7 @@ def pure_training_loss_logistic(m: float, q: float, sigma: float, A: float, N: f
     return (I1 + I2)/2
 
 def training_error_logistic(m: float, q: float, sigma: float, A: float, N: float,a:float,n:float, rho: float, alpha: float, tau: float, epsilon: float, lam: float, int_lims: float = 20.0):
-    Q = q
+
     def integrand(xi, y):
         e = m * m / (rho * q)
         w_0 = np.sqrt(rho*e) * xi
@@ -311,7 +311,6 @@ def training_error_logistic(m: float, q: float, sigma: float, A: float, N: float
     return (Iplus + Iminus) * 0.5
 
 def adversarial_generalization_error_logistic(m: float, q: float, rho: float, tau: float, epsilon_term: float, int_lims: float = 20.0):
-    Q = q
     def integrand(xi, y):
         e = m * m / (rho * q)
         w_0 = np.sqrt(rho*e) * xi
@@ -329,6 +328,26 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho: float, ta
     Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
     return (Iplus + Iminus) * 0.5
+
+
+def test_loss_overlaps(m: float, q: float, rho: float, tau: float, sigma: float, epsilon_term: float, int_lims: float = 20.0):
+    def integrand(xi, y):
+        e = m * m / (rho * q)
+        w_0 = np.sqrt(rho*e) * xi
+        V_0 = rho * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+        w = np.sqrt(q) * xi
+
+        loss_value = adversarial_loss(y,w,epsilon_term)
+
+        return z_0 * gaussian(xi) * loss_value
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    return (Iplus + Iminus) * 0.5
+
 
 
 def generalization_error(rho_w_star,m,q, tau):
