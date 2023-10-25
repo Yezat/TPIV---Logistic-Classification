@@ -92,9 +92,9 @@ class StateEvolutionExperimentInformation:
         self.duration: float = None
         self.experiment_id: str = task.experiment_id
         self.generalization_error: float = generalization_error(data_model.rho, overlaps.m, overlaps.q, task.tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.epsilon * overlaps.a / np.sqrt(overlaps.n))
-        self.training_loss: float = pure_training_loss_logistic(overlaps.m,overlaps.q,overlaps.sigma,overlaps.A,overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
-        self.training_error: float = training_error_logistic(overlaps.m,overlaps.q,overlaps.sigma,overlaps.A,overlaps.N,overlaps.a,overlaps.n,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
+        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.epsilon * overlaps.A / np.sqrt(overlaps.N))
+        self.training_loss: float = pure_training_loss_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
+        self.training_error: float = training_error_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.sigma: float = overlaps.sigma
         self.q: float = overlaps.q
@@ -120,11 +120,7 @@ class StateEvolutionExperimentInformation:
         self.N : float = overlaps.N
         self.A_hat : float = overlaps.A_hat
         self.N_hat : float = overlaps.N_hat
-        self.a: float = overlaps.a
-        self.n: float = overlaps.n
-        self.a_hat: float = overlaps.a_hat
-        self.n_hat: float = overlaps.n_hat
-        self.test_loss: float = test_loss_overlaps(overlaps.m,overlaps.q,data_model.rho,task.tau,overlaps.sigma,task.epsilon*overlaps.a/np.sqrt(overlaps.n))
+        self.test_loss: float = test_loss_overlaps(overlaps.m,overlaps.q,data_model.rho,task.tau,overlaps.sigma,task.epsilon*overlaps.A/np.sqrt(overlaps.N))
 
 class ERMExperimentInformation:
     def __init__(self, task, data_model, data: DataSet, weights):
@@ -255,14 +251,10 @@ class DatabaseHandler:
                     sigma_hat REAL,
                     q_hat REAL,
                     m_hat REAL,
-                    A_self REAL,
-                    N_self REAL,
-                    A_self_hat REAL,
-                    N_self_hat REAL,
-                    a REAL,
-                    n REAL,
-                    a_hat REAL,
-                    n_hat REAL,
+                    A REAL,
+                    N REAL,
+                    A_hat REAL,
+                    N_hat REAL,
                     test_loss REAL
                 )
             ''')
@@ -365,7 +357,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -399,10 +391,6 @@ class DatabaseHandler:
             experiment_information.N,
             experiment_information.A_hat,
             experiment_information.N_hat,
-            experiment_information.a,
-            experiment_information.n,
-            experiment_information.a_hat,
-            experiment_information.n_hat,
             experiment_information.test_loss
         ))
         self.connection.commit()
