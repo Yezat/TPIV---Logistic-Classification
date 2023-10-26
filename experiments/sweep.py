@@ -80,10 +80,10 @@ def get_optimal_lambda(logger,task, data_model):
     logger.info(f"Starting optimal lambda {task}")
     start = time.time()
 
-    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[1e-5,1e2],options={'xatol': 1e-4,'maxiter':100})
-    logger.info(f"Minimized success: {res.success} message {res.message}")
+    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-1e1,1e2],options={'xatol': 1e-8,'maxiter':100})
+    logger.info(f"Minimized success: {res.success}; Message: {res.message}")
     if not res.success:
-        raise Exception("Optimization of lambda failed " + str(res.message))
+        raise Exception("Optimization of lambda failed: " + str(res.message))
     
     end = time.time()
     experiment_duration = end-start
@@ -92,6 +92,9 @@ def get_optimal_lambda(logger,task, data_model):
     result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name)
     return result
 
+
+def get_optimal_epsilon(logger, task, data_model):
+    raise NotImplementedError("This function is not implemented yet")
 
 # Define a function to process a task
 def process_task(task, logger, data_model):
@@ -104,6 +107,8 @@ def process_task(task, logger, data_model):
             task.result = run_state_evolution(logger,task, data_model)
         elif task.method == "optimal_lambda":
             task.result = get_optimal_lambda(logger,task, data_model)
+        elif task.method == "optimal_epsilon":
+            task.result = get_optimal_epsilon(logger, task, data_model)
         else:
             task.result = run_erm(logger,task, data_model)
     except Exception as e:
@@ -185,42 +190,55 @@ def master(num_processes, logger, experiment):
     # iterate all the parameters and create process objects for each parameter
     idx = 1
     for alpha in experiment.alphas:
-        for epsilon in experiment.epsilons:
+
+        
+
+        if ExperimentType.OptimalEpsilon == experiment.experiment_type:
+            # if that is the case, for each tau and lambda, compute the optimal epsilon
             for tau in experiment.taus:
-                
-                if ExperimentType.OptimalLambda == experiment.experiment_type:
+                for lam in experiment.lambdas:
+                    tasks.append(Task(idx,experiment_id,"optimal_epsilon",alpha,0,lam,tau,experiment.d,None,None, experiment.data_model_type))
+                    idx += 1
+        else:
+            for epsilon in experiment.epsilons:
+                for tau in experiment.taus:
                     
-                    
-                    optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
-
-                    initial_lambda = 1
-
-                    if not optimal_result.get_key() in optimal_lambdas.keys():
-                        tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
-                    
-                else: 
-                    lambdas = experiment.lambdas
-                    if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
-
+                    if ExperimentType.OptimalLambda == experiment.experiment_type:
+                        
+                        
                         optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
 
+                        initial_lambda = 1
+
                         if not optimal_result.get_key() in optimal_lambdas.keys():
-                            logger.info(f"The key is '{optimal_result.get_key()}'")
-                            # logger.info(f"{optimal_lambdas.keys()}")
-                            # log all keys of optimal_lambdas
-                            for key in optimal_lambdas.keys():
-                                logger.info(f"Key: '{key}'")
-                            raise Exception("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda")
+                            tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                            idx += 1
+                        
+                    else: 
+                        lambdas = experiment.lambdas
+                        if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
 
-                        lambdas = [optimal_lambdas[optimal_result.get_key()]]
-                
-                    for lam in lambdas:                    
+                            optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
 
-                        for _ in range(experiment.state_evolution_repetitions):
-                            tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
+                            if not optimal_result.get_key() in optimal_lambdas.keys():
+                                logger.info(f"The key is '{optimal_result.get_key()}'")
+                                # logger.info(f"{optimal_lambdas.keys()}")
+                                # log all keys of optimal_lambdas
+                                for key in optimal_lambdas.keys():
+                                    logger.info(f"Key: '{key}'")
+                                raise Exception("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda")
 
-                        for _ in range(experiment.erm_repetitions):
-                            tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                            lambdas = [optimal_lambdas[optimal_result.get_key()]]
+                    
+                        for lam in lambdas:                    
+
+                            for _ in range(experiment.state_evolution_repetitions):
+                                tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
+                                idx += 1
+
+                            for _ in range(experiment.erm_repetitions):
+                                tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                                idx += 1
 
     # Initialize the progress bar
     pbar = tqdm(total=len(tasks))
@@ -234,6 +252,7 @@ def master(num_processes, logger, experiment):
         if task_idx >= len(tasks):
             break
         task = tasks[task_idx]
+        logger.info(f"Sending task {task_idx} to {i+1}")
         MPI.COMM_WORLD.send(task, dest=i+1, tag=task.id)
         task_idx += 1
 
@@ -242,10 +261,12 @@ def master(num_processes, logger, experiment):
     while received_tasks < len(tasks):
         status = MPI.Status()
         # log status information
-        logger.info(f"Received task {received_tasks} from {status.source}") 
+        logger.info(f"Received the {received_tasks}th task") 
         
         task = MPI.COMM_WORLD.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
         received_tasks += 1
+
+        logger.info(f"Received task {task.id} from {status.source}")
 
         # result
         result = task.result
@@ -256,6 +277,8 @@ def master(num_processes, logger, experiment):
                 with DatabaseHandler(logger) as db:
                     db.insert_state_evolution(result)
             elif task.method == "optimal_lambda":
+                append_object_to_csv(result)
+            elif task.method == "optimal_epsilon":
                 append_object_to_csv(result)
             else:
                 with DatabaseHandler(logger) as db:
@@ -282,8 +305,9 @@ def master(num_processes, logger, experiment):
     end = time.time()
     duration = end - start
     logger.info("Experiment took %d seconds", duration)
-    with DatabaseHandler(logger) as db:
-        db.complete_experiment(experiment_id, duration)
+    if experiment.experiment_type == ExperimentType.Sweep:
+        with DatabaseHandler(logger) as db:
+            db.complete_experiment(experiment_id, duration)
     logger.info("Done")
 
     # Close the progress bar
@@ -307,11 +331,13 @@ if __name__ == "__main__":
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(f'%(asctime)s - %(levelname)s - rank {rank} - %(message)s')
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+
+    logger.info("The size is %d", size)
 
     logger.info("This process has rank %d", rank)
 

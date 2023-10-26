@@ -18,6 +18,7 @@ class ExperimentType(Enum):
     Sweep = 0
     OptimalLambda = 1
     SweepAtOptimalLambda = 2
+    OptimalEpsilon = 3
 
 class ExperimentInformation:
     def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, experiment_name: str = "", compute_hessian: bool = False):

@@ -14,7 +14,7 @@ from scipy.special import logit
 """
 class OverlapSet():
     def __init__(self) -> None:
-        self.INITIAL_CONDITION = (0.1,0.1,0.5,0.1,0.1)
+        self.INITIAL_CONDITION = (1e-1,1e-1,1e-1,1e-1,1e-1)
 
         self.m = self.INITIAL_CONDITION[0]
         self.q = self.INITIAL_CONDITION[1]

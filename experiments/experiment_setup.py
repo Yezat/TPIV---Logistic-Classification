@@ -48,13 +48,13 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.array([3.4]) #np.linspace(0.1,6,3)
-    epsilons: np.ndarray = np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
-    lambdas: np.ndarray = np.array([0.1])
+    alphas: np.ndarray = np.array([3.5]) #np.linspace(0.1,6,3)
+    epsilons: np.ndarray = np.array([0.35]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
+    lambdas: np.ndarray = np.array([-0.00001,-0.000008]) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 
     dp: float = 0.01
-    experiment_type: ExperimentType = ExperimentType.SweepAtOptimalLambda
+    experiment_type: ExperimentType = ExperimentType.Sweep
     experiment_name: str = "Vanilla Strong Weak Trials"
     compute_hessian: bool = False
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, experiment_name,compute_hessian)
