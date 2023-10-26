@@ -107,52 +107,30 @@ def worker(logger, data_model):
     logger.info(f"Worker exiting - my rank is {rank}")
 
 
-def get_default_experiment():
-    state_evolution_repetitions: int = 1
-    erm_repetitions: int = 2
-    # alphas: np.ndarray = np.array([0.2,0.8,1.3,1.7,2.,2.5])
-    # alphas: np.ndarray = np.array([3,4,5,6,7])
-    alphas: np.ndarray = np.linspace(1,3,3)
-    # epsilons: np.ndarray = np.array([0,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09])
-    # epsilons: np.ndarray = np.array([0,0.02,0.05,0.07,0.09,0.12])
-    epsilons: np.ndarray = np.array([0.0,0.7])
-    lambdas: np.ndarray = np.array([100])
-    taus: np.ndarray = np.array([1.5])
-    ps: np.ndarray = np.array([0.75])
-    dp: float = 0.01
-    d: int = 1000
-    p: int = 1000
-    erm_methods: list = ["sklearn"]
-    experiment_name: str = "Default Experiment"
-    dataModelType: DataModelType = DataModelType.VanillaGaussian
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp,dataModelType,p,experiment_name)
-    return experiment
 
 def load_experiment(filename, logger):
     # Get the experiment information from this file.
     if filename is None:
         filename = "sweep_experiment.json"
 
-    # create an experiment object and first define default values
-    experiment = get_default_experiment()
 
 
     # load the experiment parameters from the json file
     try:
         with open(filename) as f:
-            experiment.__dict__ = json.load(f, cls=NumpyDecoder)
-            # create a new experiment id
-            experiment.experiment_id = str(uuid.uuid4())
-            # overwrite the code version
-            experiment.code_version = __version__
-            experiment.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            experiment_dict = json.load(f, cls=NumpyDecoder)
+            experiment = ExperimentInformation.fromdict(experiment_dict)
             logger.info("Loaded experiment from file %s", filename)
-            # log the dataModelType
+            # log the dataModelType, name and description
             logger.info(f"DataModelType: {experiment.data_model_type.name}")
+            logger.info(f"DataModelName: {experiment.data_model_name}")
+            logger.info(f"DataModelDescription: {experiment.data_model_description}")
+
+            return experiment
     except FileNotFoundError:
         logger.error("Could not find file %s. Using the standard elements instead", filename)
 
-    return experiment
+    
 
 # Define the master function
 def master(num_processes, logger, experiment):
@@ -182,7 +160,7 @@ def master(num_processes, logger, experiment):
                     import optimal_choice
                     logger.info(f"Computing optimal lambda for {alpha}, {epsilon}, {tau}")
                     lam = optimal_choice.get_optimal_lambda(alpha, epsilon, tau, logger)
-                    # TODO make this sweep more efficient, i.e. parallelize it...
+                    # TODO make this sweep more efficient, i.e. parallelize it... I.e. make it a task! How to then evaluate at optimal lambda? 
 
                     for _ in range(experiment.state_evolution_repetitions):
                         tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None,experiment.data_model_type))

@@ -10,6 +10,40 @@ import json
 import numpy as np
 from helpers import *
 
+import logging
+logger = logging.getLogger()
+# Make the logger log to console
+logger.addHandler(logging.StreamHandler())
+logger.setLevel(logging.INFO)
+
+data_model_name = ""
+data_model_description = "" # Don't remove this, the next definition is ment to be commented out...
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Start Here, and define your data_model
+------------------------------------------------------------------------------------------------------------------------
+"""
+d = 1000
+
+data_model_type = DataModelType.VanillaGaussian
+data_model_name = "VanillaGaussian"
+data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
+
+# Sigma_w = power_law_diagonal_matrix(d, 1.4)
+Sigma_w = np.eye(d)
+# Sigma_delta = power_law_diagonal_matrix(d, 1.2)
+Sigma_delta = np.eye(d)
+
+experiment_filename = "sweep_experiment.json"
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Next, define your experiment.
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
 # # Create a SweepExperiment
 def get_default_experiment():
     state_evolution_repetitions: int = 1
@@ -20,39 +54,37 @@ def get_default_experiment():
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 
     dp: float = 0.01
-    d: int = 1000
-    p: int = 1000
     erm_methods: list = ["sklearn"] #"optimal_lambda"
     experiment_name: str = "Vanilla Strong Weak Trials"
-    data_model_type: DataModelType = DataModelType.VanillaGaussian
     compute_hessian: bool = False
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,p, experiment_name,compute_hessian)
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,data_model_name, data_model_description, experiment_name,compute_hessian)
     return experiment
 experiment = get_default_experiment()
 
-import logging
-logger = logging.getLogger()
-# Make the logger log to console
-logger.addHandler(logging.StreamHandler())
-logger.setLevel(logging.INFO)
 
 
-Sigma_w = power_law_diagonal_matrix(experiment.d, 1.4)
-Sigma_w = np.eye(experiment.d)
-Sigma_delta = power_law_diagonal_matrix(experiment.d, 1.2)
-Sigma_delta = np.eye(experiment.d)
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Now let the experiment create the data_model and save the experiment to a json file.
+------------------------------------------------------------------------------------------------------------------------
+"""
 
-# Force a creation of a new data_model
-experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)
-
+try:
+    # Force a creation of a new data_model
+    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=data_model_name, description=data_model_description)
+except Exception as e:
+    # if you overwrite an existing data_model, you will get an exception. Still overwrite an experiment definition to ensure that you can run the experiment with the existing data_model.
+    logger.info(f"Exception {e} occured.")
 
 # use json dump to save the experiment parameters
-with open("sweep_experiment.json","w") as f:
+with open(experiment_filename,"w") as f:
     # use the NumpyEncoder to encode numpy arrays
     # Let's produce some json
-    json_string = json.dumps(experiment.__dict__,cls= NumpyEncoder)
+    json_string = json.dumps(experiment,cls= NumpyEncoder)
     # now write it
     f.write(json_string)
+
+logger.info(f"Succesfully saved experiment to {experiment_filename}. You can run it even though we did not recreate the data_model!")
 
 # # Start the MPI
 # import subprocess

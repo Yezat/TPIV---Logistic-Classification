@@ -14,7 +14,7 @@ import pandas as pd
 from data_model import *
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, dataModelType: DataModelType, p: int, experiment_name: str = "", compute_hessian: bool = False):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, experiment_name: str = "", compute_hessian: bool = False):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -28,19 +28,24 @@ class ExperimentInformation:
         self.taus: np.ndarray = taus
         self.ps: np.ndarray = ps
         self.dp: float = dp
-        self.p: int = p
         self.d: int = d
         self.erm_methods: list = erm_methods
         self.completed: bool = False
-        self.data_model_type: DataModelType = dataModelType
+        self.data_model_type: DataModelType = data_model_type
+        self.data_model_name: str = data_model_name
+        self.data_model_description: str = data_model_description
         self.compute_hessian: bool = compute_hessian
+
+    @classmethod
+    def fromdict(cls, d):
+        return cls(**d)
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
     
-    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None):
+    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, name: str = "", description: str = ""):
         """
         Instantiates a data model of the type specified in self.data_model_type and stores it to source_pickle_path,
         custom student prior covariances and adversarial training covariances can be specified
@@ -58,9 +63,9 @@ class ExperimentInformation:
         """
         data_model = None
         if self.data_model_type == DataModelType.VanillaGaussian:
-            data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)
+            data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         elif self.data_model_type == DataModelType.SourceCapacity:
-            data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta)
+            data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
         return data_model
@@ -279,10 +284,11 @@ class DatabaseHandler:
                 ps BLOB,
                 dp REAL,
                 d INTEGER,
-                p INTEGER,
                 erm_methods BLOB,
                 completed BOOLEAN,
-                data_model_type TEXT
+                data_model_type TEXT,
+                data_model_name TEXT,
+                data_model_description TEXT
             )''')
             self.connection.commit()
 
@@ -329,7 +335,7 @@ class DatabaseHandler:
     def insert_experiment(self, experiment_information: ExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
             experiment_information.experiment_name,
             experiment_information.duration,
@@ -344,10 +350,11 @@ class DatabaseHandler:
             json.dumps(experiment_information.ps, cls=NumpyEncoder),
             float(experiment_information.dp),
             experiment_information.d,
-            experiment_information.p,
             json.dumps(experiment_information.erm_methods),
             experiment_information.completed,
             experiment_information.data_model_type.name,
+            experiment_information.data_model_name,
+            experiment_information.data_model_description
             ))
         self.connection.commit()
 
@@ -478,6 +485,15 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         if isinstance(obj,ERMExperimentInformation):
             return obj.__dict__
+        if isinstance(obj, ExperimentInformation):
+            experiment = obj.__dict__
+            # remove the entries for experiment_id, code_version and date
+            experiment.pop("experiment_id")
+            experiment.pop("code_version")
+            experiment.pop("date")
+            experiment.pop("duration")
+            experiment.pop("completed")
+            return experiment
         if isinstance(obj, CalibrationResults):
             return obj.__dict__
         if isinstance(obj,np.int32):

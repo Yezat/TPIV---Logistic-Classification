@@ -40,6 +40,10 @@ class AbstractDataModel(ABC):
         the teacher-teacher overlap
     PhiPhiT: ndarray
         The Sigma_x^T Theta Theta^T Sigma_x matrix (d,d)
+    name: str
+        Optional name of the model, if defined. The pickle file name will contain this name. If the file already exists. An exception will be thrown
+    description: str
+        Optional description of the model, just a text to describe in words what the model is about
     ----------
     Furthermore, the following spectra are computed
     ----------
@@ -70,7 +74,7 @@ class AbstractDataModel(ABC):
         returns a json with all the information about the model
     ----------
     """
-    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../") -> None:
+    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", name = "", description = "") -> None:
         self.d = d
         self.logger = logger
         self.source_pickle_path = source_pickle_path
@@ -82,8 +86,16 @@ class AbstractDataModel(ABC):
             self.model_type = DataModelType.AbstractModel
 
 
-        # check if a pickle exists
+        self.name = name
+        self.description = description
+
         self.source_pickle = f"{source_pickle_path}data/data_model_{self.model_type.name}_{d}.pkl"
+        if name != "":
+            self.source_pickle = f"{source_pickle_path}data/data_model_{self.model_type.name}_{d}_name_{name}.pkl"
+
+
+        # check if a pickle exists
+        
         if os.path.isfile(self.source_pickle) and not delete_existing:
             # load self from pickle 
             with open(self.source_pickle, 'rb') as f:
@@ -104,38 +116,57 @@ class AbstractDataModel(ABC):
         """
         self.logger.info("Finishing initialization")
         assumption_1 = self.Sigma_x - self.Sigma_x.T @ np.linalg.inv(self.Sigma_x) @ self.Sigma_x
-        min_eigval = np.min(np.linalg.eigvalsh(assumption_1))
+        min_eigval = np.min(np.linalg.eigvals(assumption_1))
         if min_eigval < 0:
             self.logger.warning(f"Assumption on Schur Complement failed: Matrix was not positive semi-definite; min eigval: {min_eigval}")
 
         # compute the spectra
-        self.spec_PhiPhit = np.linalg.eigvalsh(self.PhiPhiT)
-        self.spec_Sigma_x = np.linalg.eigvalsh(self.Sigma_x)
-        self.spec_Sigma_delta = np.linalg.eigvalsh(self.Sigma_delta)
-        self.spec_Sigma_w = np.linalg.eigvalsh(self.Sigma_w)
+        self.spec_PhiPhit = np.linalg.eigvals(self.PhiPhiT)
+        self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
+        self.spec_Sigma_delta = np.linalg.eigvals(self.Sigma_delta)
+        self.spec_Sigma_w = np.linalg.eigvals(self.Sigma_w)
+        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
 
         # store the pickle
         self.store_self_to_pickle()
 
     def store_self_to_pickle(self):
+
+        if self.name != "":
+            # if the name is defined, and the source pickle exists, throw an exception before storing and thereby overwriting the existing file. This shall prevent accidentally overwriting an existing file
+            if os.path.isfile(self.source_pickle):
+                raise Exception(f"File {self.source_pickle} already exists. Please delete it or change the name of the model")
+
         with open(self.source_pickle, "wb") as f:
             pickle.dump(self, f)
             self.logger.info("stored self to pickle")
+            self.logger.info(self.get_info())
 
     def get_info(self):
         info = {
-            'data_model': 'custom',
+            'data_model': self.name,
+            'data_model_type': self.model_type.name,
+            'description': self.description,
             'student_dimension': self.d,
             'aspect_ratio': self.gamma,
             'rho': self.rho,
-            'commute': self.commute,
-            'kitchen_kind': self.kitchen_kind.name,
-            'Norm Sigma_w': np.linalg.norm(self.Sigma_w),
-            'Norm Sigma_delta': np.linalg.norm(self.Sigma_delta),
-            'Norm Sigma_x': np.linalg.norm(self.Sigma_x),
-            'Norm Sigma_theta': np.linalg.norm(self.Sigma_theta),
-            'Norm PhiPhiT': np.linalg.norm(self.PhiPhiT),
-            'Norm theta': np.linalg.norm(self.theta),
+            'Min EV Sigma_w': np.min(self.spec_Sigma_w),
+            'Max EV Sigma_w': np.max(self.spec_Sigma_w),
+            'Min EV Sigma_delta': np.min(self.spec_Sigma_delta),
+            'Max EV Sigma_delta': np.max(self.spec_Sigma_delta),
+            'Min EV Sigma_x': np.min(self.spec_Sigma_x),
+            'Max EV Sigma_x': np.max(self.spec_Sigma_x),
+            'Min EV Sigma_theta': np.min(self.spec_Sigma_theta),
+            'Max EV Sigma_theta': np.max(self.spec_Sigma_theta),
+            'Min EV PhiPhiT': np.min(self.spec_PhiPhit),
+            'Max EV PhiPhiT': np.max(self.spec_PhiPhit),
+            # 'Norm Sigma_w': np.linalg.norm(self.Sigma_w),
+            # 'Norm Sigma_delta': np.linalg.norm(self.Sigma_delta),
+            # 'Norm Sigma_x': np.linalg.norm(self.Sigma_x),
+            # 'Norm Sigma_theta': np.linalg.norm(self.Sigma_theta),
+            # 'Norm PhiPhiT': np.linalg.norm(self.PhiPhiT),
+            # 'Norm theta': np.linalg.norm(self.theta),
+            # ''
         }
         return info
     
@@ -165,9 +196,9 @@ class DataSet():
 """
 
 class VanillaGaussianDataModel(AbstractDataModel):
-    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None) -> None:
+    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, name = "", description = "") -> None:
         self.model_type = DataModelType.VanillaGaussian
-        super().__init__(d, logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path)
+        super().__init__(d, logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path,name=name,description=description)
 
         if not self.loaded_from_pickle:
 
@@ -197,10 +228,10 @@ class VanillaGaussianDataModel(AbstractDataModel):
         return DataSet(X, y, X_test, y_test, the)
     
 class SourceCapacityDataModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None)->None:
+    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "")->None:
 
         self.model_type = DataModelType.SourceCapacity
-        super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path)
+        super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path, name=name,description=description)
 
         if not self.loaded_from_pickle:
 

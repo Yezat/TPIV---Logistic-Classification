@@ -256,7 +256,7 @@ def compute_experimental_teacher_calibration(p, w, werm, Xtest, sigma):
             teacher_probabilities = np.array([probit(Xtest[i] @ w / np.sqrt(d),sigma) for i in index]) 
 
         if len(teacher_probabilities) == 0:
-            return p
+            return p-1
 
         return p - np.mean(teacher_probabilities)
     
