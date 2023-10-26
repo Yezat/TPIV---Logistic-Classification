@@ -93,8 +93,31 @@ def get_optimal_lambda(logger,task, data_model):
     return result
 
 
+def minimize_epsilon(logger, task, data_model):
+
+    state_evolution_info = run_state_evolution(logger, task, data_model)
+
+    total_calibration = np.abs(np.array(state_evolution_info.calibrations.calibrations)).sum()
+
+    logger.info(f"Absolute integrated calibration for epsilon {task.epsilon} is {total_calibration}")
+    return total_calibration
+
 def get_optimal_epsilon(logger, task, data_model):
-    raise NotImplementedError("This function is not implemented yet")
+    
+    ps = np.linspace(0.01,0.99,1000)
+    task.ps = ps
+
+    def minimize(e):
+        task.epsilon = e
+        return minimize_epsilon(logger,task,data_model)
+
+    res = minimize_scalar(lambda e : minimize(e),method="bounded", bounds=[0,10.0],options={'xatol': 1e-4,'maxiter':200})
+    logger.info(f"Minimized success: {res.success}; Message: {res.message}")
+    if not res.success:
+        raise Exception("Optimization of epsilon failed " + str(res.message))
+    result = OptimalEpsilonResult(task.alpha, res.x, task.tau, task.lam, data_model.model_type, data_model.name)
+    return result
+
 
 # Define a function to process a task
 def process_task(task, logger, data_model):
