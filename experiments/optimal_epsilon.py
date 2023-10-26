@@ -58,7 +58,7 @@ if __name__ == "__main__":
         lam = float(sys.argv[2])
         tau = float(sys.argv[3])
     except:
-        logger.info("Usage: optimal_choice.py alpha lam tau")
+        logger.info("Usage: optimal_epsilon.py alpha lam tau")
         logger.info("Default values if no parameters provided: alpha = 5, lam = 0.5, tau = 1")
 
     if alpha is None:

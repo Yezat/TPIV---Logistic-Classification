@@ -328,11 +328,11 @@ def test_loss_overlaps(m: float, q: float, rho: float, tau: float, sigma: float,
 
 
 
-def generalization_error(rho_w_star,m,q, tau):
+def generalization_error(rho,m,q, tau):
     """
     Returns the generalization error in terms of the overlaps
     """
-    return np.arccos(m / np.sqrt( (rho_w_star + tau**2 ) * q ) )/np.pi
+    return np.arccos(m / np.sqrt( (rho + tau**2 ) * q ) )/np.pi
 
 
 def overlap_calibration(rho,p,m,q_erm,tau, debug = False):
@@ -373,7 +373,8 @@ def damped_update(new, old, damping):
 def fixed_point_finder(
     logger,
     my_data_model: AbstractDataModel,
-    task: Task
+    task: Task,
+    log: bool = True,
 ):
     
     overlaps = OverlapSet()  
@@ -383,7 +384,7 @@ def fixed_point_finder(
     iter_nb = 0
     
     while err > overlaps.TOL_FPE or iter_nb < overlaps.MIN_ITER_FPE:
-        if iter_nb % 10 == 0:
+        if iter_nb % 10 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             overlaps.log_overlaps(logger)
 

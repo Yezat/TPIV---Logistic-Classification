@@ -11,7 +11,7 @@ Then you can run a sweep using mpi as described at the top of the sweep.py file 
 All plotting can be done within the playground.ipynb file.
 
 ## Optimal l2-regularization strength and optimal epsilon in terms of calibration
-The file optimal_choice can be used to compute the optimal l2-regularization strength in terms of generalization error.
+The file optimal_lambda can be used to compute the optimal l2-regularization strength in terms of generalization error.
 The file optimal_epsilon can be used to compute the optimal epsilon in terms of calibration.
 
 "# TPIV---Logistic-Classification" 

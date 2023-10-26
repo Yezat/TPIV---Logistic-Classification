@@ -13,8 +13,14 @@ import sqlite3
 import pandas as pd
 from data_model import *
 
+# create an ExperimentType enum
+class ExperimentType(Enum):
+    Sweep = 0
+    OptimalLambda = 1
+    SweepAtOptimalLambda = 2
+
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, erm_methods: list, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, experiment_name: str = "", compute_hessian: bool = False):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, experiment_name: str = "", compute_hessian: bool = False):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -29,7 +35,7 @@ class ExperimentInformation:
         self.ps: np.ndarray = ps
         self.dp: float = dp
         self.d: int = d
-        self.erm_methods: list = erm_methods
+        self.experiment_type: ExperimentType = experiment_type
         self.completed: bool = False
         self.data_model_type: DataModelType = data_model_type
         self.data_model_name: str = data_model_name
@@ -284,7 +290,7 @@ class DatabaseHandler:
                 ps BLOB,
                 dp REAL,
                 d INTEGER,
-                erm_methods BLOB,
+                experiment_type Text,
                 completed BOOLEAN,
                 data_model_type TEXT,
                 data_model_name TEXT,
@@ -350,7 +356,7 @@ class DatabaseHandler:
             json.dumps(experiment_information.ps, cls=NumpyEncoder),
             float(experiment_information.dp),
             experiment_information.d,
-            json.dumps(experiment_information.erm_methods),
+            experiment_information.experiment_type.name,
             experiment_information.completed,
             experiment_information.data_model_type.name,
             experiment_information.data_model_name,
@@ -479,6 +485,13 @@ class DatabaseHandler:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.connection.close()
 
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Experiment Serialization Helpers
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
@@ -498,7 +511,7 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.__dict__
         if isinstance(obj,np.int32):
             return str(obj)
-        if isinstance(obj, DataModelType):
+        if isinstance(obj, Enum):
             return obj.name
         return json.JSONEncoder.default(self, obj)
     
@@ -521,5 +534,15 @@ class NumpyDecoder(json.JSONDecoder):
             # Replace the string value with the enumeration type
             obj['data_model_type'] = data_model_type
 
-        return obj
+        # check if the 'experiment_type' field is present in the object
+        if 'experiment_type' in obj:
+            # Get the value of 'experiment_type'
+            experiment_type_str = obj['experiment_type']
 
+            # Map the string value to the enumeration type
+            experiment_type = ExperimentType[experiment_type_str]
+
+            # Replace the string value with the enumeration type
+            obj['experiment_type'] = experiment_type
+
+        return obj

@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.special import erfc
 from data_model import DataModelType
+import os
 
 
 """
@@ -118,3 +119,79 @@ class Task:
 
     def __str__(self):
         return f"Task {self.id} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Optimal Lambda Helpers
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+class OptimalLambdaResult():
+    def __init__(self, alpha, epsilon, tau, optimal_lambda, data_model_type, data_model_name):
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.tau = tau
+        self.optimal_lambda = optimal_lambda
+        self.data_model_type = data_model_type
+        self.data_model_name = data_model_name
+
+    def to_csv_line(self):
+        # round all the results to 8 digits
+        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.tau:.8f},{self.optimal_lambda:.8f},{self.data_model_type.name},{self.data_model_name}"
+    
+    def from_csv_line(self, line):
+        # remove the line break
+        line = line[:-1]
+        alpha,epsilon,tau,lam,data_model_type,data_model_name = line.split(",")
+        return OptimalLambdaResult(float(alpha),float(epsilon),float(tau),float(lam),DataModelType[data_model_type],data_model_name)
+    
+    def get_csv_header(self):
+        return "alpha,epsilon,tau,lambda,data_model_type,data_model_name"
+
+    def get_csv_filename(self):
+        return "optimal_lambdas.csv"
+    
+    def get_key(self):
+        # the key of a result is the tuple (alpha,epsilon,tau, data_model_type, data_model_name) returned as a string
+        # round all the results to 8 digits
+        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.tau:.8f},{self.data_model_type.name},{self.data_model_name}"
+
+    def get_target(self):
+        return self.optimal_lambda
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+    CSV Helpers
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+def append_object_to_csv(obj):
+    # if the file does not exist, create it and append a header
+    if not os.path.isfile(obj.get_csv_filename()):
+        with open(obj.get_csv_filename(),"w") as f:
+            f.write(obj.get_csv_header() + "\n")
+    with open(obj.get_csv_filename(),"a") as f:
+        f.write(obj.to_csv_line() + "\n")
+
+def load_csv_to_object_dictionary(obj, path = ""):
+    filename = path + obj.get_csv_filename()
+    # if the file does not exist, return an empty dictionary
+    if not os.path.isfile(filename):
+        return {}
+    with open(filename,"r") as f:
+        lines = f.readlines()
+        # remove the header
+        lines = lines[1:]
+        # create a dictionary
+        dictionary = {}
+        for line in lines:
+            # create the object
+            obj = obj.from_csv_line(line)
+            # add it to the dictionary
+            dictionary[obj.get_key()] = obj.get_target()
+        return dictionary 
+    
+
+

@@ -15,6 +15,7 @@ from state_evolution import overlap_calibration, fixed_point_finder
 from gradient_descent import sklearn_optimize, compute_experimental_teacher_calibration, run_optimizer
 from data_model import *
 from helpers import Task
+from scipy.optimize import minimize_scalar
 import logging
 
 
@@ -62,6 +63,35 @@ def run_state_evolution(logger,task, data_model):
 
     return st_exp_info
 
+def minimizer_lambda(logger, task, data_model, lam):
+    """
+    Run the state evolution and return the generalization error
+    """
+    task.lam = lam
+    overlaps = fixed_point_finder(logger, data_model, task, log=False)
+    gen_error =  generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
+    logger.info(f"Generalization error for lambda {task.lam} is {gen_error}")
+    return gen_error
+
+def get_optimal_lambda(logger,task, data_model):
+    """
+    Computes the optimal lambda given a task and a data_model, returns the lambda
+    """
+    logger.info(f"Starting optimal lambda {task}")
+    start = time.time()
+
+    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[1e-5,1e2],options={'xatol': 1e-4,'maxiter':100})
+    logger.info(f"Minimized success: {res.success} message {res.message}")
+    if not res.success:
+        raise Exception("Optimization of lambda failed " + str(res.message))
+    
+    end = time.time()
+    experiment_duration = end-start
+
+    logger.info(f"Finished optimal lambda {task} in {experiment_duration} seconds - optimal lambda is {res.x}")
+    result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name)
+    return result
+
 
 # Define a function to process a task
 def process_task(task, logger, data_model):
@@ -72,6 +102,8 @@ def process_task(task, logger, data_model):
 
         if task.method == "state_evolution":
             task.result = run_state_evolution(logger,task, data_model)
+        elif task.method == "optimal_lambda":
+            task.result = get_optimal_lambda(logger,task, data_model)
         else:
             task.result = run_erm(logger,task, data_model)
     except Exception as e:
@@ -113,8 +145,6 @@ def load_experiment(filename, logger):
     if filename is None:
         filename = "sweep_experiment.json"
 
-
-
     # load the experiment parameters from the json file
     try:
         with open(filename) as f:
@@ -147,39 +177,50 @@ def master(num_processes, logger, experiment):
     # tasks = [{"id": i, "data": "Task " + str(i)} for i in range(1, 100)]
     tasks = []
 
+
+    dummy_optimal_result = OptimalLambdaResult(0,0,0,0,None,None)
+    # load the optimal lambdas from the csv file
+    optimal_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
+
     # iterate all the parameters and create process objects for each parameter
     idx = 1
     for alpha in experiment.alphas:
         for epsilon in experiment.epsilons:
-
             for tau in experiment.taus:
                 
-                # if method is "optimal_lambda":
-                # compute first the optimal lambda
-                if "optimal_lambda" in experiment.erm_methods:
-                    import optimal_choice
-                    logger.info(f"Computing optimal lambda for {alpha}, {epsilon}, {tau}")
-                    lam = optimal_choice.get_optimal_lambda(alpha, epsilon, tau, logger)
-                    # TODO make this sweep more efficient, i.e. parallelize it... I.e. make it a task! How to then evaluate at optimal lambda? 
-
-                    for _ in range(experiment.state_evolution_repetitions):
-                        tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None,experiment.data_model_type))
-
-                    for _ in range(experiment.erm_repetitions):
-                        method = "sklearn"
-                        tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
-                else:
-
-                # if method is not "optimal_lambda":
-                    for lam in experiment.lambdas:
+                if ExperimentType.OptimalLambda == experiment.experiment_type:
                     
+                    
+                    optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+
+                    initial_lambda = 1
+
+                    if not optimal_result.get_key() in optimal_lambdas.keys():
+                        tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                    
+                else: 
+                    lambdas = experiment.lambdas
+                    if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
+
+                        optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+
+                        if not optimal_result.get_key() in optimal_lambdas.keys():
+                            logger.info(f"The key is '{optimal_result.get_key()}'")
+                            # logger.info(f"{optimal_lambdas.keys()}")
+                            # log all keys of optimal_lambdas
+                            for key in optimal_lambdas.keys():
+                                logger.info(f"Key: '{key}'")
+                            raise Exception("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda")
+
+                        lambdas = [optimal_lambdas[optimal_result.get_key()]]
+                
+                    for lam in lambdas:                    
 
                         for _ in range(experiment.state_evolution_repetitions):
                             tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
 
                         for _ in range(experiment.erm_repetitions):
-                            for method in experiment.erm_methods:
-                                tasks.append(Task(idx,experiment_id,method,alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                            tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
 
     # Initialize the progress bar
     pbar = tqdm(total=len(tasks))
@@ -214,6 +255,8 @@ def master(num_processes, logger, experiment):
             if task.method == "state_evolution":
                 with DatabaseHandler(logger) as db:
                     db.insert_state_evolution(result)
+            elif task.method == "optimal_lambda":
+                append_object_to_csv(result)
             else:
                 with DatabaseHandler(logger) as db:
                     db.insert_erm(result)
@@ -280,7 +323,7 @@ if __name__ == "__main__":
         
     else:
         # run the worker
-        worker(logger, experiment.get_data_model(logger,delete_existing=False))
+        worker(logger, experiment.get_data_model(logger,delete_existing=False,name=experiment.data_model_name))
 
     MPI.Finalize()
     

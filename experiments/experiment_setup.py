@@ -5,7 +5,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 from data_model import DataModelType
-from experiment_information import NumpyEncoder, ExperimentInformation
+from experiment_information import NumpyEncoder, ExperimentInformation, ExperimentType
 import json
 import numpy as np
 from helpers import *
@@ -48,26 +48,29 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.1,6,3)
-    epsilons: np.ndarray = np.array([0.0,0.5]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
+    alphas: np.ndarray = np.array([3.4]) #np.linspace(0.1,6,3)
+    epsilons: np.ndarray = np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
     lambdas: np.ndarray = np.array([0.1])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.75]) 
     dp: float = 0.01
-    erm_methods: list = ["sklearn"] #"optimal_lambda"
+    experiment_type: ExperimentType = ExperimentType.SweepAtOptimalLambda
     experiment_name: str = "Vanilla Strong Weak Trials"
     compute_hessian: bool = False
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,erm_methods,ps,dp, data_model_type,data_model_name, data_model_description, experiment_name,compute_hessian)
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, experiment_name,compute_hessian)
     return experiment
 experiment = get_default_experiment()
 
-
+# Log the experiment object
+logger.info(f"Experiment: {experiment}")
 
 """
 ------------------------------------------------------------------------------------------------------------------------
     Now let the experiment create the data_model and save the experiment to a json file.
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+
 
 try:
     # Force a creation of a new data_model
