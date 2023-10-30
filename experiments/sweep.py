@@ -220,12 +220,16 @@ def master(num_processes, logger, experiment):
             # if that is the case, for each tau and lambda, compute the optimal epsilon
             for tau in experiment.taus:
                 for lam in experiment.lambdas:
-                    tasks.append(Task(idx,experiment_id,"optimal_epsilon",alpha,0,lam,tau,experiment.d,None,None, experiment.data_model_type))
+                    tasks.append(Task(idx,experiment_id,"optimal_epsilon",alpha,0,0,lam,tau,experiment.d,None,None, experiment.data_model_type))
                     idx += 1
         else:
             for epsilon in experiment.epsilons:
                 for tau in experiment.taus:
                     
+                    test_against_epsilon = epsilon
+                    if experiment.test_against_largest_epsilon:
+                        test_against_epsilon = np.max(experiment.epsilons)
+
                     if ExperimentType.OptimalLambda == experiment.experiment_type:
                         
                         
@@ -234,7 +238,7 @@ def master(num_processes, logger, experiment):
                         initial_lambda = 1
 
                         if not optimal_result.get_key() in optimal_lambdas.keys():
-                            tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                            tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                             idx += 1
                         
                     else: 
@@ -256,11 +260,11 @@ def master(num_processes, logger, experiment):
                         for lam in lambdas:                    
 
                             for _ in range(experiment.state_evolution_repetitions):
-                                tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
+                                tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
                                 idx += 1
 
                             for _ in range(experiment.erm_repetitions):
-                                tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                                tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                                 idx += 1
 
     # Initialize the progress bar
@@ -328,7 +332,7 @@ def master(num_processes, logger, experiment):
     end = time.time()
     duration = end - start
     logger.info("Experiment took %d seconds", duration)
-    if experiment.experiment_type == ExperimentType.Sweep:
+    if experiment.experiment_type == ExperimentType.Sweep or experiment.experiment_type == ExperimentType.SweepAtOptimalLambda:
         with DatabaseHandler(logger) as db:
             db.complete_experiment(experiment_id, duration)
     logger.info("Done")

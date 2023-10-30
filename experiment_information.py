@@ -21,7 +21,7 @@ class ExperimentType(Enum):
     OptimalEpsilon = 3
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, experiment_name: str = "", compute_hessian: bool = False):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_largest_epsilon: bool, experiment_name: str = "", compute_hessian: bool = False):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -31,6 +31,7 @@ class ExperimentInformation:
         self.erm_repetitions: int = erm_repetitions
         self.alphas: np.ndarray = alphas
         self.epsilons: np.ndarray = epsilons
+        self.test_against_largest_epsilon: bool = test_against_largest_epsilon
         self.lambdas: np.ndarray = lambdas
         self.taus: np.ndarray = taus
         self.ps: np.ndarray = ps
@@ -104,7 +105,7 @@ class StateEvolutionExperimentInformation:
         self.duration: float = None
         self.experiment_id: str = task.experiment_id
         self.generalization_error: float = generalization_error(data_model.rho, overlaps.m, overlaps.q, task.tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.epsilon * overlaps.A / np.sqrt(overlaps.N))
+        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N))
         self.training_loss: float = pure_training_loss_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
         self.training_error: float = training_error_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -117,6 +118,7 @@ class StateEvolutionExperimentInformation:
         self.rho: float = data_model.rho
         self.alpha: float = task.alpha
         self.epsilon: float = task.epsilon
+        self.test_against_epsilon: float = task.test_against_epsilon
         self.tau: float = task.tau
         self.lam: float = task.lam
         self.calibrations: CalibrationResults = calibration_results
@@ -132,7 +134,7 @@ class StateEvolutionExperimentInformation:
         self.N : float = overlaps.N
         self.A_hat : float = overlaps.A_hat
         self.N_hat : float = overlaps.N_hat
-        self.test_loss: float = test_loss_overlaps(overlaps.m,overlaps.q,data_model.rho,task.tau,overlaps.sigma,task.epsilon*overlaps.A/np.sqrt(overlaps.N))
+        self.test_loss: float = test_loss_overlaps(overlaps.m,overlaps.q,data_model.rho,task.tau,overlaps.sigma,task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
 
 class ERMExperimentInformation:
     def __init__(self, task, data_model, data: DataSet, weights):
@@ -170,18 +172,19 @@ class ERMExperimentInformation:
 
         self.cosb: float = self.m / np.sqrt(self.Q*self.rho)
         self.epsilon: float = task.epsilon
+        self.test_against_epsilon: float = task.test_against_epsilon
         self.lam: float = task.lam
         n: int = data.X.shape[0]
         yhat_gd = predict_erm(data.X_test,weights)
         self.generalization_error_erm: float = error(data.y_test,yhat_gd)
-        self.adversarial_generalization_error_erm: float = adversarial_error(data.y_test,data.X_test,weights,task.epsilon, data_model.Sigma_delta)
+        self.adversarial_generalization_error_erm: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_delta)
 
         self.A: float = weights.dot(data_model.Sigma_delta @ weights) / task.d
         self.N: float = weights.dot(weights) / task.d
 
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, task.tau)
         self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,
-        self.rho,task.tau,task.epsilon * self.A / np.sqrt(self.N))
+        self.rho,task.tau,task.test_against_epsilon * self.A / np.sqrt(self.N))
         yhat_gd_train = predict_erm(data.X,weights)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = "sklearn"
@@ -195,7 +198,7 @@ class ERMExperimentInformation:
         self.analytical_calibrations: CalibrationResults = analytical_calibrations_result
         self.erm_calibrations: CalibrationResults = erm_calibrations_result
 
-        self.test_loss: float = pure_training_loss(weights,data.X_test,data.y_test,task.epsilon, Sigma_delta=data_model.Sigma_delta)
+        self.test_loss: float = pure_training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_delta)
         
         if task.compute_hessian:
             self.test_set_min_eigenvalue_hessian = min_eigenvalue_hessian(data.X_test,data.y_test,weights,task.epsilon,task.lam,data_model.Sigma_w)
@@ -252,6 +255,7 @@ class DatabaseHandler:
                     rho REAL,
                     alpha REAL,
                     epsilon REAL,
+                    test_against_epsilon REAL,
                     tau REAL,
                     lam REAL,
                     calibrations BLOB,
@@ -286,6 +290,7 @@ class DatabaseHandler:
                 erm_repetitions INTEGER,
                 alphas BLOB,
                 epsilons BLOB,
+                test_against_largest_epsilon BOOLEAN, 
                 lambdas BLOB,
                 taus BLOB,
                 ps BLOB,
@@ -314,6 +319,7 @@ class DatabaseHandler:
                     m REAL,
                     cosb REAL,
                     epsilon REAL,
+                    test_against_epsilon REAL,
                     lam REAL,
                     generalization_error_erm REAL,
                     generalization_error_overlap REAL,
@@ -342,7 +348,7 @@ class DatabaseHandler:
     def insert_experiment(self, experiment_information: ExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
             experiment_information.experiment_name,
             experiment_information.duration,
@@ -352,6 +358,7 @@ class DatabaseHandler:
             experiment_information.erm_repetitions,
             json.dumps(experiment_information.alphas, cls=NumpyEncoder),
             json.dumps(experiment_information.epsilons, cls=NumpyEncoder),
+            experiment_information.test_against_largest_epsilon,
             json.dumps(experiment_information.lambdas, cls=NumpyEncoder),
             json.dumps(experiment_information.taus, cls=NumpyEncoder),
             json.dumps(experiment_information.ps, cls=NumpyEncoder),
@@ -371,7 +378,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -390,6 +397,7 @@ class DatabaseHandler:
             experiment_information.rho,
             float(experiment_information.alpha),
             float(experiment_information.epsilon),
+            float(experiment_information.test_against_epsilon),
             float(experiment_information.tau),
             float(experiment_information.lam),
             experiment_information.calibrations.to_json(),
@@ -429,7 +437,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -440,6 +448,7 @@ class DatabaseHandler:
             experiment_information.m,
             experiment_information.cosb,
             float(experiment_information.epsilon),
+            float(experiment_information.test_against_epsilon),
             float(experiment_information.lam),
             experiment_information.generalization_error_erm,
             experiment_information.generalization_error_overlap,
