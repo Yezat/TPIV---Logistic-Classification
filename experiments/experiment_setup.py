@@ -48,16 +48,17 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.array([3.5]) #np.linspace(0.1,6,3)
-    epsilons: np.ndarray = np.array([0.35]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
-    lambdas: np.ndarray = np.array([-0.00001,-0.000008]) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
+    alphas: np.ndarray = np.linspace(0.1,6,3)
+    epsilons: np.ndarray = np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) # np.linspace(0,1,5)
+    lambdas: np.ndarray = np.array([0.01]) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
-    ps: np.ndarray = np.array([0.75]) 
+    ps: np.ndarray = np.array([0.6]) 
     dp: float = 0.01
     experiment_type: ExperimentType = ExperimentType.Sweep
-    experiment_name: str = "Vanilla Strong Weak Trials"
+    test_against_largest_epsilon: bool = True
+    experiment_name: str = "Vanilla Sweep At Optimal Lambda"
     compute_hessian: bool = False
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, experiment_name,compute_hessian)
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon, experiment_name,compute_hessian)
     return experiment
 experiment = get_default_experiment()
 
@@ -87,7 +88,7 @@ with open(experiment_filename,"w") as f:
     # now write it
     f.write(json_string)
 
-logger.info(f"Succesfully saved experiment to {experiment_filename}. You can run it even though we did not recreate the data_model!")
+logger.info(f"Succesfully saved experiment to {experiment_filename}. You can run it even if we did not recreate the data_model!")
 
 # # Start the MPI
 # import subprocess

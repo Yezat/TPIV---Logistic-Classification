@@ -93,8 +93,31 @@ def get_optimal_lambda(logger,task, data_model):
     return result
 
 
+def minimize_epsilon(logger, task, data_model):
+
+    state_evolution_info = run_state_evolution(logger, task, data_model)
+
+    total_calibration = np.abs(np.array(state_evolution_info.calibrations.calibrations)).sum()
+
+    logger.info(f"Absolute integrated calibration for epsilon {task.epsilon} is {total_calibration}")
+    return total_calibration
+
 def get_optimal_epsilon(logger, task, data_model):
-    raise NotImplementedError("This function is not implemented yet")
+    
+    ps = np.linspace(0.01,0.99,1000)
+    task.ps = ps
+
+    def minimize(e):
+        task.epsilon = e
+        return minimize_epsilon(logger,task,data_model)
+
+    res = minimize_scalar(lambda e : minimize(e),method="bounded", bounds=[0,10.0],options={'xatol': 1e-4,'maxiter':200})
+    logger.info(f"Minimized success: {res.success}; Message: {res.message}")
+    if not res.success:
+        raise Exception("Optimization of epsilon failed " + str(res.message))
+    result = OptimalEpsilonResult(task.alpha, res.x, task.tau, task.lam, data_model.model_type, data_model.name)
+    return result
+
 
 # Define a function to process a task
 def process_task(task, logger, data_model):
@@ -197,12 +220,16 @@ def master(num_processes, logger, experiment):
             # if that is the case, for each tau and lambda, compute the optimal epsilon
             for tau in experiment.taus:
                 for lam in experiment.lambdas:
-                    tasks.append(Task(idx,experiment_id,"optimal_epsilon",alpha,0,lam,tau,experiment.d,None,None, experiment.data_model_type))
+                    tasks.append(Task(idx,experiment_id,"optimal_epsilon",alpha,0,0,lam,tau,experiment.d,None,None, experiment.data_model_type))
                     idx += 1
         else:
             for epsilon in experiment.epsilons:
                 for tau in experiment.taus:
                     
+                    test_against_epsilon = epsilon
+                    if experiment.test_against_largest_epsilon:
+                        test_against_epsilon = np.max(experiment.epsilons)
+
                     if ExperimentType.OptimalLambda == experiment.experiment_type:
                         
                         
@@ -211,7 +238,7 @@ def master(num_processes, logger, experiment):
                         initial_lambda = 1
 
                         if not optimal_result.get_key() in optimal_lambdas.keys():
-                            tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                            tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                             idx += 1
                         
                     else: 
@@ -233,11 +260,11 @@ def master(num_processes, logger, experiment):
                         for lam in lambdas:                    
 
                             for _ in range(experiment.state_evolution_repetitions):
-                                tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
+                                tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
                                 idx += 1
 
                             for _ in range(experiment.erm_repetitions):
-                                tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                                tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                                 idx += 1
 
     # Initialize the progress bar
@@ -305,7 +332,7 @@ def master(num_processes, logger, experiment):
     end = time.time()
     duration = end - start
     logger.info("Experiment took %d seconds", duration)
-    if experiment.experiment_type == ExperimentType.Sweep:
+    if experiment.experiment_type == ExperimentType.Sweep or experiment.experiment_type == ExperimentType.SweepAtOptimalLambda:
         with DatabaseHandler(logger) as db:
             db.complete_experiment(experiment_id, duration)
     logger.info("Done")

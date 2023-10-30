@@ -101,12 +101,13 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
 
 
 class Task:
-    def __init__(self, id, experiment_id, method, alpha, epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, compute_hessian: bool = False):
+    def __init__(self, id, experiment_id, method, alpha, epsilon, test_against_epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, compute_hessian: bool = False):
         self.id = id
         self.experiment_id = experiment_id
         self.method = method
         self.alpha = alpha
         self.epsilon = epsilon
+        self.test_against_epsilon = test_against_epsilon
         self.lam = lam
         self.tau = tau
         self.d = d
@@ -118,7 +119,7 @@ class Task:
         self.compute_hessian: bool = compute_hessian
 
     def __str__(self):
-        return f"Task {self.id} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
+        return f"Task {self.id} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, test_against_epsilon={self.test_against_epsilon}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
 
 
 """
