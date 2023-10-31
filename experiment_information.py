@@ -1,5 +1,5 @@
-from gradient_descent import pure_training_loss, min_eigenvalue_hessian, compute_experimental_teacher_calibration
-from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error, overlap_calibration, test_loss_overlaps
+from gradient_descent import pure_training_loss, min_eigenvalue_hessian, compute_experimental_teacher_calibration, robustness_student, robustness_teacher
+from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error, overlap_calibration, test_loss_overlaps, robustness_overlaps, robustness_overlaps_teacher
 from helpers import *
 from gradient_descent import predict_erm, error, adversarial_error
 import numpy as np
@@ -19,6 +19,7 @@ class ExperimentType(Enum):
     OptimalLambda = 1
     SweepAtOptimalLambda = 2
     OptimalEpsilon = 3
+    OptimalLambdaAdversarialTestError = 4
 
 class ExperimentInformation:
     def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_largest_epsilon: bool, experiment_name: str = "", compute_hessian: bool = False):
@@ -134,7 +135,9 @@ class StateEvolutionExperimentInformation:
         self.N : float = overlaps.N
         self.A_hat : float = overlaps.A_hat
         self.N_hat : float = overlaps.N_hat
-        self.test_loss: float = test_loss_overlaps(overlaps.m,overlaps.q,data_model.rho,task.tau,overlaps.sigma,task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
+        self.test_loss: float = test_loss_overlaps(overlaps.m,overlaps.q,data_model.rho,task.tau,overlaps.sigma, task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
+        self.student_robustness: float = robustness_overlaps(overlaps.m, overlaps.q, data_model.rho, task.tau, task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
+        self.teacher_robustness: float = robustness_overlaps_teacher(overlaps, data_model.rho, task.tau, task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
 
 class ERMExperimentInformation:
     def __init__(self, task, data_model, data: DataSet, weights):
@@ -183,8 +186,7 @@ class ERMExperimentInformation:
         self.N: float = weights.dot(weights) / task.d
 
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, task.tau)
-        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,
-        self.rho,task.tau,task.test_against_epsilon * self.A / np.sqrt(self.N))
+        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,task.tau,task.test_against_epsilon * self.A / np.sqrt(self.N))
         yhat_gd_train = predict_erm(data.X,weights)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = "sklearn"
@@ -199,6 +201,9 @@ class ERMExperimentInformation:
         self.erm_calibrations: CalibrationResults = erm_calibrations_result
 
         self.test_loss: float = pure_training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_delta)
+
+        self.student_robustness: float = robustness_student(weights, data.X_test, data.y_test, task.test_against_epsilon, data_model.Sigma_delta)
+        self.teacher_robustness: float = robustness_teacher(weights, data.theta, data.X_test, data.y_test, task.test_against_epsilon, data_model.Sigma_delta)
         
         if task.compute_hessian:
             self.test_set_min_eigenvalue_hessian = min_eigenvalue_hessian(data.X_test,data.y_test,weights,task.epsilon,task.lam,data_model.Sigma_w)
@@ -271,7 +276,9 @@ class DatabaseHandler:
                     N REAL,
                     A_hat REAL,
                     N_hat REAL,
-                    test_loss REAL
+                    test_loss REAL,
+                    student_robustness REAL,
+                    teacher_robustness REAL
                 )
             ''')
             self.connection.commit()
@@ -337,6 +344,8 @@ class DatabaseHandler:
                     test_loss REAL,
                     A REAL,
                     N REAL,
+                    student_robustness REAL,
+                    teacher_robustness REAL,
                     Test_set_min_eigenvalue_hessian REAL,
                     Test_set_min_eigenvalue_hessian_teacher_weights REAL,
                     Train_set_min_eigenvalue_hessian REAL,
@@ -378,7 +387,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -413,7 +422,9 @@ class DatabaseHandler:
             experiment_information.N,
             experiment_information.A_hat,
             experiment_information.N_hat,
-            experiment_information.test_loss
+            experiment_information.test_loss,
+            experiment_information.student_robustness,
+            experiment_information.teacher_robustness
         ))
         self.connection.commit()
 
@@ -437,7 +448,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -466,6 +477,8 @@ class DatabaseHandler:
             experiment_information.test_loss,
             experiment_information.A,
             experiment_information.N,
+            experiment_information.student_robustness,
+            experiment_information.teacher_robustness,
             experiment_information.test_set_min_eigenvalue_hessian,
             experiment_information.test_set_min_eigenvalue_hessian_teacher_weights,
             experiment_information.train_set_min_eigenvalue_hessian,

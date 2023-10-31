@@ -69,7 +69,12 @@ def minimizer_lambda(logger, task, data_model, lam):
     """
     task.lam = lam
     overlaps = fixed_point_finder(logger, data_model, task, log=False)
-    gen_error =  generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
+
+    if task.method == "optimal_lambda":
+        gen_error =  generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
+    elif task.method == "optimal_adversarial_lambda":
+        gen_error = adversarial_generalization_error_logistic(overlaps.m,overlaps.q, data_model.rho, task.tau, task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N))
+
     logger.info(f"Generalization error for lambda {task.lam} is {gen_error}")
     return gen_error
 
@@ -89,7 +94,10 @@ def get_optimal_lambda(logger,task, data_model):
     experiment_duration = end-start
 
     logger.info(f"Finished optimal lambda {task} in {experiment_duration} seconds - optimal lambda is {res.x}")
-    result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name)
+    if task.method == "optimal_lambda":
+        result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name)
+    elif task.method == "optimal_adversarial_lambda":
+        result = OptimalAdversarialLambdaResult(task.alpha, task.epsilon, task.test_against_epsilon, task.tau, res.x,data_model.model_type, data_model.name)
     return result
 
 
@@ -128,7 +136,7 @@ def process_task(task, logger, data_model):
 
         if task.method == "state_evolution":
             task.result = run_state_evolution(logger,task, data_model)
-        elif task.method == "optimal_lambda":
+        elif task.method == "optimal_lambda" or task.method == "optimal_adversarial_lambda":
             task.result = get_optimal_lambda(logger,task, data_model)
         elif task.method == "optimal_epsilon":
             task.result = get_optimal_epsilon(logger, task, data_model)
@@ -209,6 +217,9 @@ def master(num_processes, logger, experiment):
     dummy_optimal_result = OptimalLambdaResult(0,0,0,0,None,None)
     # load the optimal lambdas from the csv file
     optimal_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
+    
+    dummy_optimal_result = OptimalAdversarialLambdaResult(0,0,0,0,0,None,None)
+    optimal_adversarial_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
 
     # iterate all the parameters and create process objects for each parameter
     idx = 1
@@ -240,6 +251,16 @@ def master(num_processes, logger, experiment):
                         if not optimal_result.get_key() in optimal_lambdas.keys():
                             tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                             idx += 1
+
+                    if ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
+                        optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,test_against_epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+
+                        initial_lambda = 1
+
+                        if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
+                            tasks.append(Task(idx,experiment_id,"optimal_adversarial_lambda",alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                            idx += 1
+
                         
                     else: 
                         lambdas = experiment.lambdas
@@ -303,7 +324,7 @@ def master(num_processes, logger, experiment):
             if task.method == "state_evolution":
                 with DatabaseHandler(logger) as db:
                     db.insert_state_evolution(result)
-            elif task.method == "optimal_lambda":
+            elif task.method == "optimal_lambda" or task.method == "optimal_adversarial_lambda":
                 append_object_to_csv(result)
             elif task.method == "optimal_epsilon":
                 append_object_to_csv(result)

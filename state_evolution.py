@@ -308,6 +308,52 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho: float, ta
     return (Iplus + Iminus) * 0.5
 
 
+def robustness_overlaps(m: float, q: float, rho: float, tau: float, epsilon_term: float, int_lims: float = 20.0):
+    def integrand(xi, y):
+        e = m * m / (rho * q)
+        w_0 = np.sqrt(rho*e) * xi
+        V_0 = rho * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+        w = np.sqrt(q) * xi
+
+
+        attacked_activation = np.sign(w - y*epsilon_term)
+        activation = np.sign(w)
+
+        return z_0 * gaussian(xi) * (activation == attacked_activation)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    return (Iplus + Iminus) * 0.5
+
+
+def robustness_overlaps_teacher(overlaps, rho: float, tau: float, epsilon_term: float, int_lims: float = 20.0):
+    def integrand(xi, y):
+        e = overlaps.m * overlaps.m / (rho * overlaps.q)
+        w_0 = np.sqrt(rho*e) * xi
+        V_0 = rho * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+        w = np.sqrt(overlaps.q) * xi
+
+
+        attacked_activation = np.sign(w - y*epsilon_term)
+        
+
+        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon_term,w)
+
+        activation = np.sign(proximal)
+
+        return z_0 * gaussian(xi) * (y == attacked_activation)
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    return (Iplus + Iminus) * 0.5
+
+
 def test_loss_overlaps(m: float, q: float, rho: float, tau: float, sigma: float, epsilon_term: float, int_lims: float = 20.0):
     def integrand(xi, y):
         e = m * m / (rho * q)

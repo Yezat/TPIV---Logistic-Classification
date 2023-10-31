@@ -1,0 +1,7 @@
+alpha,epsilon,test_epsilon,tau,lambda,data_model_type,data_model_name
+0.50000000,0.60000000,0.60000000,0.00000000,-1.02272060,VanillaGaussian,VanillaGaussian
+0.50000000,0.00000000,0.60000000,0.00000000,0.04477271,VanillaGaussian,VanillaGaussian
+2.00000000,0.00000000,0.60000000,0.00000000,0.01626676,VanillaGaussian,VanillaGaussian
+2.00000000,0.60000000,0.60000000,0.00000000,-1.25169548,VanillaGaussian,VanillaGaussian
+10.00000000,0.00000000,0.60000000,0.00000000,-0.82880854,VanillaGaussian,VanillaGaussian
+10.00000000,0.60000000,0.60000000,0.00000000,-2.76076313,VanillaGaussian,VanillaGaussian
