@@ -75,6 +75,8 @@ class ExperimentInformation:
             data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         elif self.data_model_type == DataModelType.SourceCapacity:
             data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
+        elif self.data_model_type == DataModelType.MarginGaussian:
+            data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
         return data_model
