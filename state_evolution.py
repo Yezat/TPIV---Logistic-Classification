@@ -1,11 +1,10 @@
 import numpy as np
 from typing import Tuple
 from scipy.integrate import quad
-from scipy.special import erfc
+from scipy.special import erfc, erf, logit, owens_t
 from helpers import *
 from data_model import *
 from scipy.optimize import root_scalar
-from scipy.special import logit
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -307,6 +306,102 @@ def adversarial_generalization_error_logistic(m: float, q: float, rho: float, ta
     Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
     return (Iplus + Iminus) * 0.5
 
+def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
+    # gen_error = generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
+
+    a = overlaps.m/np.sqrt((overlaps.q* data_model.rho - overlaps.m**2))
+
+    b = task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q)
+
+    owen = 2 * owens_t(a*b , 1/a)
+
+    erferfc = 0.5 * erf(b/np.sqrt(2)) * erfc(-a*b/np.sqrt(2))
+
+    # cot = np.arctan(-1/a)/np.pi
+
+    # print("owen",owen,"erferfc",erferfc,"cot",cot,"gen_error",gen_error)
+
+    gen_error = owen + erferfc 
+
+
+    # # let's try the crazy formula
+    # hat_ratio = 1 / (np.sqrt( data_model.rho - 1 + data_model.rho * overlaps.q_hat/overlaps.m_hat**2  ))
+
+    # # assert that hatm/sqrt(hatq) >= 0
+    # assert overlaps.m_hat / np.sqrt(overlaps.q_hat) >= 0, f"hat_ratio: {hat_ratio}, q_hat: {overlaps.q_hat}, m_hat: {overlaps.m_hat}, rho: {data_model.rho}"
+
+    # # assert a precision of 1e-3 between a and hat_ratio
+    # assert abs(a - hat_ratio) < 1e-3, f"a: {a}, hat_ratio: {hat_ratio}, q_hat: {overlaps.q_hat}, m_hat: {overlaps.m_hat}, rho: {data_model.rho}"
+
+
+    # alternative_2 =  0.5 + 0.5*erf(b/np.sqrt(2)) - 2 * owens_t( b, a)
+
+    # assert abs(gen_error - alternative_2) < 1e-15, f"gen_error: {gen_error}, alternative_2: {alternative_2}, m: {overlaps.m}, q: {overlaps.q}"
+
+
+
+    # # Let's code up A78 and see if it matches numerically the other expressions
+    # alternative_3 = np.arccos(overlaps.m / np.sqrt( data_model.rho * overlaps.q ))/np.pi
+
+    # def integrand(xi):
+    #     return np.exp(-xi**2/2) * erfc( - overlaps.m * xi / np.sqrt(2 * (overlaps.q * data_model.rho - overlaps.m**2) ) ) / np.sqrt(2*np.pi)
+
+    # alternative_3 += quad(integrand,0,task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q),limit=500)[0]
+
+    # assert abs(gen_error - alternative_3) < 1e-15, f"gen_error: {gen_error}, alternative_3: {alternative_3}, m: {overlaps.m}, q: {overlaps.q}"
+
+
+    # assert abs(alternative_2 - alternative_3) < 1e-15, f"alternative_2: {alternative_2}, alternative_3: {alternative_3}, m: {overlaps.m}, q: {overlaps.q}"
+
+    return gen_error
+
+def adversarial_generalization_error_overlaps_test(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
+
+    gen_error = generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
+
+    def solution(a,b):
+        r = -4*np.pi*np.sqrt(a**2)*owens_t(np.sqrt(2)*np.sqrt(a**2)*b,1/np.sqrt(a**2))
+        r += np.pi*a*erf(b)*erfc(a*b)
+        r += 2*a*np.arctan(1/a)
+        r /= 2*np.sqrt(np.pi)*a
+        return r
+
+    eg = task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q)
+
+    a = -overlaps.m / np.sqrt((overlaps.q* data_model.rho - overlaps.m**2))
+    b = eg/np.sqrt(2)
+    
+    gen_error += solution(a,b)/np.sqrt(np.pi)
+
+    return gen_error
+
+def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
+    def integrand(xi, y):
+        e = overlaps.m * overlaps.m / (data_model.rho * overlaps.q)
+        w_0 = np.sqrt(data_model.rho*e) * xi
+        V_0 = data_model.rho * (1-e)
+
+        z_0 = erfc((-y * w_0) / np.sqrt(2*(task.tau**2 + V_0)))
+        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+        w = np.sqrt(overlaps.q) * xi
+
+        epsilon_term = task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N)
+
+        activation = np.sign(w - y*epsilon_term)
+
+        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon_term,w)
+
+        teacher_activation = np.sign(proximal)
+
+        return z_0 * gaussian(xi) * (activation != teacher_activation)
+
+    int_lims = 20
+
+    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    return (Iplus + Iminus) * 0.5
+
+
 
 def robustness_overlaps(m: float, q: float, rho: float, tau: float, epsilon_term: float, int_lims: float = 20.0):
     def integrand(xi, y):
@@ -393,7 +488,7 @@ def overlap_calibration(rho,p,m,q_erm,tau, debug = False):
     tau: noise level
     """
     logi = logit(p)
-    m_q_ratio = m/(q_erm )
+    m_q_ratio = m/(q_erm)
 
     num = (logi )* m_q_ratio 
     if debug:

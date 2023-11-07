@@ -17,6 +17,7 @@ class DataModelType(Enum):
     SourceCapacity = 2
     RandomCovariate = 3
     MarginGaussian = 4
+    KFeaturesModel = 5
 
 class AbstractDataModel(ABC):
     """
@@ -228,6 +229,64 @@ class VanillaGaussianDataModel(AbstractDataModel):
         y_test = np.sign(X_test @ the  / np.sqrt(self.d) + tau * np.random.normal(0,1,(100000,)))
         return DataSet(X, y, X_test, y_test, the)
     
+
+class KFeaturesModel(AbstractDataModel):
+    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "", feature_sizes = np.array([2,998]), features = np.array([10,1]))->None:
+        """
+            k = len(feature_sizes)
+            feature_sizes = np.array([2,d-2]) # must sum to d and be of length k
+            features = np.array([100,1]) # must be of length k and contains the number of features for each feature size
+        """
+
+        self.model_type = DataModelType.KFeaturesModel
+        super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path, name=name,description=description)
+
+        if not self.loaded_from_pickle:
+
+            
+            k = len(feature_sizes)
+
+            self.theta = np.zeros(d)
+            for i in range(k):
+                self.theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features[i]
+
+
+            spec_Omega0 = self.theta**2
+            self.Sigma_x=np.diag(spec_Omega0)
+            
+
+            self.logger.info(f"features: {features}")
+            self.logger.info(f"feature_sizes: {feature_sizes}")
+            self.logger.info(f"theta: {self.theta}")
+            self.logger.info(f"Sigma_x: {self.Sigma_x}")
+
+
+            self.rho = np.mean(spec_Omega0* self.theta**2) 
+            self.PhiPhiT = np.diag( spec_Omega0**2 * self.theta**2)
+            self.Sigma_theta = np.diag(self.theta**2)
+
+            self.Sigma_w = Sigma_w
+            self.Sigma_delta = Sigma_delta
+            if self.Sigma_w is None:
+                self.Sigma_w = np.eye(self.d)
+            if self.Sigma_delta is None:
+                self.Sigma_delta = np.eye(self.d)
+
+            self._finish_initialization()
+
+
+    def generate_data(self, n, tau) -> DataSet:
+
+        X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
+        
+        y = np.sign(X @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))
+        
+        X_test = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, 10000, method="cholesky") 
+        y_test = np.sign(X_test @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
+
+        return DataSet(X, y, X_test, y_test, self.theta)
+    
+
 class SourceCapacityDataModel(AbstractDataModel):
     def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "")->None:
 
