@@ -26,11 +26,24 @@ data_model_description = "" # Don't remove this, the next definition is ment to 
 """
 d = 1000
 
-data_model_type = DataModelType.VanillaGaussian
-data_model_name = "VanillaGaussian"
-data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
-Sigma_w = np.eye(d)
-Sigma_delta = np.eye(d)
+# data_model_type = DataModelType.VanillaGaussian
+# data_model_name = "VanillaGaussian"
+# data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.eye(d)
+
+
+"""
+-------------------
+"""
+
+# data_model_type = DataModelType.MarginGaussian
+# data_model_name = "DirectedMarginGaussian"
+# data_model_description = "A Data-Model with Gaussian Mixtures with a certain margin towards the e1 teacher."
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.zeros((d,d))
+# Sigma_delta[0,0] = 1
+
 
 """
 -------------------
@@ -76,7 +89,16 @@ Sigma_delta = np.eye(d)
 # Sigma_delta = np.diag(np.zeros(d))
 # Sigma_delta[0,0] = 1
 
+"""
+-------------------
+"""
 
+
+data_model_type = DataModelType.KFeaturesModel
+# data_model_name = "KFeaturesModel_TwoStrongFeatures"
+data_model_description = "2 Strong Features (100) and 998 weak features (1)"
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
 
 experiment_filename = "sweep_experiment.json"
 
@@ -91,9 +113,9 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.array([0.5,2,10]) #np.linspace(0.1,10,15) #
+    alphas: np.ndarray = np.linspace(0.5,10.0,4) #np.linspace(0.1,10,15) #
     epsilons: np.ndarray = np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
-    lambdas: np.ndarray = np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
+    lambdas: np.ndarray = np.array([0.02,0.1,1,10]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = np.array([0.6,0.75,0.9]) 
     dp: float = 0.01
@@ -101,9 +123,9 @@ def get_default_experiment():
     alphas = np.round(alphas,4)
     epsilons = np.round(epsilons,4)
     lambdas = np.round(lambdas,4)
-    experiment_type: ExperimentType = ExperimentType.OptimalLambdaAdversarialTestError
+    experiment_type: ExperimentType = ExperimentType.Sweep
     test_against_largest_epsilon: bool = True
-    experiment_name: str = "Vanilla Gaussian Alpha Sweep Robustness Tests"
+    experiment_name: str = "2 Features Sweep Alpha"
     compute_hessian: bool = False
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon, experiment_name,compute_hessian)
     return experiment
@@ -125,7 +147,7 @@ try:
     experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=data_model_name, description=data_model_description)
 except Exception as e:
     # if you overwrite an existing data_model, you will get an exception. Still overwrite an experiment definition to ensure that you can run the experiment with the existing data_model.
-    logger.info(f"Exception {e} occured.")
+    logger.info(f"Exception '{e}' occured.")
 
 # use json dump to save the experiment parameters
 with open(experiment_filename,"w") as f:

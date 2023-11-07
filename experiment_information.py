@@ -1,5 +1,5 @@
-from gradient_descent import pure_training_loss, min_eigenvalue_hessian, compute_experimental_teacher_calibration, robustness_student, robustness_teacher
-from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error, overlap_calibration, test_loss_overlaps, robustness_overlaps, robustness_overlaps_teacher
+from gradient_descent import pure_training_loss, min_eigenvalue_hessian, compute_experimental_teacher_calibration, robustness_student, robustness_teacher, adversarial_error_teacher
+from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error, overlap_calibration, test_loss_overlaps, robustness_overlaps, robustness_overlaps_teacher, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher
 from helpers import *
 from gradient_descent import predict_erm, error, adversarial_error
 import numpy as np
@@ -75,6 +75,10 @@ class ExperimentInformation:
             data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         elif self.data_model_type == DataModelType.SourceCapacity:
             data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
+        elif self.data_model_type == DataModelType.MarginGaussian:
+            data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
+        elif self.data_model_type == DataModelType.KFeaturesModel:
+            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
         return data_model
@@ -106,7 +110,9 @@ class StateEvolutionExperimentInformation:
         self.duration: float = None
         self.experiment_id: str = task.experiment_id
         self.generalization_error: float = generalization_error(data_model.rho, overlaps.m, overlaps.q, task.tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N))
+        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N)) # TODO: this function should be deprecated, the function below should be used...
+        self.adversarial_generalization_error_overlaps: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
+        self.adversarial_generalization_error_overlaps_teacher: float = adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model)
         self.training_loss: float = pure_training_loss_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
         self.training_error: float = training_error_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -181,9 +187,20 @@ class ERMExperimentInformation:
         yhat_gd = predict_erm(data.X_test,weights)
         self.generalization_error_erm: float = error(data.y_test,yhat_gd)
         self.adversarial_generalization_error_erm: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_delta)
+        self.adversarial_generalization_error_erm_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model.Sigma_delta)
+        
 
         self.A: float = weights.dot(data_model.Sigma_delta @ weights) / task.d
         self.N: float = weights.dot(weights) / task.d
+
+        overlaps = OverlapSet()
+        overlaps.A = self.A
+        overlaps.N = self.N
+        overlaps.m = self.m
+        overlaps.q = self.Q
+
+
+        self.adversarial_generalization_error_erm_overlaps: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
 
         self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, task.tau)
         self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,task.tau,task.test_against_epsilon * self.A / np.sqrt(self.N))
@@ -248,6 +265,8 @@ class DatabaseHandler:
                     experiment_id TEXT,
                     generalization_error REAL,
                     adversarial_generalization_error REAL,
+                    adversarial_generalization_error_overlaps REAL,
+                    adversarial_generalization_error_overlaps_teacher REAL,
                     training_loss REAL,
                     training_error REAL,
                     date TEXT,
@@ -331,7 +350,9 @@ class DatabaseHandler:
                     generalization_error_erm REAL,
                     generalization_error_overlap REAL,
                     adversarial_generalization_error_erm REAL,
+                    adversarial_generalization_error_erm_teacher REAL,
                     adversarial_generalization_error_overlap REAL,
+                    adversarial_generalization_error_overlaps REAL,
                     date TEXT,
                     chosen_minimizer TEXT,
                     training_error REAL,
@@ -387,13 +408,15 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
             experiment_information.experiment_id,
             experiment_information.generalization_error,
             experiment_information.adversarial_generalization_error,
+            experiment_information.adversarial_generalization_error_overlaps,
+            experiment_information.adversarial_generalization_error_overlaps_teacher,
             experiment_information.training_loss,
             experiment_information.training_error,
             experiment_information.date,
@@ -448,7 +471,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -464,7 +487,9 @@ class DatabaseHandler:
             experiment_information.generalization_error_erm,
             experiment_information.generalization_error_overlap,
             experiment_information.adversarial_generalization_error_erm,
+            experiment_information.adversarial_generalization_error_erm_teacher,
             experiment_information.adversarial_generalization_error_overlap,
+            experiment_information.adversarial_generalization_error_erm_overlaps,
             experiment_information.date,
             experiment_information.chosen_minimizer,
             experiment_information.training_error,
