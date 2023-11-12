@@ -1,7 +1,7 @@
-from gradient_descent import pure_training_loss, min_eigenvalue_hessian, compute_experimental_teacher_calibration, robustness_student, robustness_teacher, adversarial_error_teacher
+from ERM import compute_experimental_teacher_calibration, robustness_student, robustness_teacher, adversarial_error_teacher
 from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error, overlap_calibration, test_loss_overlaps, robustness_overlaps, robustness_overlaps_teacher, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher
 from helpers import *
-from gradient_descent import predict_erm, error, adversarial_error
+from ERM import predict_erm, error, adversarial_error
 import numpy as np
 from _version import __version__
 from typing import Tuple
@@ -21,8 +21,10 @@ class ExperimentType(Enum):
     OptimalEpsilon = 3
     OptimalLambdaAdversarialTestError = 4
 
+
+
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_largest_epsilon: bool, experiment_name: str = "", compute_hessian: bool = False):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_largest_epsilon: bool, problem_types: list[ProblemType], experiment_name: str = "", compute_hessian: bool = False):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -44,6 +46,7 @@ class ExperimentInformation:
         self.data_model_name: str = data_model_name
         self.data_model_description: str = data_model_description
         self.compute_hessian: bool = compute_hessian
+        self.problem_types: list[ProblemType] = problem_types
 
     @classmethod
     def fromdict(cls, d):
@@ -54,7 +57,7 @@ class ExperimentInformation:
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
     
-    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, name: str = "", description: str = ""):
+    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, name: str = "", description: str = "", feature_sizes: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None):
         """
         Instantiates a data model of the type specified in self.data_model_type and stores it to source_pickle_path,
         custom student prior covariances and adversarial training covariances can be specified
@@ -78,7 +81,7 @@ class ExperimentInformation:
         elif self.data_model_type == DataModelType.MarginGaussian:
             data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         elif self.data_model_type == DataModelType.KFeaturesModel:
-            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
+            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description, feature_sizes = feature_sizes, features_x = features_x, features_theta = features_theta)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
         return data_model
@@ -105,6 +108,7 @@ class StateEvolutionExperimentInformation:
                 calibrations.append(overlap_calibration(data_model.rho,p,overlaps.m,overlaps.q,task.tau))
         calibration_results = CalibrationResults(task.ps,calibrations,None)
 
+        self.problem_type: ProblemType = task.problem_type
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
         self.duration: float = None
@@ -146,7 +150,9 @@ class StateEvolutionExperimentInformation:
         self.teacher_robustness: float = robustness_overlaps_teacher(overlaps, data_model.rho, task.tau, task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
 
 class ERMExperimentInformation:
-    def __init__(self, task, data_model, data: DataSet, weights):
+    def __init__(self, task, data_model, data: DataSet, weights, problem_instance):
+
+        # TODO: implement obtaining all the observables through the problem_instance (wherever necessary e.g. loss, but maybe not for gen error)
 
         # let's calculate the calibration
         analytical_calibrations = []
@@ -161,10 +167,11 @@ class ERMExperimentInformation:
             self.rho: float = data.theta.dot(data_model.Sigma_x@data.theta) / task.d
 
             # We cannot compute the calibration if we don't know the ground truth.    
-            for p in task.ps:
-            
-                analytical_calibrations.append(overlap_calibration(data_model.rho,p,self.m,self.Q,task.tau))        
-                erm_calibrations.append(compute_experimental_teacher_calibration(p,data.theta,weights,data.X_test,task.tau))
+            if task.ps is not None:
+                for p in task.ps:
+                
+                    analytical_calibrations.append(overlap_calibration(data_model.rho,p,self.m,self.Q,task.tau))        
+                    erm_calibrations.append(compute_experimental_teacher_calibration(p,data.theta,weights,data.X_test,task.tau))
         else:
             self.rho: float = data_model.rho
             self.m: float = None
@@ -172,6 +179,7 @@ class ERMExperimentInformation:
         analytical_calibrations_result = CalibrationResults(task.ps,analytical_calibrations,None)
         erm_calibrations_result = CalibrationResults(task.ps,erm_calibrations,task.dp)
 
+        self.problem_type: ProblemType = task.problem_type
         self.id: str = str(uuid.uuid4())
         self.duration : float = None
         self.code_version: str = __version__
@@ -208,7 +216,7 @@ class ERMExperimentInformation:
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = "sklearn"
         self.training_error: float = error(data.y,yhat_gd_train)
-        self.training_loss: float = pure_training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)
+        self.training_loss: float = problem_instance.training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)
         self.d: int = task.d
         self.tau: float = task.tau
         self.alpha: float = n/task.d
@@ -217,21 +225,16 @@ class ERMExperimentInformation:
         self.analytical_calibrations: CalibrationResults = analytical_calibrations_result
         self.erm_calibrations: CalibrationResults = erm_calibrations_result
 
-        self.test_loss: float = pure_training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_delta)
+        self.test_loss: float = problem_instance.training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_delta)
 
         self.student_robustness: float = robustness_student(weights, data.X_test, data.y_test, task.test_against_epsilon, data_model.Sigma_delta)
         self.teacher_robustness: float = robustness_teacher(weights, data.theta, data.X_test, data.y_test, task.test_against_epsilon, data_model.Sigma_delta)
         
-        if task.compute_hessian:
-            self.test_set_min_eigenvalue_hessian = min_eigenvalue_hessian(data.X_test,data.y_test,weights,task.epsilon,task.lam,data_model.Sigma_w)
-            self.test_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(data.X_test,data.y_test,data.theta,task.epsilon,task.lam,data_model.Sigma_w)
-            self.train_set_min_eigenvalue_hessian = min_eigenvalue_hessian(data.X,data.y,weights,task.epsilon,task.lam,data_model.Sigma_w)
-            self.train_set_min_eigenvalue_hessian_teacher_weights = min_eigenvalue_hessian(data.X,data.y,data.theta,task.epsilon,task.lam,data_model.Sigma_w)
-        else:
-            self.test_set_min_eigenvalue_hessian = None
-            self.test_set_min_eigenvalue_hessian_teacher_weights = None
-            self.train_set_min_eigenvalue_hessian = None
-            self.train_set_min_eigenvalue_hessian_teacher_weights = None
+
+        self.test_set_min_eigenvalue_hessian = None
+        self.test_set_min_eigenvalue_hessian_teacher_weights = None
+        self.train_set_min_eigenvalue_hessian = None
+        self.train_set_min_eigenvalue_hessian_teacher_weights = None
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
@@ -262,6 +265,7 @@ class DatabaseHandler:
                     id TEXT PRIMARY KEY,
                     code_version TEXT,
                     duration REAL,
+                    problem_type TEXT,
                     experiment_id TEXT,
                     generalization_error REAL,
                     adversarial_generalization_error REAL,
@@ -310,6 +314,7 @@ class DatabaseHandler:
                 experiment_id TEXT PRIMARY KEY,
                 experiment_name TEXT,
                 duration REAL,
+                problem_types TEXT,
                 code_version TEXT,
                 date TEXT,
                 state_evolution_repetitions INTEGER,
@@ -338,6 +343,7 @@ class DatabaseHandler:
                 CREATE TABLE {ERM_TABLE} (
                     id TEXT PRIMARY KEY,
                     duration REAL,
+                    problem_type TEXT,
                     code_version TEXT,
                     experiment_id TEXT,
                     Q REAL,
@@ -378,10 +384,11 @@ class DatabaseHandler:
     def insert_experiment(self, experiment_information: ExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
             experiment_information.experiment_name,
             experiment_information.duration,
+            json.dumps([problem_type.name for problem_type in experiment_information.problem_types], cls=NumpyEncoder),
             experiment_information.code_version,
             experiment_information.date,
             experiment_information.state_evolution_repetitions,
@@ -408,10 +415,11 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
+            experiment_information.problem_type.name,
             experiment_information.experiment_id,
             experiment_information.generalization_error,
             experiment_information.adversarial_generalization_error,
@@ -471,10 +479,11 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
+            experiment_information.problem_type.name,
             experiment_information.code_version,
             experiment_information.experiment_id,
             experiment_information.Q,
@@ -592,5 +601,27 @@ class NumpyDecoder(json.JSONDecoder):
 
             # Replace the string value with the enumeration type
             obj['experiment_type'] = experiment_type
+
+        # check if the 'problem_types' field is present in the object
+        if 'problem_types' in obj:
+            # Get the value of 'problem_types'
+            problem_types_str = obj['problem_types']
+
+            # Map the string value to the enumeration type
+            problem_types = [ProblemType[problem_type_str] for problem_type_str in problem_types_str]
+
+            # Replace the string value with the enumeration type
+            obj['problem_types'] = problem_types
+
+        # check if the 'problem_type' field is present in the object
+        if 'problem_type' in obj:
+            # Get the value of 'problem_type'
+            problem_type_str = obj['problem_type']
+
+            # Map the string value to the enumeration type
+            problem_type = ProblemType[problem_type_str]
+
+            # Replace the string value with the enumeration type
+            obj['problem_type'] = problem_type
 
         return obj

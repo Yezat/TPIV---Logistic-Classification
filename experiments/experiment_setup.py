@@ -5,7 +5,7 @@ currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentfram
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 from data_model import DataModelType
-from experiment_information import NumpyEncoder, ExperimentInformation, ExperimentType
+from experiment_information import NumpyEncoder, ExperimentInformation, ExperimentType, ProblemType
 import json
 import numpy as np
 from helpers import *
@@ -18,6 +18,10 @@ logger.setLevel(logging.INFO)
 
 data_model_name = ""
 data_model_description = "" # Don't remove this, the next definition is ment to be commented out...
+
+feature_sizes = None
+features_x = None
+features_theta = None
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -95,8 +99,11 @@ d = 1000
 
 
 data_model_type = DataModelType.KFeaturesModel
-# data_model_name = "KFeaturesModel_TwoStrongFeatures"
-data_model_description = "2 Strong Features (100) and 998 weak features (1)"
+feature_sizes = np.array([100,900])
+features_x = np.array([2,1])
+features_theta = np.array([1,1])
+data_model_name = f"KFeaturesModel_TwoStrongFeatures_{feature_sizes}_{features_x}_{features_theta}"
+data_model_description = "2 Strong Features (100) and 900 weak features (1)"
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
 
@@ -113,11 +120,11 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.5,10.0,4) #np.linspace(0.1,10,15) #
-    epsilons: np.ndarray = np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
-    lambdas: np.ndarray = np.array([0.02,0.1,1,10]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
+    alphas: np.ndarray = np.linspace(0.5,7.0,4) #np.linspace(0.1,10,15) #
+    epsilons: np.ndarray = np.array([0,0.5]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+    lambdas: np.ndarray = np.array([0.01]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
-    ps: np.ndarray = np.array([0.6,0.75,0.9]) 
+    ps: np.ndarray = None # np.array([0.6,0.75,0.9]) 
     dp: float = 0.01
     # round the lambdas, epsilons and alphas for 4 digits
     alphas = np.round(alphas,4)
@@ -125,9 +132,10 @@ def get_default_experiment():
     lambdas = np.round(lambdas,4)
     experiment_type: ExperimentType = ExperimentType.Sweep
     test_against_largest_epsilon: bool = True
-    experiment_name: str = "2 Features Sweep Alpha"
+    experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
     compute_hessian: bool = False
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon, experiment_name,compute_hessian)
+    problem_types: list[ProblemType] = [ProblemType.Ridge]
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon,problem_types, experiment_name,compute_hessian)
     return experiment
 experiment = get_default_experiment()
 
@@ -141,10 +149,9 @@ logger.info(f"Experiment: {experiment}")
 """
 
 
-
 try:
     # Force a creation of a new data_model
-    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=data_model_name, description=data_model_description)
+    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=data_model_name, description=data_model_description, feature_sizes=feature_sizes, features_x=features_x, features_theta=features_theta)
 except Exception as e:
     # if you overwrite an existing data_model, you will get an exception. Still overwrite an experiment definition to ensure that you can run the experiment with the existing data_model.
     logger.info(f"Exception '{e}' occured.")

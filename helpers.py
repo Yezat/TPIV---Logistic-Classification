@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.special import erfc
+from enum import Enum
 from data_model import DataModelType
 import os
-
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -99,9 +99,12 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
 """
 
 
+class ProblemType(Enum):
+    Logistic = 0
+    Ridge = 1
 
 class Task:
-    def __init__(self, id, experiment_id, method, alpha, epsilon, test_against_epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, compute_hessian: bool = False):
+    def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, compute_hessian: bool = False):
         self.id = id
         self.experiment_id = experiment_id
         self.method = method
@@ -117,9 +120,10 @@ class Task:
         self.dp = dp
         self.data_model_type: DataModelType = data_model_type
         self.compute_hessian: bool = compute_hessian
+        self.problem_type: ProblemType = problem_type
 
     def __str__(self):
-        return f"Task {self.id} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, test_against_epsilon={self.test_against_epsilon}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
+        return f"Task {self.id} on {self.problem_type.name} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, test_against_epsilon={self.test_against_epsilon}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
 
 
 """

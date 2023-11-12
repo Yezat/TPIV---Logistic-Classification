@@ -231,12 +231,20 @@ class VanillaGaussianDataModel(AbstractDataModel):
     
 
 class KFeaturesModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "", feature_sizes = np.array([2,998]), features = np.array([10,1]))->None:
+    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "", feature_sizes = None, features_x =None, features_theta = None)->None:
         """
             k = len(feature_sizes)
             feature_sizes = np.array([2,d-2]) # must sum to d and be of length k
-            features = np.array([100,1]) # must be of length k and contains the number of features for each feature size
+            features_x = np.array([100,1]) # must be of length k and contains each features size for the data covariance X
+            features_theta = np.array([1,1]) # must be of length k and contains each features size for the teacher prior
         """
+    
+        if feature_sizes is None:
+            feature_sizes = np.array([1,999])
+        if features_x is None:
+            features_x = np.array([10,1])
+        if features_theta is None:
+            features_theta = np.array([1,1])
 
         self.model_type = DataModelType.KFeaturesModel
         super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path, name=name,description=description)
@@ -247,19 +255,18 @@ class KFeaturesModel(AbstractDataModel):
             k = len(feature_sizes)
 
             self.theta = np.zeros(d)
+            spec_Omega0 = np.zeros(d)
             for i in range(k):
-                self.theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features[i]
-
-
-            spec_Omega0 = self.theta**2
+                self.theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_theta[i]
+                spec_Omega0[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_x[i]
             self.Sigma_x=np.diag(spec_Omega0)
             
+            self.theta = np.ones(d)
 
-            self.logger.info(f"features: {features}")
             self.logger.info(f"feature_sizes: {feature_sizes}")
             self.logger.info(f"theta: {self.theta}")
             self.logger.info(f"Sigma_x: {self.Sigma_x}")
-
+            self.logger.info(f"Sigma_delta: {Sigma_delta}")
 
             self.rho = np.mean(spec_Omega0* self.theta**2) 
             self.PhiPhiT = np.diag( spec_Omega0**2 * self.theta**2)

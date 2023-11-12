@@ -12,7 +12,7 @@ sys.path.insert(0, parentdir)
 from _version import __version__
 from experiment_information import *
 from state_evolution import overlap_calibration, fixed_point_finder
-from gradient_descent import sklearn_optimize, compute_experimental_teacher_calibration, run_optimizer
+from ERM import compute_experimental_teacher_calibration, run_optimizer
 from data_model import *
 from helpers import Task
 from scipy.optimize import minimize_scalar
@@ -29,9 +29,9 @@ def run_erm(logger, task, data_model):
 
     data = data_model.generate_data(int(task.alpha * task.d), task.tau)
 
-    weights_erm = run_optimizer(task, data_model, data, logger)
+    weights_erm, problem_instance = run_optimizer(task, data_model, data, logger)
     
-    erm_information = ERMExperimentInformation(task, data_model, data, weights_erm)
+    erm_information = ERMExperimentInformation(task, data_model, data, weights_erm, problem_instance)
 
     end = time.time()
     erm_information.duration = end - start
@@ -223,70 +223,69 @@ def master(num_processes, logger, experiment):
 
     # iterate all the parameters and create process objects for each parameter
     idx = 1
-    for alpha in experiment.alphas:
+    for problem in experiment.problem_types:
+        for alpha in experiment.alphas:  
 
-        
-
-        if ExperimentType.OptimalEpsilon == experiment.experiment_type:
-            # if that is the case, for each tau and lambda, compute the optimal epsilon
-            for tau in experiment.taus:
-                for lam in experiment.lambdas:
-                    tasks.append(Task(idx,experiment_id,"optimal_epsilon",alpha,0,0,lam,tau,experiment.d,None,None, experiment.data_model_type))
-                    idx += 1
-        else:
-            for epsilon in experiment.epsilons:
+            if ExperimentType.OptimalEpsilon == experiment.experiment_type:
+                # if that is the case, for each tau and lambda, compute the optimal epsilon
                 for tau in experiment.taus:
-                    
-                    test_against_epsilon = epsilon
-                    if experiment.test_against_largest_epsilon:
-                        test_against_epsilon = np.max(experiment.epsilons)
-
-                    if ExperimentType.OptimalLambda == experiment.experiment_type:
+                    for lam in experiment.lambdas:
+                        tasks.append(Task(idx,experiment_id,"optimal_epsilon",problem,alpha,0,0,lam,tau,experiment.d,None,None, experiment.data_model_type))
+                        idx += 1
+            else:
+                for epsilon in experiment.epsilons:
+                    for tau in experiment.taus:
                         
-                        
-                        optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+                        test_against_epsilon = epsilon
+                        if experiment.test_against_largest_epsilon:
+                            test_against_epsilon = np.max(experiment.epsilons)
 
-                        initial_lambda = 1
-
-                        if not optimal_result.get_key() in optimal_lambdas.keys():
-                            tasks.append(Task(idx,experiment_id,"optimal_lambda",alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
-                            idx += 1
-
-                    if ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
-                        optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,test_against_epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
-
-                        initial_lambda = 1
-
-                        if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
-                            tasks.append(Task(idx,experiment_id,"optimal_adversarial_lambda",alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
-                            idx += 1
-
-                        
-                    else: 
-                        lambdas = experiment.lambdas
-                        if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
-
+                        if ExperimentType.OptimalLambda == experiment.experiment_type:
+                            
+                            
                             optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
 
+                            initial_lambda = 1
+
                             if not optimal_result.get_key() in optimal_lambdas.keys():
-                                logger.info(f"The key is '{optimal_result.get_key()}'")
-                                # logger.info(f"{optimal_lambdas.keys()}")
-                                # log all keys of optimal_lambdas
-                                for key in optimal_lambdas.keys():
-                                    logger.info(f"Key: '{key}'")
-                                raise Exception("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda")
-
-                            lambdas = [optimal_lambdas[optimal_result.get_key()]]
-                    
-                        for lam in lambdas:                    
-
-                            for _ in range(experiment.state_evolution_repetitions):
-                                tasks.append(Task(idx,experiment_id,"state_evolution",alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
+                                tasks.append(Task(idx,experiment_id,"optimal_lambda",problem,alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                                 idx += 1
 
-                            for _ in range(experiment.erm_repetitions):
-                                tasks.append(Task(idx,experiment_id,"sklearn",alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                        if ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
+                            optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,test_against_epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+
+                            initial_lambda = 1
+
+                            if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
+                                tasks.append(Task(idx,experiment_id,"optimal_adversarial_lambda",problem,alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                                 idx += 1
+
+                            
+                        else: 
+                            lambdas = experiment.lambdas
+                            if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
+
+                                optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+
+                                if not optimal_result.get_key() in optimal_lambdas.keys():
+                                    logger.info(f"The key is '{optimal_result.get_key()}'")
+                                    # logger.info(f"{optimal_lambdas.keys()}")
+                                    # log all keys of optimal_lambdas
+                                    for key in optimal_lambdas.keys():
+                                        logger.info(f"Key: '{key}'")
+                                    raise Exception("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda")
+
+                                lambdas = [optimal_lambdas[optimal_result.get_key()]]
+                        
+                            for lam in lambdas:                    
+
+                                for _ in range(experiment.state_evolution_repetitions):
+                                    tasks.append(Task(idx,experiment_id,"state_evolution",problem,alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type))
+                                    idx += 1
+
+                                for _ in range(experiment.erm_repetitions):
+                                    tasks.append(Task(idx,experiment_id,"sklearn",problem,alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
+                                    idx += 1
 
     # Initialize the progress bar
     pbar = tqdm(total=len(tasks))
