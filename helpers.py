@@ -133,26 +133,27 @@ class Task:
 """
 
 class OptimalLambdaResult():
-    def __init__(self, alpha, epsilon, tau, optimal_lambda, data_model_type, data_model_name):
+    def __init__(self, alpha, epsilon, tau, optimal_lambda, data_model_type, data_model_name,problem_type):
         self.alpha = alpha
         self.epsilon = epsilon
         self.tau = tau
         self.optimal_lambda = optimal_lambda
         self.data_model_type = data_model_type
         self.data_model_name = data_model_name
+        self.problem_type = problem_type
 
     def to_csv_line(self):
         # round all the results to 8 digits
-        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.tau:.8f},{self.optimal_lambda:.8f},{self.data_model_type.name},{self.data_model_name}"
+        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.tau:.8f},{self.optimal_lambda:.8f},{self.data_model_type.name},{self.data_model_name},{self.problem_type.name}"
     
     def from_csv_line(self, line):
         # remove the line break
         line = line[:-1]
-        alpha,epsilon,tau,lam,data_model_type,data_model_name = line.split(",")
-        return OptimalLambdaResult(float(alpha),float(epsilon),float(tau),float(lam),DataModelType[data_model_type],data_model_name)
+        alpha,epsilon,tau,lam,data_model_type,data_model_name,problem_type_name = line.split(",")
+        return OptimalLambdaResult(float(alpha),float(epsilon),float(tau),float(lam),DataModelType[data_model_type],data_model_name,ProblemType[problem_type_name])
     
     def get_csv_header(self):
-        return "alpha,epsilon,tau,lambda,data_model_type,data_model_name"
+        return "alpha,epsilon,tau,lambda,data_model_type,data_model_name,problem_type"
 
     def get_csv_filename(self):
         return "optimal_lambdas.csv"
@@ -160,13 +161,13 @@ class OptimalLambdaResult():
     def get_key(self):
         # the key of a result is the tuple (alpha,epsilon,tau, data_model_type, data_model_name) returned as a string
         # round all the results to 8 digits
-        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.tau:.8f},{self.data_model_type.name},{self.data_model_name}"
+        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.tau:.8f},{self.data_model_type.name},{self.data_model_name},{self.problem_type.name}"
 
     def get_target(self):
         return self.optimal_lambda
 
 class OptimalAdversarialLambdaResult():
-    def __init__(self, alpha, epsilon, test_epsilon, tau, optimal_lambda, data_model_type, data_model_name):
+    def __init__(self, alpha, epsilon, test_epsilon, tau, optimal_lambda, data_model_type, data_model_name,problem_type):
         self.alpha = alpha
         self.epsilon = epsilon
         self.test_epsilon = test_epsilon
@@ -174,19 +175,20 @@ class OptimalAdversarialLambdaResult():
         self.optimal_lambda = optimal_lambda
         self.data_model_type = data_model_type
         self.data_model_name = data_model_name
+        self.problem_type = problem_type
 
     def to_csv_line(self):
         # round all the results to 8 digits
-        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.test_epsilon:.8f},{self.tau:.8f},{self.optimal_lambda:.8f},{self.data_model_type.name},{self.data_model_name}"
+        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.test_epsilon:.8f},{self.tau:.8f},{self.optimal_lambda:.8f},{self.data_model_type.name},{self.data_model_name},{self.problem_type.name}"
     
     def from_csv_line(self, line):
         # remove the line break
         line = line[:-1]
-        alpha,epsilon,test_epsilon,tau,lam,data_model_type,data_model_name = line.split(",")
-        return OptimalAdversarialLambdaResult(float(alpha),float(epsilon), float(test_epsilon),float(tau),float(lam),DataModelType[data_model_type],data_model_name)
+        alpha,epsilon,test_epsilon,tau,lam,data_model_type,data_model_name, problem_type_name = line.split(",")
+        return OptimalAdversarialLambdaResult(float(alpha),float(epsilon), float(test_epsilon),float(tau),float(lam),DataModelType[data_model_type],data_model_name,ProblemType[problem_type_name])
     
     def get_csv_header(self):
-        return "alpha,epsilon,test_epsilon,tau,lambda,data_model_type,data_model_name"
+        return "alpha,epsilon,test_epsilon,tau,lambda,data_model_type,data_model_name,problem_type"
 
     def get_csv_filename(self):
         return "optimal_adversarial_lambdas.csv"
@@ -194,7 +196,7 @@ class OptimalAdversarialLambdaResult():
     def get_key(self):
         # the key of a result is the tuple (alpha,epsilon,tau, data_model_type, data_model_name) returned as a string
         # round all the results to 8 digits
-        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.test_epsilon:.8f},{self.tau:.8f},{self.data_model_type.name},{self.data_model_name}"
+        return f"{self.alpha:.8f},{self.epsilon:.8f},{self.test_epsilon:.8f},{self.tau:.8f},{self.data_model_type.name},{self.data_model_name},{self.problem_type.name}"
 
     def get_target(self):
         return self.optimal_lambda

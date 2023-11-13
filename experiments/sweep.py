@@ -85,7 +85,7 @@ def get_optimal_lambda(logger,task, data_model):
     logger.info(f"Starting optimal lambda {task}")
     start = time.time()
 
-    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-1e1,1e2],options={'xatol': 1e-8,'maxiter':100})
+    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-0.001,1e2],options={'xatol': 1e-8,'maxiter':100})
     logger.info(f"Minimized success: {res.success}; Message: {res.message}")
     if not res.success:
         raise Exception("Optimization of lambda failed: " + str(res.message))
@@ -95,9 +95,9 @@ def get_optimal_lambda(logger,task, data_model):
 
     logger.info(f"Finished optimal lambda {task} in {experiment_duration} seconds - optimal lambda is {res.x}")
     if task.method == "optimal_lambda":
-        result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name)
+        result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name,task.problem_type)
     elif task.method == "optimal_adversarial_lambda":
-        result = OptimalAdversarialLambdaResult(task.alpha, task.epsilon, task.test_against_epsilon, task.tau, res.x,data_model.model_type, data_model.name)
+        result = OptimalAdversarialLambdaResult(task.alpha, task.epsilon, task.test_against_epsilon, task.tau, res.x,data_model.model_type, data_model.name,task.problem_type)
     return result
 
 
@@ -214,11 +214,11 @@ def master(num_processes, logger, experiment):
     tasks = []
 
 
-    dummy_optimal_result = OptimalLambdaResult(0,0,0,0,None,None)
+    dummy_optimal_result = OptimalLambdaResult(0,0,0,0,None,None,None)
     # load the optimal lambdas from the csv file
     optimal_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
     
-    dummy_optimal_result = OptimalAdversarialLambdaResult(0,0,0,0,0,None,None)
+    dummy_optimal_result = OptimalAdversarialLambdaResult(0,0,0,0,0,None,None,None)
     optimal_adversarial_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
 
     # iterate all the parameters and create process objects for each parameter
@@ -243,7 +243,7 @@ def master(num_processes, logger, experiment):
                         if ExperimentType.OptimalLambda == experiment.experiment_type:
                             
                             
-                            optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+                            optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name, problem)
 
                             initial_lambda = 1
 
@@ -251,7 +251,7 @@ def master(num_processes, logger, experiment):
                                 tasks.append(Task(idx,experiment_id,"optimal_lambda",problem,alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type))
                                 idx += 1
 
-                        if ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
+                        elif ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
                             optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,test_against_epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
 
                             initial_lambda = 1
@@ -265,7 +265,7 @@ def master(num_processes, logger, experiment):
                             lambdas = experiment.lambdas
                             if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
 
-                                optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+                                optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name, problem)
 
                                 if not optimal_result.get_key() in optimal_lambdas.keys():
                                     logger.info(f"The key is '{optimal_result.get_key()}'")

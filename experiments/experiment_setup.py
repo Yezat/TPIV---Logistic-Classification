@@ -120,8 +120,8 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.5,6.0,3) #np.linspace(0.1,10,15) #
-    epsilons: np.ndarray = np.array([0,0.5]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+    alphas: np.ndarray = np.linspace(0.5,6.0,1) #np.linspace(0.1,10,15) #
+    epsilons: np.ndarray = np.array([0.5]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
     lambdas: np.ndarray = np.array([0.01]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = None # np.array([0.6,0.75,0.9]) 
@@ -130,7 +130,7 @@ def get_default_experiment():
     alphas = np.round(alphas,4)
     epsilons = np.round(epsilons,4)
     lambdas = np.round(lambdas,4)
-    experiment_type: ExperimentType = ExperimentType.Sweep
+    experiment_type: ExperimentType = ExperimentType.OptimalLambda
     test_against_largest_epsilon: bool = True
     experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
     compute_hessian: bool = False
