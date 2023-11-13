@@ -395,7 +395,7 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
 
 
 def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
-    return erf( task.test_against_epsilon * overlaps.m / np.sqrt( 2 * task.d * data_model.rho * overlaps.q ) )
+    return erf( task.test_against_epsilon * overlaps.m / np.sqrt( 2 * data_model.rho * overlaps.q ) )
 
 
 def generalization_error(rho,m,q, tau):
