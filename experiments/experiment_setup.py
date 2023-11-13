@@ -30,11 +30,11 @@ features_theta = None
 """
 d = 1000
 
-# data_model_type = DataModelType.VanillaGaussian
-# data_model_name = "VanillaGaussian"
-# data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
-# Sigma_w = np.eye(d)
-# Sigma_delta = np.eye(d)
+data_model_type = DataModelType.VanillaGaussian
+data_model_name = "VanillaGaussian"
+data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
 
 
 """
@@ -98,14 +98,14 @@ d = 1000
 """
 
 
-data_model_type = DataModelType.KFeaturesModel
-feature_sizes = np.array([100,900])
-features_x = np.array([2,1])
-features_theta = np.array([1,1])
-data_model_name = f"KFeaturesModel_TwoStrongFeatures_{feature_sizes}_{features_x}_{features_theta}"
-data_model_description = "2 Strong Features (100) and 900 weak features (1)"
-Sigma_w = np.eye(d)
-Sigma_delta = np.eye(d)
+# data_model_type = DataModelType.KFeaturesModel
+# feature_sizes = np.array([100,900])
+# features_x = np.array([2,1])
+# features_theta = np.array([1,1])
+# data_model_name = f"KFeaturesModel_TwoStrongFeatures_{feature_sizes}_{features_x}_{features_theta}"
+# data_model_description = "2 Strong Features (100) and 900 weak features (1)"
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.eye(d)
 
 experiment_filename = "sweep_experiment.json"
 
@@ -120,7 +120,7 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.5,7.0,4) #np.linspace(0.1,10,15) #
+    alphas: np.ndarray = np.linspace(0.5,6.0,3) #np.linspace(0.1,10,15) #
     epsilons: np.ndarray = np.array([0,0.5]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
     lambdas: np.ndarray = np.array([0.01]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
@@ -134,7 +134,7 @@ def get_default_experiment():
     test_against_largest_epsilon: bool = True
     experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
     compute_hessian: bool = False
-    problem_types: list[ProblemType] = [ProblemType.Ridge]
+    problem_types: list[ProblemType] = [ProblemType.Ridge, ProblemType.Logistic]
     experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon,problem_types, experiment_name,compute_hessian)
     return experiment
 experiment = get_default_experiment()

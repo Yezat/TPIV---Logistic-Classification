@@ -73,7 +73,7 @@ def minimizer_lambda(logger, task, data_model, lam):
     if task.method == "optimal_lambda":
         gen_error =  generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
     elif task.method == "optimal_adversarial_lambda":
-        gen_error = adversarial_generalization_error_logistic(overlaps.m,overlaps.q, data_model.rho, task.tau, task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N))
+        gen_error = adversarial_generalization_error_overlaps(overlaps.m,overlaps.q, data_model.rho, task.tau, task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N))
 
     logger.info(f"Generalization error for lambda {task.lam} is {gen_error}")
     return gen_error

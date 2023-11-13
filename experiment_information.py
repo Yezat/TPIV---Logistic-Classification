@@ -1,5 +1,5 @@
-from ERM import compute_experimental_teacher_calibration, robustness_student, robustness_teacher, adversarial_error_teacher
-from state_evolution import pure_training_loss_logistic, training_error_logistic, adversarial_generalization_error_logistic, generalization_error, overlap_calibration, test_loss_overlaps, robustness_overlaps, robustness_overlaps_teacher, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher
+from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher
+from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables
 from helpers import *
 from ERM import predict_erm, error, adversarial_error
 import numpy as np
@@ -101,70 +101,99 @@ class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
     def __init__(self, task,overlaps, data_model):
 
+        if task.problem_type == ProblemType.Ridge:
+            observables = RidgeObservables()
+        elif task.problem_type == ProblemType.Logistic:
+            observables = LogisticObservables()
+        else:
+            raise Exception(f"Problem type {task.problem_type.name} not implemented")
+
         # let's compute and store the calibrations
         calibrations = []
         if task.ps is not None:
             for p in task.ps:
                 calibrations.append(overlap_calibration(data_model.rho,p,overlaps.m,overlaps.q,task.tau))
         calibration_results = CalibrationResults(task.ps,calibrations,None)
+        self.calibrations: CalibrationResults = calibration_results
 
+        # store basic information
         self.problem_type: ProblemType = task.problem_type
         self.id: str = str(uuid.uuid4())
         self.code_version: str = __version__
-        self.duration: float = None
+        self.duration: float = None # the duration is set in sweep after all errors have been computed.
         self.experiment_id: str = task.experiment_id
-        self.generalization_error: float = generalization_error(data_model.rho, overlaps.m, overlaps.q, task.tau)
-        self.adversarial_generalization_error: float = adversarial_generalization_error_logistic(overlaps.m,overlaps.q,data_model.rho,task.tau,task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N)) # TODO: this function should be deprecated, the function below should be used...
-        self.adversarial_generalization_error_overlaps: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
-        self.adversarial_generalization_error_overlaps_teacher: float = adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model)
-        self.training_loss: float = pure_training_loss_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
-        self.training_error: float = training_error_logistic(overlaps,data_model.rho,task.alpha,task.tau,task.epsilon, task.lam)
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.sigma: float = overlaps.sigma
-        self.q: float = overlaps.q
-        self.Q_self: float = overlaps.sigma + overlaps.q
-        self.m: float = overlaps.m
-        self.cosb: float = self.m / np.sqrt((self.q)*data_model.rho)
+
+        # State Evolution Parameters
         self.initial_condition: Tuple[float, float, float] = overlaps.INITIAL_CONDITION
-        self.rho: float = data_model.rho
-        self.alpha: float = task.alpha
-        self.epsilon: float = task.epsilon
-        self.test_against_epsilon: float = task.test_against_epsilon
-        self.tau: float = task.tau
-        self.lam: float = task.lam
-        self.calibrations: CalibrationResults = calibration_results
         self.abs_tol: float = overlaps.TOL_FPE
         self.min_iter: int = overlaps.MIN_ITER_FPE
         self.max_iter: int = overlaps.MAX_ITER_FPE
         self.blend_fpe: float = overlaps.BLEND_FPE
         self.int_lims: float = overlaps.INT_LIMS
+
+        # Experiment Parameters
+        self.alpha: float = task.alpha
+        self.epsilon: float = task.epsilon
+        self.test_against_epsilon: float = task.test_against_epsilon
+        self.tau: float = task.tau
+        self.lam: float = task.lam
+
+        # Generalization Error
+        self.generalization_error: float = generalization_error(data_model.rho, overlaps.m, overlaps.q, task.tau)
+
+        # Adversarial Generalization Error
+        self.adversarial_generalization_error: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
+        self.adversarial_generalization_error_teacher: float = adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model)
+        
+        # Training Error
+        self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
+
+        # Loss
+        self.training_loss: float = observables.training_loss(task, overlaps, data_model, self.int_lims)
+        self.test_loss: float = observables.test_loss(task, overlaps, data_model, self.int_lims)
+        
+        
+        # Overlaps
+        self.sigma: float = overlaps.sigma
+        self.q: float = overlaps.q
+        self.Q_self: float = overlaps.sigma + overlaps.q
+        self.m: float = overlaps.m
+        self.rho: float = data_model.rho
+        self.A : float = overlaps.A
+        self.N : float = overlaps.N
+        
+
+        # Hat overlaps
         self.sigma_hat : float = overlaps.sigma_hat
         self.q_hat : float = overlaps.q_hat
         self.m_hat : float = overlaps.m_hat
-        self.A : float = overlaps.A
-        self.N : float = overlaps.N
         self.A_hat : float = overlaps.A_hat
         self.N_hat : float = overlaps.N_hat
-        self.test_loss: float = test_loss_overlaps(overlaps.m,overlaps.q,data_model.rho,task.tau,overlaps.sigma, task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
-        self.student_robustness: float = robustness_overlaps(overlaps.m, overlaps.q, data_model.rho, task.tau, task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
-        self.teacher_robustness: float = robustness_overlaps_teacher(overlaps, data_model.rho, task.tau, task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
+
+        
+        # Angle
+        self.angle: float = self.m / np.sqrt((self.q)*data_model.rho)
+        
+        # Robustness
+        self.robustness: float = 1 - self.adversarial_generalization_error
+        self.teacher_robustness: float = 1 - self.adversarial_generalization_error_teacher
 
 class ERMExperimentInformation:
     def __init__(self, task, data_model, data: DataSet, weights, problem_instance):
 
-        # TODO: implement obtaining all the observables through the problem_instance (wherever necessary e.g. loss, but maybe not for gen error)
+        # let's compute and store the overlaps      
+        self.Q = weights.dot(data_model.Sigma_x@weights) / task.d
+        self.A: float = weights.dot(data_model.Sigma_delta @ weights) / task.d
+        self.N: float = weights.dot(weights) / task.d
 
         # let's calculate the calibration
         analytical_calibrations = []
         erm_calibrations = []
-        
-        self.Q = weights.dot(data_model.Sigma_x@weights) / task.d
-        self.m = weights.dot(data_model.Sigma_x@data.theta) / task.d
-
-        if data.theta is not None:
-            
+        if data.theta is not None:           
             
             self.rho: float = data.theta.dot(data_model.Sigma_x@data.theta) / task.d
+            self.m = weights.dot(data_model.Sigma_x@data.theta) / task.d
 
             # We cannot compute the calibration if we don't know the ground truth.    
             if task.ps is not None:
@@ -178,28 +207,8 @@ class ERMExperimentInformation:
 
         analytical_calibrations_result = CalibrationResults(task.ps,analytical_calibrations,None)
         erm_calibrations_result = CalibrationResults(task.ps,erm_calibrations,task.dp)
-
-        self.problem_type: ProblemType = task.problem_type
-        self.id: str = str(uuid.uuid4())
-        self.duration : float = None
-        self.code_version: str = __version__
-        self.experiment_id: str = task.experiment_id
-
-        
-
-        self.cosb: float = self.m / np.sqrt(self.Q*self.rho)
-        self.epsilon: float = task.epsilon
-        self.test_against_epsilon: float = task.test_against_epsilon
-        self.lam: float = task.lam
-        n: int = data.X.shape[0]
-        yhat_gd = predict_erm(data.X_test,weights)
-        self.generalization_error_erm: float = error(data.y_test,yhat_gd)
-        self.adversarial_generalization_error_erm: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_delta)
-        self.adversarial_generalization_error_erm_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model.Sigma_delta)
-        
-
-        self.A: float = weights.dot(data_model.Sigma_delta @ weights) / task.d
-        self.N: float = weights.dot(weights) / task.d
+        self.analytical_calibrations: CalibrationResults = analytical_calibrations_result
+        self.erm_calibrations: CalibrationResults = erm_calibrations_result
 
         overlaps = OverlapSet()
         overlaps.A = self.A
@@ -207,34 +216,53 @@ class ERMExperimentInformation:
         overlaps.m = self.m
         overlaps.q = self.Q
 
-
-        self.adversarial_generalization_error_erm_overlaps: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
-
-        self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, task.tau)
-        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_logistic(self.m,self.Q,self.rho,task.tau,task.test_against_epsilon * self.A / np.sqrt(self.N))
-        yhat_gd_train = predict_erm(data.X,weights)
+        # store basic information
+        self.problem_type: ProblemType = task.problem_type
+        self.id: str = str(uuid.uuid4())
+        self.duration : float = None # the duration is set in sweep after all errors have been computed.
+        self.code_version: str = __version__
+        self.experiment_id: str = task.experiment_id
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.chosen_minimizer: str = "sklearn"
-        self.training_error: float = error(data.y,yhat_gd_train)
-        self.training_loss: float = problem_instance.training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)
+
+        # store the experiment parameters
+        self.epsilon: float = task.epsilon
+        self.test_against_epsilon: float = task.test_against_epsilon
+        self.lam: float = task.lam
         self.d: int = task.d
         self.tau: float = task.tau
+        n: int = data.X.shape[0]
         self.alpha: float = n/task.d
+
+        # Angle
+        self.angle: float = self.m / np.sqrt(self.Q*self.rho)
+
+        # Generalization Error        
+        yhat_gd = predict_erm(data.X_test,weights)
+        self.generalization_error_erm: float = error(data.y_test,yhat_gd)
+        self.generalization_error_overlap: float = generalization_error(self.rho,self.m,self.Q, task.tau)
         
 
-        self.analytical_calibrations: CalibrationResults = analytical_calibrations_result
-        self.erm_calibrations: CalibrationResults = erm_calibrations_result
+        # Adversarial Generalization Error
+        self.adversarial_generalization_error: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_delta)
+        self.adversarial_generalization_error_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model.Sigma_delta)
+        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
 
+        
+        # Training Error
+        yhat_gd_train = predict_erm(data.X,weights)
+        self.training_error: float = error(data.y,yhat_gd_train)       
+        
+
+        # Loss
+        self.training_loss: float = problem_instance.training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)       
         self.test_loss: float = problem_instance.training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_delta)
 
-        self.student_robustness: float = robustness_student(weights, data.X_test, data.y_test, task.test_against_epsilon, data_model.Sigma_delta)
-        self.teacher_robustness: float = robustness_teacher(weights, data.theta, data.X_test, data.y_test, task.test_against_epsilon, data_model.Sigma_delta)
+        # Robustness
+        self.robustness: float = 1 - self.adversarial_generalization_error
+        self.teacher_robustness: float = 1 - self.adversarial_generalization_error_teacher
         
 
-        self.test_set_min_eigenvalue_hessian = None
-        self.test_set_min_eigenvalue_hessian_teacher_weights = None
-        self.train_set_min_eigenvalue_hessian = None
-        self.train_set_min_eigenvalue_hessian_teacher_weights = None
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
@@ -269,8 +297,7 @@ class DatabaseHandler:
                     experiment_id TEXT,
                     generalization_error REAL,
                     adversarial_generalization_error REAL,
-                    adversarial_generalization_error_overlaps REAL,
-                    adversarial_generalization_error_overlaps_teacher REAL,
+                    adversarial_generalization_error_teacher REAL,
                     training_loss REAL,
                     training_error REAL,
                     date TEXT,
@@ -278,7 +305,7 @@ class DatabaseHandler:
                     q REAL,
                     Q_self REAL,
                     m REAL,
-                    cosb REAL,
+                    angle REAL,
                     initial_condition BLOB,
                     rho REAL,
                     alpha REAL,
@@ -300,7 +327,7 @@ class DatabaseHandler:
                     A_hat REAL,
                     N_hat REAL,
                     test_loss REAL,
-                    student_robustness REAL,
+                    robustness REAL,
                     teacher_robustness REAL
                 )
             ''')
@@ -349,16 +376,15 @@ class DatabaseHandler:
                     Q REAL,
                     rho REAL,
                     m REAL,
-                    cosb REAL,
+                    angle REAL,
                     epsilon REAL,
                     test_against_epsilon REAL,
                     lam REAL,
                     generalization_error_erm REAL,
                     generalization_error_overlap REAL,
-                    adversarial_generalization_error_erm REAL,
-                    adversarial_generalization_error_erm_teacher REAL,
+                    adversarial_generalization_error REAL,
+                    adversarial_generalization_error_teacher REAL,
                     adversarial_generalization_error_overlap REAL,
-                    adversarial_generalization_error_overlaps REAL,
                     date TEXT,
                     chosen_minimizer TEXT,
                     training_error REAL,
@@ -371,12 +397,8 @@ class DatabaseHandler:
                     test_loss REAL,
                     A REAL,
                     N REAL,
-                    student_robustness REAL,
-                    teacher_robustness REAL,
-                    Test_set_min_eigenvalue_hessian REAL,
-                    Test_set_min_eigenvalue_hessian_teacher_weights REAL,
-                    Train_set_min_eigenvalue_hessian REAL,
-                    Train_set_min_eigenvalue_hessian_teacher_weights REAL
+                    robustness REAL,
+                    teacher_robustness REAL
                 )
             ''')
             self.connection.commit()
@@ -415,7 +437,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -423,8 +445,7 @@ class DatabaseHandler:
             experiment_information.experiment_id,
             experiment_information.generalization_error,
             experiment_information.adversarial_generalization_error,
-            experiment_information.adversarial_generalization_error_overlaps,
-            experiment_information.adversarial_generalization_error_overlaps_teacher,
+            experiment_information.adversarial_generalization_error_teacher,
             experiment_information.training_loss,
             experiment_information.training_error,
             experiment_information.date,
@@ -432,7 +453,7 @@ class DatabaseHandler:
             experiment_information.q,
             experiment_information.Q_self,
             experiment_information.m,
-            experiment_information.cosb,
+            experiment_information.angle,
             json.dumps(experiment_information.initial_condition),
             experiment_information.rho,
             float(experiment_information.alpha),
@@ -454,7 +475,7 @@ class DatabaseHandler:
             experiment_information.A_hat,
             experiment_information.N_hat,
             experiment_information.test_loss,
-            experiment_information.student_robustness,
+            experiment_information.robustness,
             experiment_information.teacher_robustness
         ))
         self.connection.commit()
@@ -479,7 +500,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -489,16 +510,15 @@ class DatabaseHandler:
             experiment_information.Q,
             experiment_information.rho,
             experiment_information.m,
-            experiment_information.cosb,
+            experiment_information.angle,
             float(experiment_information.epsilon),
             float(experiment_information.test_against_epsilon),
             float(experiment_information.lam),
             experiment_information.generalization_error_erm,
             experiment_information.generalization_error_overlap,
-            experiment_information.adversarial_generalization_error_erm,
-            experiment_information.adversarial_generalization_error_erm_teacher,
+            experiment_information.adversarial_generalization_error,
+            experiment_information.adversarial_generalization_error_teacher,
             experiment_information.adversarial_generalization_error_overlap,
-            experiment_information.adversarial_generalization_error_erm_overlaps,
             experiment_information.date,
             experiment_information.chosen_minimizer,
             experiment_information.training_error,
@@ -511,12 +531,8 @@ class DatabaseHandler:
             experiment_information.test_loss,
             experiment_information.A,
             experiment_information.N,
-            experiment_information.student_robustness,
-            experiment_information.teacher_robustness,
-            experiment_information.test_set_min_eigenvalue_hessian,
-            experiment_information.test_set_min_eigenvalue_hessian_teacher_weights,
-            experiment_information.train_set_min_eigenvalue_hessian,
-            experiment_information.train_set_min_eigenvalue_hessian_teacher_weights
+            experiment_information.robustness,
+            experiment_information.teacher_robustness
         ))
         self.connection.commit()
 

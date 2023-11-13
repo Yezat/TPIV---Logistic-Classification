@@ -314,24 +314,21 @@ def adversarial_error(y, Xtest, w_gd, epsilon, Sigma_delta):
     return error(y, np.sign( Xtest@w_gd/np.sqrt(d) - y*epsilon/np.sqrt(d) * wSw/nww  ))
 
 def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, Sigma_delta):
+    if teacher_weights is None:
+        return None
+
     d = Xtest.shape[1]
+    Xtest = Xtest / d
+    epsilon = epsilon / d
+
+    
     nww = np.sqrt(w_gd@w_gd)
 
-    Sw = Sigma_delta.dot(w_gd) # shape (d,)
+    tSw = teacher_weights.dot(Sigma_delta@w_gd) # shape (d,)
     
-    # multiply y (shape n,)) elementwise with Sw, the result is a matrix of shape (n,d)
-    attacked_weights = np.outer(y,Sw) # shape (n,d)
+    y_attacked_teacher = np.sign( Xtest@teacher_weights - y*epsilon * tSw/nww  )
 
-    # Let's attack the data (using the data set labels and the students weights)
-    X_attacked = Xtest - attacked_weights * epsilon / nww
-
-    # Let's predict the attacked labels using the student weights
-    y_attacked = np.sign( X_attacked@w_gd/np.sqrt(d)  )
-
-    # Let's compute the ground truth label assignment of the attacked data using the teacher_weights
-    y_ground_truth = np.sign( X_attacked@teacher_weights/np.sqrt(d)  )
-
-    return error(y_attacked, y_ground_truth)
+    return error(y_attacked_teacher, y)
 
 
 
@@ -388,47 +385,3 @@ def predict_erm_probability(X,weights):
     
     return sigmoid(argument)
 
-"""
-------------------------------------------------------------------------------------------------------------------------
-    Robustness
-------------------------------------------------------------------------------------------------------------------------
-"""
-def robustness_student(weights, X, y, epsilon, Sigma_delta):
-    """
-    TODO this stuff is completely wrong!!
-    This is a third way of measure robustness
-    Where the target is the attacked label vs the non-attacked label both evaluated by the student
-    """
-    d = X.shape[1]
-    wSw = weights.dot(Sigma_delta@weights)
-    nww = np.sqrt(weights@weights)
-
-    # Compute the optimal attack
-    attack = epsilon/np.sqrt(d) * ( wSw / nww  )
-
-    # predict the attacked labels
-    y_attacked = np.sign( sigmoid( X@weights/np.sqrt(d) - y*attack  ) - 0.5)
-
-    # predict the non-attacked labels
-    y_hat = predict_erm(X,weights)
-
-    # compute the robustness
-    return np.mean(y_attacked == y_hat)
-
-def robustness_teacher(weights, teacher_weights, X, y, epsilon, Sigma_delta):
-    # TODO this should be called student
-    d = X.shape[1]
-    wSw = weights.dot(Sigma_delta@weights)
-    nww = np.sqrt(weights@weights)
-
-    # Compute the optimal attack
-    attack = epsilon/np.sqrt(d) * ( wSw / nww  )
-
-    # predict the attacked labels
-    y_attacked = np.sign( sigmoid( X@weights/np.sqrt(d) - y*attack  ) - 0.5)
-
-    # predict the non-attacked labels
-    y_hat = predict_erm(X,teacher_weights)
-
-    # compute the robustness
-    return np.mean(y_attacked == y)

@@ -288,69 +288,98 @@ def var_func(task, overlaps, data_model, logger):
 ------------------------------------------------------------------------------------------------------------------------
 """
 
-def training_loss_logistic(m: float, q: float, sigma: float, A: float, N:float, rho: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
-    return pure_training_loss_logistic(m,q,sigma,A,N,rho,alpha,tau,epsilon,lam,int_lims) + (lam/(2*alpha)) * q
+class LogisticObservables:
+
+    @staticmethod
+    def training_loss_logistic_with_regularization(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+        return LogisticObservables.training_loss(task, overlaps, data_model, int_lims) + (task.lam/(2*task.alpha)) * overlaps.q
+
+    @staticmethod
+    def training_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+
+        def integrand(xi,y):
+            w = np.sqrt(overlaps.q) * xi
+            z_0 = erfc(  ( (-y * overlaps.m * xi) / np.sqrt(overlaps.q) ) / np.sqrt(2*(task.tau**2 + (data_model.rho - overlaps.m**2/overlaps.q))))
+
+            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+
+            l = adversarial_loss(y,proximal, task.epsilon*overlaps.A/np.sqrt(overlaps.N))
+
+            return z_0 * l * gaussian(xi)
+
+        I1 = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
+        I2 = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
+        return (I1 + I2)/2
+
+    @staticmethod
+    def training_error(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+        def integrand(xi, y):
+            e = overlaps.m * overlaps.m / (data_model.rho * overlaps.q)
+            w_0 = np.sqrt(data_model.rho*e) * xi
+            V_0 = data_model.rho * (1-e)
+
+            z_0 = erfc((-y * w_0) / np.sqrt(2*(task.tau**2 + V_0)))
+
+            # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+            w = np.sqrt(overlaps.q) * xi
+
+            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+
+            activation = np.sign(proximal)
+
+            return z_0* gaussian(xi) * (activation != y)
+
+        Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+        Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+        return (Iplus + Iminus) * 0.5
+
+    @staticmethod
+    def test_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+        def integrand(xi, y):
+            e = overlaps.m * overlaps.m / (data_model.rho * overlaps.q)
+            w_0 = np.sqrt(data_model.rho*e) * xi
+            V_0 = data_model.rho * (1-e)
+
+            z_0 = erfc((-y * w_0) / np.sqrt(2*(task.tau**2 + V_0)))
+            # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+            w = np.sqrt(overlaps.q) * xi
+
+            loss_value = adversarial_loss(y,w,task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
+
+            return z_0 * gaussian(xi) * loss_value
+
+        Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
+        Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+        return (Iplus + Iminus) * 0.5
 
 
-def pure_training_loss_logistic(overlaps: OverlapSet, rho: float, alpha: float, tau: float, epsilon: float, lam: float , int_lims: float = 20.0):
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Ridge Observables
+------------------------------------------------------------------------------------------------------------------------
+"""
+class RidgeObservables:
+    # TODO compute and then implement...
 
-    def integrand(xi,y):
-        w = np.sqrt(overlaps.q) * xi
-        z_0 = erfc(  ( (-y * overlaps.m * xi) / np.sqrt(overlaps.q) ) / np.sqrt(2*(tau**2 + (rho - overlaps.m**2/overlaps.q))))
+    @staticmethod
+    def training_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+        return None
 
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+    @staticmethod
+    def training_error(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+        return None
 
-        l = adversarial_loss(y,proximal, epsilon*overlaps.A/np.sqrt(overlaps.N))
+    @staticmethod
+    def test_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+        return None
 
-        return z_0 * l * gaussian(xi)
-
-    I1 = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
-    I2 = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
-    return (I1 + I2)/2
-
-def training_error_logistic(overlaps: OverlapSet, rho: float, alpha: float, tau: float, epsilon: float, lam: float, int_lims: float = 20.0):
-
-    def integrand(xi, y):
-        e = overlaps.m * overlaps.m / (rho * overlaps.q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
-
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
-
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(overlaps.q) * xi
-
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.A/np.sqrt(overlaps.N),w)
-
-        activation = np.sign(proximal)
-
-        return z_0* gaussian(xi) * (activation != y)
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-    return (Iplus + Iminus) * 0.5
-
-def adversarial_generalization_error_logistic(m: float, q: float, rho: float, tau: float, epsilon_term: float, int_lims: float = 20.0):
-    def integrand(xi, y):
-        e = m * m / (rho * q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
-
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(q) * xi
-
-
-        activation = np.sign(w - y*epsilon_term)
-
-        return z_0 * gaussian(xi) * (activation != y)
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-    return (Iplus + Iminus) * 0.5
+"""
+------------------------------------------------------------------------------------------------------------------------
+    General Observables
+------------------------------------------------------------------------------------------------------------------------
+"""
 
 def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
-    # gen_error = generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
 
     a = overlaps.m/np.sqrt((overlaps.q* data_model.rho - overlaps.m**2))
 
@@ -360,156 +389,13 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
 
     erferfc = 0.5 * erf(b/np.sqrt(2)) * erfc(-a*b/np.sqrt(2))
 
-    # cot = np.arctan(-1/a)/np.pi
-
-    # print("owen",owen,"erferfc",erferfc,"cot",cot,"gen_error",gen_error)
-
     gen_error = owen + erferfc 
 
-
-    # # let's try the crazy formula
-    # hat_ratio = 1 / (np.sqrt( data_model.rho - 1 + data_model.rho * overlaps.q_hat/overlaps.m_hat**2  ))
-
-    # # assert that hatm/sqrt(hatq) >= 0
-    # assert overlaps.m_hat / np.sqrt(overlaps.q_hat) >= 0, f"hat_ratio: {hat_ratio}, q_hat: {overlaps.q_hat}, m_hat: {overlaps.m_hat}, rho: {data_model.rho}"
-
-    # # assert a precision of 1e-3 between a and hat_ratio
-    # assert abs(a - hat_ratio) < 1e-3, f"a: {a}, hat_ratio: {hat_ratio}, q_hat: {overlaps.q_hat}, m_hat: {overlaps.m_hat}, rho: {data_model.rho}"
-
-
-    # alternative_2 =  0.5 + 0.5*erf(b/np.sqrt(2)) - 2 * owens_t( b, a)
-
-    # assert abs(gen_error - alternative_2) < 1e-15, f"gen_error: {gen_error}, alternative_2: {alternative_2}, m: {overlaps.m}, q: {overlaps.q}"
-
-
-
-    # # Let's code up A78 and see if it matches numerically the other expressions
-    # alternative_3 = np.arccos(overlaps.m / np.sqrt( data_model.rho * overlaps.q ))/np.pi
-
-    # def integrand(xi):
-    #     return np.exp(-xi**2/2) * erfc( - overlaps.m * xi / np.sqrt(2 * (overlaps.q * data_model.rho - overlaps.m**2) ) ) / np.sqrt(2*np.pi)
-
-    # alternative_3 += quad(integrand,0,task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q),limit=500)[0]
-
-    # assert abs(gen_error - alternative_3) < 1e-15, f"gen_error: {gen_error}, alternative_3: {alternative_3}, m: {overlaps.m}, q: {overlaps.q}"
-
-
-    # assert abs(alternative_2 - alternative_3) < 1e-15, f"alternative_2: {alternative_2}, alternative_3: {alternative_3}, m: {overlaps.m}, q: {overlaps.q}"
-
     return gen_error
 
-def adversarial_generalization_error_overlaps_test(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
-
-    gen_error = generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
-
-    def solution(a,b):
-        r = -4*np.pi*np.sqrt(a**2)*owens_t(np.sqrt(2)*np.sqrt(a**2)*b,1/np.sqrt(a**2))
-        r += np.pi*a*erf(b)*erfc(a*b)
-        r += 2*a*np.arctan(1/a)
-        r /= 2*np.sqrt(np.pi)*a
-        return r
-
-    eg = task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q)
-
-    a = -overlaps.m / np.sqrt((overlaps.q* data_model.rho - overlaps.m**2))
-    b = eg/np.sqrt(2)
-    
-    gen_error += solution(a,b)/np.sqrt(np.pi)
-
-    return gen_error
 
 def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
-    def integrand(xi, y):
-        e = overlaps.m * overlaps.m / (data_model.rho * overlaps.q)
-        w_0 = np.sqrt(data_model.rho*e) * xi
-        V_0 = data_model.rho * (1-e)
-
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(task.tau**2 + V_0)))
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(overlaps.q) * xi
-
-        epsilon_term = task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N)
-
-        activation = np.sign(w - y*epsilon_term)
-
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon_term,w)
-
-        teacher_activation = np.sign(proximal)
-
-        return z_0 * gaussian(xi) * (activation != teacher_activation)
-
-    int_lims = 20
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-    return (Iplus + Iminus) * 0.5
-
-
-
-def robustness_overlaps(m: float, q: float, rho: float, tau: float, epsilon_term: float, int_lims: float = 20.0):
-    def integrand(xi, y):
-        e = m * m / (rho * q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
-
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(q) * xi
-
-
-        attacked_activation = np.sign(w - y*epsilon_term)
-        activation = np.sign(w)
-
-        return z_0 * gaussian(xi) * (activation == attacked_activation)
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-    return (Iplus + Iminus) * 0.5
-
-
-def robustness_overlaps_teacher(overlaps, rho: float, tau: float, epsilon_term: float, int_lims: float = 20.0):
-    def integrand(xi, y):
-        e = overlaps.m * overlaps.m / (rho * overlaps.q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
-
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(overlaps.q) * xi
-
-
-        attacked_activation = np.sign(w - y*epsilon_term)
-        
-
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon_term,w)
-
-        activation = np.sign(proximal)
-
-        return z_0 * gaussian(xi) * (y == attacked_activation)
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-    return (Iplus + Iminus) * 0.5
-
-
-def test_loss_overlaps(m: float, q: float, rho: float, tau: float, sigma: float, epsilon_term: float, int_lims: float = 20.0):
-    def integrand(xi, y):
-        e = m * m / (rho * q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
-
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(q) * xi
-
-        loss_value = adversarial_loss(y,w,epsilon_term)
-
-        return z_0 * gaussian(xi) * loss_value
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-    return (Iplus + Iminus) * 0.5
-
+    return erf( task.test_against_epsilon * overlaps.m / np.sqrt( 2 * task.d * data_model.rho * overlaps.q ) )
 
 
 def generalization_error(rho,m,q, tau):
@@ -550,8 +436,6 @@ def overlap_calibration(rho,p,m,q_erm,tau, debug = False):
 
 def damped_update(new, old, damping):
     return damping * new + (1 - damping) * old
-
-
 
 
 def fixed_point_finder(
