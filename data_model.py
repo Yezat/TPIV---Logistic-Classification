@@ -231,16 +231,16 @@ class VanillaGaussianDataModel(AbstractDataModel):
     
 
 class KFeaturesModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "", feature_sizes = None, features_x =None, features_theta = None)->None:
+    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
         """
-            k = len(feature_sizes)
-            feature_sizes = np.array([2,d-2]) # must sum to d and be of length k
+            k = len(feature_ratios)
+            feature_ratios = np.array([2,d-2]) # must sum to d and be of length k
             features_x = np.array([100,1]) # must be of length k and contains each features size for the data covariance X
             features_theta = np.array([1,1]) # must be of length k and contains each features size for the teacher prior
         """
     
-        if feature_sizes is None:
-            feature_sizes = np.array([1,999])
+        if feature_ratios is None:
+            feature_ratios = np.array([1/d,1-1/d])
         if features_x is None:
             features_x = np.array([10,1])
         if features_theta is None:
@@ -252,7 +252,10 @@ class KFeaturesModel(AbstractDataModel):
         if not self.loaded_from_pickle:
 
             
-            k = len(feature_sizes)
+            k = len(feature_ratios)
+
+            # transform the feature ratios to feature sizes
+            feature_sizes = np.floor(feature_ratios * d).astype(int)
 
             self.theta = np.zeros(d)
             spec_Omega0 = np.zeros(d)

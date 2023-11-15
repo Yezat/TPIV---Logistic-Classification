@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 data_model_name = ""
 data_model_description = "" # Don't remove this, the next definition is ment to be commented out...
 
-feature_sizes = None
+feature_ratios = None
 features_x = None
 features_theta = None
 
@@ -99,7 +99,7 @@ Sigma_delta = np.eye(d)
 
 
 # data_model_type = DataModelType.KFeaturesModel
-# feature_sizes = np.array([100,900])
+# feature_ratios = np.array([100/1000,900/1000])
 # features_x = np.array([2,1])
 # features_theta = np.array([1,1])
 # data_model_name = f"KFeaturesModel_TwoStrongFeatures_{feature_sizes}_{features_x}_{features_theta}"
@@ -151,7 +151,7 @@ logger.info(f"Experiment: {experiment}")
 
 try:
     # Force a creation of a new data_model
-    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=data_model_name, description=data_model_description, feature_sizes=feature_sizes, features_x=features_x, features_theta=features_theta)
+    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=data_model_name, description=data_model_description, feature_ratios=feature_ratios, features_x=features_x, features_theta=features_theta)
 except Exception as e:
     # if you overwrite an existing data_model, you will get an exception. Still overwrite an experiment definition to ensure that you can run the experiment with the existing data_model.
     logger.info(f"Exception '{e}' occured.")

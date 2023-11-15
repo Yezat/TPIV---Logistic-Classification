@@ -57,7 +57,7 @@ class ExperimentInformation:
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
     
-    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, name: str = "", description: str = "", feature_sizes: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None):
+    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, name: str = "", description: str = "", feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None):
         """
         Instantiates a data model of the type specified in self.data_model_type and stores it to source_pickle_path,
         custom student prior covariances and adversarial training covariances can be specified
@@ -81,7 +81,7 @@ class ExperimentInformation:
         elif self.data_model_type == DataModelType.MarginGaussian:
             data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
         elif self.data_model_type == DataModelType.KFeaturesModel:
-            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description, feature_sizes = feature_sizes, features_x = features_x, features_theta = features_theta)
+            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description, feature_ratios = feature_ratios, features_x = features_x, features_theta = features_theta)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
         return data_model
