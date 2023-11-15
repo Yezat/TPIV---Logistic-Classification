@@ -57,7 +57,7 @@ class ExperimentInformation:
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
     
-    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, name: str = "", description: str = "", feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None):
+    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name: str = "", description: str = "", feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None):
         """
         Instantiates a data model of the type specified in self.data_model_type and stores it to source_pickle_path,
         custom student prior covariances and adversarial training covariances can be specified
@@ -75,13 +75,13 @@ class ExperimentInformation:
         """
         data_model = None
         if self.data_model_type == DataModelType.VanillaGaussian:
-            data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
+            data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description)
         elif self.data_model_type == DataModelType.SourceCapacity:
-            data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
+            data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description)
         elif self.data_model_type == DataModelType.MarginGaussian:
-            data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description)
+            data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description)
         elif self.data_model_type == DataModelType.KFeaturesModel:
-            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=name, description=description, feature_ratios = feature_ratios, features_x = features_x, features_theta = features_theta)
+            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description, feature_ratios = feature_ratios, features_x = features_x, features_theta = features_theta)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
         return data_model
@@ -147,7 +147,6 @@ class StateEvolutionExperimentInformation:
         self.adversarial_generalization_error_teacher: float = adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model)
         
         self.fair_adversarial_error: float = fair_adversarial_error_overlaps(overlaps, task, data_model,0.13,logger)
-        logger.info(f"Fair Adversarial Error: {self.fair_adversarial_error}")
 
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
@@ -165,6 +164,8 @@ class StateEvolutionExperimentInformation:
         self.rho: float = data_model.rho
         self.A : float = overlaps.A
         self.N : float = overlaps.N
+        self.P : float = overlaps.P
+        self.F : float = overlaps.F
         
 
         # Hat overlaps
@@ -187,8 +188,10 @@ class ERMExperimentInformation:
 
         # let's compute and store the overlaps      
         self.Q = weights.dot(data_model.Sigma_x@weights) / task.d
-        self.A: float = weights.dot(data_model.Sigma_delta @ weights) / task.d
+        self.A: float = weights.dot(data_model.Sigma_upsilon @ weights) / task.d
         self.N: float = weights.dot(weights) / task.d
+        self.P: float = weights.dot(data_model.Sigma_delta@weights) / task.d
+        
 
         # let's calculate the calibration
         analytical_calibrations = []
@@ -197,6 +200,7 @@ class ERMExperimentInformation:
             
             self.rho: float = data.theta.dot(data_model.Sigma_x@data.theta) / task.d
             self.m = weights.dot(data_model.Sigma_x@data.theta) / task.d
+            self.F: float = weights.dot(data_model.Sigma_upsilon@data.theta) / task.d
 
             # We cannot compute the calibration if we don't know the ground truth.    
             if task.ps is not None:
@@ -218,6 +222,8 @@ class ERMExperimentInformation:
         overlaps.N = self.N
         overlaps.m = self.m
         overlaps.q = self.Q
+        overlaps.P = self.P
+        overlaps.F = self.F
 
         # store basic information
         self.problem_type: ProblemType = task.problem_type
@@ -247,11 +253,10 @@ class ERMExperimentInformation:
         
 
         # Adversarial Generalization Error
-        self.adversarial_generalization_error: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_delta)
-        self.adversarial_generalization_error_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model.Sigma_delta)
+        self.adversarial_generalization_error: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_upsilon)
+        self.adversarial_generalization_error_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model)
         self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
-        self.fair_adversarial_error: float = fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,0.13,data_model.Sigma_delta, logger)
-        logger.info(f"Fair Adversarial Error: {self.fair_adversarial_error}")
+        self.fair_adversarial_error: float = fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,0.13,data_model, logger)
         
         # Training Error
         yhat_gd_train = predict_erm(data.X,weights)
@@ -260,7 +265,7 @@ class ERMExperimentInformation:
 
         # Loss
         self.training_loss: float = problem_instance.training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)       
-        self.test_loss: float = problem_instance.training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_delta)
+        self.test_loss: float = problem_instance.training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_upsilon)
 
         # Robustness
         self.robustness: float = 1 - self.adversarial_generalization_error
@@ -329,6 +334,8 @@ class DatabaseHandler:
                     m_hat REAL,
                     A REAL,
                     N REAL,
+                    P REAL,
+                    F REAL,
                     A_hat REAL,
                     N_hat REAL,
                     test_loss REAL,
@@ -403,6 +410,8 @@ class DatabaseHandler:
                     test_loss REAL,
                     A REAL,
                     N REAL,
+                    P REAL,
+                    F REAL,
                     robustness REAL,
                     teacher_robustness REAL
                 )
@@ -443,7 +452,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -479,6 +488,8 @@ class DatabaseHandler:
             experiment_information.m_hat,
             experiment_information.A,
             experiment_information.N,
+            experiment_information.P,
+            experiment_information.F,
             experiment_information.A_hat,
             experiment_information.N_hat,
             experiment_information.test_loss,
@@ -507,7 +518,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -539,6 +550,8 @@ class DatabaseHandler:
             experiment_information.test_loss,
             experiment_information.A,
             experiment_information.N,
+            experiment_information.P,
+            experiment_information.F,
             experiment_information.robustness,
             experiment_information.teacher_robustness
         ))

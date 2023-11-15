@@ -128,6 +128,8 @@ class AbstractDataModel(ABC):
         self.spec_Sigma_delta = np.linalg.eigvals(self.Sigma_delta)
         self.spec_Sigma_w = np.linalg.eigvals(self.Sigma_w)
         self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
+        self.spec_Sigma_upsilon = np.linalg.eigvals(self.Sigma_upsilon)
+        self.spec_FTerm = np.linalg.eigvals(self.FTerm)
 
         # store the pickle
         self.store_self_to_pickle()
@@ -198,7 +200,7 @@ class DataSet():
 """
 
 class VanillaGaussianDataModel(AbstractDataModel):
-    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, name = "", description = "") -> None:
+    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name = "", description = "") -> None:
         self.model_type = DataModelType.VanillaGaussian
         super().__init__(d, logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path,name=name,description=description)
 
@@ -209,13 +211,18 @@ class VanillaGaussianDataModel(AbstractDataModel):
 
             self.Sigma_w = Sigma_w
             self.Sigma_delta = Sigma_delta
+            self.Sigma_upsilon = Sigma_upsilon
             if self.Sigma_w is None:
                 self.Sigma_w = np.eye(self.d)
             if self.Sigma_delta is None:
                 self.Sigma_delta = np.eye(self.d)
+            if self.Sigma_upsilon is None:
+                self.Sigma_upsilon = np.eye(self.d)
 
             self.rho = 1
             self.PhiPhiT = np.eye(self.d)
+            
+            self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
 
             self._finish_initialization()
 
@@ -231,7 +238,7 @@ class VanillaGaussianDataModel(AbstractDataModel):
     
 
 class KFeaturesModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
+    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta = None, Sigma_upsilon = None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
         """
             k = len(feature_ratios)
             feature_ratios = np.array([2,d-2]) # must sum to d and be of length k
@@ -277,10 +284,15 @@ class KFeaturesModel(AbstractDataModel):
 
             self.Sigma_w = Sigma_w
             self.Sigma_delta = Sigma_delta
+            self.Sigma_upsilon = Sigma_upsilon
             if self.Sigma_w is None:
                 self.Sigma_w = np.eye(self.d)
             if self.Sigma_delta is None:
                 self.Sigma_delta = np.eye(self.d)
+            if self.Sigma_upsilon is None:
+                self.Sigma_upsilon = np.eye(self.d)
+
+            self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
 
             self._finish_initialization()
 
@@ -298,7 +310,7 @@ class KFeaturesModel(AbstractDataModel):
     
 
 class SourceCapacityDataModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta=None, name="", description = "")->None:
+    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta = None, Sigma_upsilon = None, name="", description = "")->None:
 
         self.model_type = DataModelType.SourceCapacity
         super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path, name=name,description=description)
@@ -320,10 +332,15 @@ class SourceCapacityDataModel(AbstractDataModel):
 
             self.Sigma_w = Sigma_w
             self.Sigma_delta = Sigma_delta
+            self.Sigma_upsilon = Sigma_upsilon
             if self.Sigma_w is None:
                 self.Sigma_w = np.eye(self.d)
             if self.Sigma_delta is None:
                 self.Sigma_delta = np.eye(self.d)
+            if self.Sigma_upsilon is None:
+                self.Sigma_upsilon = np.eye(self.d)
+
+            self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
 
             self._finish_initialization()
 
@@ -341,7 +358,7 @@ class SourceCapacityDataModel(AbstractDataModel):
     
 
 class MarginGaussianDataModel(AbstractDataModel):
-    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, name = "", description = "") -> None:
+    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name = "", description = "") -> None:
         self.model_type = DataModelType.MarginGaussian
         super().__init__(d, logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path,name=name,description=description)
 
@@ -356,10 +373,15 @@ class MarginGaussianDataModel(AbstractDataModel):
 
             self.Sigma_w = Sigma_w
             self.Sigma_delta = Sigma_delta
+            self.Sigma_upsilon = Sigma_upsilon
             if self.Sigma_w is None:
                 self.Sigma_w = np.eye(self.d)
             if self.Sigma_delta is None:
                 self.Sigma_delta = np.eye(self.d)
+            if self.Sigma_upsilon is None:
+                self.Sigma_upsilon = np.eye(self.d)
+
+            self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
 
             self.rho = 1
             self.PhiPhiT = np.eye(self.d)

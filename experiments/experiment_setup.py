@@ -30,11 +30,12 @@ features_theta = None
 """
 d = 1000
 
-data_model_type = DataModelType.VanillaGaussian
-data_model_name = "VanillaGaussian"
-data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
-Sigma_w = np.eye(d)
-Sigma_delta = np.eye(d)
+# data_model_type = DataModelType.VanillaGaussian
+# data_model_name = "VanillaGaussian"
+# data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.eye(d)
+# Sigma_upsilon = np.eye(d)
 
 
 """
@@ -98,14 +99,20 @@ Sigma_delta = np.eye(d)
 """
 
 
-# data_model_type = DataModelType.KFeaturesModel
-# feature_ratios = np.array([100/1000,900/1000])
-# features_x = np.array([2,1])
-# features_theta = np.array([1,1])
-# data_model_name = f"KFeaturesModel_TwoStrongFeatures_{feature_sizes}_{features_x}_{features_theta}"
-# data_model_description = "2 Strong Features (100) and 900 weak features (1)"
-# Sigma_w = np.eye(d)
-# Sigma_delta = np.eye(d)
+data_model_type = DataModelType.KFeaturesModel
+feature_ratios = np.array([0.5,0.5])
+features_x = np.array([2,1])
+features_theta = np.array([1,10])
+# data_model_name = f"KFeaturesModel_TwoFeatures_IdentityAttack_{feature_ratios}_{features_x}_{features_theta}"
+data_model_description = "2 Features, Theta Identity, Sigma_delta Identity"
+Sigma_w = np.eye(d)
+Sigma_w[0,0] = 100
+Sigma_delta = np.eye(d)
+# only attack the first half
+Sigma_delta[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
+Sigma_upsilon = np.eye(d)
+# only attack the second half
+Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
 
 experiment_filename = "sweep_experiment.json"
 
@@ -124,7 +131,7 @@ def get_default_experiment():
     epsilons: np.ndarray = np.array([0,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
     lambdas: np.ndarray = np.array([0.01]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
-    ps: np.ndarray = None # np.array([0.6,0.75,0.9]) 
+    ps: np.ndarray = None # np.array([0.6,0.75,0.9])
     dp: float = 0.01
     # round the lambdas, epsilons and alphas for 4 digits
     alphas = np.round(alphas,4)
@@ -151,10 +158,12 @@ logger.info(f"Experiment: {experiment}")
 
 try:
     # Force a creation of a new data_model
-    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, name=data_model_name, description=data_model_description, feature_ratios=feature_ratios, features_x=features_x, features_theta=features_theta)
+    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=data_model_name, description=data_model_description, feature_ratios=feature_ratios, features_x=features_x, features_theta=features_theta)
 except Exception as e:
     # if you overwrite an existing data_model, you will get an exception. Still overwrite an experiment definition to ensure that you can run the experiment with the existing data_model.
     logger.info(f"Exception '{e}' occured.")
+    # Log the exception stack trace
+    logger.exception(e)
 
 # use json dump to save the experiment parameters
 with open(experiment_filename,"w") as f:

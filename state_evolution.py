@@ -13,19 +13,23 @@ from scipy.optimize import root_scalar
 """
 class OverlapSet():
     def __init__(self) -> None:
-        self.INITIAL_CONDITION = (1e-1,1e-1,1e-1,1e-1,1e-1)
+        self.INITIAL_CONDITION = (1e-1,1e-1,1e-1,1e-1,1e-1,1e-1,1e-1)
 
         self.m = self.INITIAL_CONDITION[0]
         self.q = self.INITIAL_CONDITION[1]
         self.sigma = self.INITIAL_CONDITION[2]
         self.A = self.INITIAL_CONDITION[3]
         self.N = self.INITIAL_CONDITION[4]
+        self.P = self.INITIAL_CONDITION[5]
+        self.F = self.INITIAL_CONDITION[6]
         
         self.m_hat = 0
         self.q_hat = 0
         self.sigma_hat = 0
         self.A_hat = 0
         self.N_hat = 0
+        self.F_hat = 0
+        self.P_hat = 0
 
         self.BLEND_FPE = 0.75
         self.TOL_FPE = 1e-4
@@ -34,18 +38,20 @@ class OverlapSet():
         self.INT_LIMS = 10.0
 
     def log_overlaps(self, logger):
-        logger.info(f"m: {self.m}, q: {self.q}, sigma: {self.sigma}, A: {self.A}, N: {self.N}")
-        logger.info(f"m_hat: {self.m_hat}, q_hat: {self.q_hat}, sigma_hat: {self.sigma_hat}, A_hat: {self.A_hat}, N_hat: {self.N_hat}")
+        logger.info(f"m: {self.m}, q: {self.q}, sigma: {self.sigma}, P: {self.P}, N: {self.N}, A: {self.A}, F: {self.F}")
+        logger.info(f"m_hat: {self.m_hat}, q_hat: {self.q_hat}, sigma_hat: {self.sigma_hat}, P_hat: {self.P_hat}, N_hat: {self.N_hat}, A_hat: {self.A_hat}, F_hat: {self.F_hat}")
 
-    def update_overlaps(self, m,q,sigma,A,N):
+    def update_overlaps(self, m,q,sigma,A,N, P , F):
         self.n_m = damped_update(m, self.m, self.BLEND_FPE)
         self.n_q = damped_update(q, self.q, self.BLEND_FPE)
         self.n_sigma = damped_update(sigma, self.sigma, self.BLEND_FPE)
         self.n_A = damped_update(A, self.A, self.BLEND_FPE)
         self.n_N = damped_update(N, self.N, self.BLEND_FPE)
+        self.n_P = damped_update(P, self.P, self.BLEND_FPE)
+        self.n_F = damped_update(F, self.F, self.BLEND_FPE)
 
         # Compute the error
-        err = max([abs(self.n_m - self.m), abs(self.n_q - self.q), abs(self.n_sigma - self.sigma), abs(self.n_A - self.A), abs(self.n_N - self.N)])
+        err = max([abs(self.n_m - self.m), abs(self.n_q - self.q), abs(self.n_sigma - self.sigma), abs(self.n_A - self.A), abs(self.n_N - self.N), abs(self.n_P - self.P), abs(self.n_F - self.F)])
 
         # Update the overlaps
         self.m = self.n_m
@@ -53,6 +59,8 @@ class OverlapSet():
         self.sigma = self.n_sigma
         self.A = self.n_A
         self.N = self.n_N
+        self.P = self.n_P
+        self.F = self.n_F
 
         return err
         
@@ -101,7 +109,7 @@ def logistic_m_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon:
         # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
         w = np.sqrt(overlaps.q) * xi
 
-        partial_prox =  proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.A/np.sqrt(overlaps.N),w) - w
+        partial_prox =  proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w) - w
 
         return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
 
@@ -119,7 +127,7 @@ def logistic_q_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon:
         z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
 
         w = np.sqrt(overlaps.q) * xi
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
         partial_proximal = ( proximal - w ) ** 2
 
         return z_0 * (partial_proximal/ (overlaps.sigma ** 2) ) * gaussian(xi)
@@ -136,9 +144,9 @@ def logistic_sigma_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsi
     """
     def alternative_derivative_f_out(xi,y):
         w = np.sqrt(overlaps.q) * xi
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
 
-        second_derivative = second_derivative_loss(y,proximal,epsilon*overlaps.A/np.sqrt(overlaps.N))
+        second_derivative = second_derivative_loss(y,proximal,epsilon*overlaps.P/np.sqrt(overlaps.N))
 
         return second_derivative / ( 1 + overlaps.sigma * second_derivative)
 
@@ -156,7 +164,7 @@ def logistic_sigma_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsi
     return  0.5 * alpha * (Iplus + Iminus)
 
 
-def logistic_A_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+def logistic_P_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
 
     def integrand(xi, y):
         e = overlaps.m * overlaps.m / (rho * overlaps.q)
@@ -167,9 +175,9 @@ def logistic_A_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon:
 
         w = np.sqrt(overlaps.q) * xi
 
-        z_star = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+        z_star = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
         
-        arg = y*z_star - epsilon * overlaps.A/np.sqrt(overlaps.N)
+        arg = y*z_star - epsilon * overlaps.P/np.sqrt(overlaps.N)
         m_derivative = sigmoid(-arg)
     
 
@@ -193,13 +201,13 @@ def logistic_N_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon:
 
         w = np.sqrt(overlaps.q) * xi
 
-        z_star = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+        z_star = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
         
 
-        arg = y*z_star - epsilon * overlaps.A/np.sqrt(overlaps.N)
+        arg = y*z_star - epsilon * overlaps.P/np.sqrt(overlaps.N)
         m_derivative = sigmoid(-arg)
 
-        m_derivative *= -0.5*epsilon*overlaps.A/(overlaps.N**(3/2))
+        m_derivative *= -0.5*epsilon*overlaps.P/(overlaps.N**(3/2))
 
         return z_0 * m_derivative * gaussian(xi)
 
@@ -220,26 +228,26 @@ def logistic_N_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon:
         # mhat = self.alpha/np.sqrt(self.data_model.gamma) * 1/(1+V) * np.sqrt(2/(np.pi*self.data_model.rho))
 
 def ridge_m_hat_func(task,overlaps,data_model,logger):
-    adv = (1 + task.epsilon * overlaps.A/np.sqrt(overlaps.N))
+    adv = (1 + task.epsilon * overlaps.P/np.sqrt(overlaps.N))
     return adv*task.alpha/np.sqrt(data_model.gamma) * 1/(1+overlaps.sigma) * np.sqrt(2/(np.pi*data_model.rho))
 
 def ridge_q_hat_func(task,overlaps,data_model,logger):
-    adv = (1 + task.epsilon * overlaps.A/np.sqrt(overlaps.N))
+    adv = (1 + task.epsilon * overlaps.P/np.sqrt(overlaps.N))
     return task.alpha * (adv**2 + overlaps.q - 2*overlaps.m*adv*np.sqrt(2/(np.pi*data_model.rho))) / (1+overlaps.sigma)**2
 
 def ridge_sigma_hat_func(task,overlaps,data_model,logger):
     return task.alpha/(1 + overlaps.sigma)
 
-def ridge_A_hat_func(task,overlaps,data_model,logger):
-    adv = (1 + task.epsilon * overlaps.A/np.sqrt(overlaps.N))
+def ridge_P_hat_func(task,overlaps,data_model,logger):
+    adv = (1 + task.epsilon * overlaps.P/np.sqrt(overlaps.N))
     result = task.alpha * ( -adv + overlaps.m*np.sqrt(2)/np.sqrt(np.pi*data_model.rho)  ) * 1/(1 + overlaps.sigma)
     result *= task.epsilon / np.sqrt(overlaps.N)
     return -result*2
 
 def ridge_N_hat_func(task,overlaps,data_model,logger):
-    adv = (1 + task.epsilon * overlaps.A/np.sqrt(overlaps.N))
+    adv = (1 + task.epsilon * overlaps.P/np.sqrt(overlaps.N))
     result = task.alpha * ( -adv + overlaps.m*np.sqrt(2)/np.sqrt(np.pi*data_model.rho)  ) * 1/(1 + overlaps.sigma)
-    result *= -0.5*task.epsilon*overlaps.A/(overlaps.N**(3/2))
+    result *= -0.5*task.epsilon*overlaps.P/(overlaps.N**(3/2))
     return -result*2
 
 """
@@ -254,13 +262,13 @@ def var_hat_func(task, overlaps, data_model, logger=None):
         overlaps.m_hat = ridge_m_hat_func(task,overlaps,data_model,logger)
         overlaps.q_hat = ridge_q_hat_func(task,overlaps,data_model,logger)
         overlaps.sigma_hat = ridge_sigma_hat_func(task,overlaps,data_model,logger)
-        overlaps.A_hat = ridge_A_hat_func(task,overlaps,data_model,logger)
+        overlaps.P_hat = ridge_P_hat_func(task,overlaps,data_model,logger)
         overlaps.N_hat = ridge_N_hat_func(task,overlaps,data_model,logger)
     elif task.problem_type == ProblemType.Logistic:
         overlaps.m_hat = logistic_m_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)/np.sqrt(data_model.gamma)
         overlaps.q_hat = logistic_q_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
         overlaps.sigma_hat = logistic_sigma_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS,logger=logger)
-        overlaps.A_hat = logistic_A_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
+        overlaps.P_hat = logistic_P_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
         overlaps.N_hat = logistic_N_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
     else:
         raise Exception(f"var_hat_func - problem_type {task.problem_type} not implemented")
@@ -268,7 +276,7 @@ def var_hat_func(task, overlaps, data_model, logger=None):
 
 def var_func(task, overlaps, data_model, logger):
 
-    Lambda = task.lam * data_model.spec_Sigma_w + overlaps.sigma_hat * data_model.spec_Sigma_x + overlaps.A_hat * data_model.spec_Sigma_delta + overlaps.N_hat * np.ones(data_model.d)
+    Lambda = task.lam * data_model.spec_Sigma_w + overlaps.sigma_hat * data_model.spec_Sigma_x + overlaps.P_hat * data_model.spec_Sigma_delta + overlaps.N_hat * np.ones(data_model.d)
     H = data_model.spec_Sigma_x * overlaps.q_hat + overlaps.m_hat**2 * data_model.spec_PhiPhit 
 
     
@@ -276,11 +284,14 @@ def var_func(task, overlaps, data_model, logger):
     q = np.mean((H * data_model.spec_Sigma_x) / Lambda**2) 
     m = overlaps.m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
     
-    A = np.mean( H * data_model.spec_Sigma_delta / Lambda**2)
+    P = np.mean( H * data_model.spec_Sigma_delta / Lambda**2)
 
     N = np.mean( H * np.ones(data_model.d) / Lambda**2)
 
-    return m, q, sigma, A, N
+    A = np.mean( H * data_model.spec_Sigma_upsilon / Lambda**2)
+    F = 0.5* overlaps.m_hat * np.mean( data_model.spec_FTerm / Lambda)
+
+    return m, q, sigma, A, N, P, F
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -301,9 +312,9 @@ class LogisticObservables:
             w = np.sqrt(overlaps.q) * xi
             z_0 = erfc(  ( (-y * overlaps.m * xi) / np.sqrt(overlaps.q) ) / np.sqrt(2*(task.tau**2 + (data_model.rho - overlaps.m**2/overlaps.q))))
 
-            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.P/np.sqrt(overlaps.N),w)
 
-            l = adversarial_loss(y,proximal, task.epsilon*overlaps.A/np.sqrt(overlaps.N))
+            l = adversarial_loss(y,proximal, task.epsilon*overlaps.P/np.sqrt(overlaps.N))
 
             return z_0 * l * gaussian(xi)
 
@@ -323,7 +334,7 @@ class LogisticObservables:
             # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
             w = np.sqrt(overlaps.q) * xi
 
-            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.A/np.sqrt(overlaps.N),w)
+            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.P/np.sqrt(overlaps.N),w)
 
             activation = np.sign(proximal)
 
@@ -387,7 +398,7 @@ def generalization_error(rho,m,q, tau):
 
 
 def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
-    return erf( task.test_against_epsilon * overlaps.m / np.sqrt( 2 * data_model.rho * overlaps.q ) )
+    return erf( task.test_against_epsilon * overlaps.F / np.sqrt( 2 * data_model.rho * overlaps.N ) )
 
 
 def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
@@ -410,12 +421,12 @@ def fair_adversarial_error_overlaps(overlaps: OverlapSet, task: Task, data_model
     
     
     V = data_model.rho*overlaps.q - overlaps.m**2
-    gamma_max = gamma+task.test_against_epsilon*overlaps.m/np.sqrt(overlaps.N)
+    gamma_max = gamma+task.test_against_epsilon*overlaps.F/np.sqrt(overlaps.N)
     gamma_star = max(gamma, gamma_max)
 
     # first term
     def first_integrand(nu, y):
-        return erfc( ( y*overlaps.m**2*nu - y* data_model.rho * np.sqrt(overlaps.N) * ( np.abs(nu) - gamma ) ) / (overlaps.m * np.sqrt(2*V*data_model.rho))  ) * np.exp(-(nu)**2 / 2)
+        return erfc( ( y*overlaps.m*overlaps.F*nu - y* data_model.rho * np.sqrt(overlaps.N) * ( np.abs(nu) - gamma ) ) / (overlaps.F * np.sqrt(2*V*data_model.rho))  ) * np.exp(-(nu)**2 / 2)
     
     r1 = quad(lambda nu: first_integrand(nu,-1),-gamma_max,-gamma,limit=500)
     first_term = r1[0]
@@ -441,8 +452,7 @@ def fair_adversarial_error_overlaps(overlaps: OverlapSet, task: Task, data_model
         return np.exp(-(nu)**2/(2*data_model.rho) ) * erfc( overlaps.m*nu / np.sqrt(2*data_model.rho * V))
     result3 = quad(lambda nu: third_integral(nu),0,gamma,limit=500)
     third_term = result3[0]
-    third_term /= np.sqrt(2*np.pi * data_model.rho)
-    
+    third_term /= np.sqrt(2*np.pi * data_model.rho)    
     
     return first_term + second_term + third_term
 
@@ -500,9 +510,9 @@ def fixed_point_finder(
 
         overlaps = var_hat_func(task, overlaps, my_data_model, logger)
 
-        new_m, new_q, new_sigma, new_A, new_N = var_func(task, overlaps, my_data_model, logger)
+        new_m, new_q, new_sigma, new_A, new_N, new_P, new_F = var_func(task, overlaps, my_data_model, logger)
 
-        err = overlaps.update_overlaps(new_m, new_q, new_sigma, new_A, new_N)
+        err = overlaps.update_overlaps(new_m, new_q, new_sigma, new_A, new_N, new_P, new_F)
 
 
         iter_nb += 1

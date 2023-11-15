@@ -306,49 +306,50 @@ class LogisticProblem:
 def error(y, yhat):
     return 0.25*np.mean((y-yhat)**2)
 
-def adversarial_error(y, Xtest, w_gd, epsilon, Sigma_delta):
+def adversarial_error(y, Xtest, w_gd, epsilon, Sigma_upsilon):
     d = Xtest.shape[1]
-    wSw = w_gd.dot(Sigma_delta@w_gd)
+    wSw = w_gd.dot(Sigma_upsilon@w_gd)
     nww = np.sqrt(w_gd@w_gd)
 
     return error(y, np.sign( Xtest@w_gd/np.sqrt(d) - y*epsilon/np.sqrt(d) * wSw/nww  ))
 
-def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, Sigma_delta):
+def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, data_model):
     if teacher_weights is None:
         return None
 
     d = Xtest.shape[1]
-    Xtest = Xtest / np.sqrt(d)
-    epsilon = epsilon / np.sqrt(d)
+    normalization = np.sqrt(d)
+    Xtest = Xtest / normalization
+    epsilon = epsilon / normalization
 
     
     nww = np.sqrt(w_gd@w_gd)
 
-    tSw = teacher_weights.dot(Sigma_delta@w_gd) # shape (d,)
+    tSw = teacher_weights.dot(data_model.Sigma_upsilon@w_gd) # shape (d,)
     
     y_attacked_teacher = np.sign( Xtest@teacher_weights - y*epsilon * tSw/nww  )
 
     return error(y_attacked_teacher, y)
 
-def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma, Sigma_delta, logger = None):
-    
-    # if Sigma_delta is not the identity, raise an exception
-    if not np.allclose(Sigma_delta, np.eye(Sigma_delta.shape[0])):
-        raise Exception("Sigma_delta is not the identity matrix")
+def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma, data_model, logger = None):
     
     d = X_test.shape[1]
-    X_test = X_test / np.sqrt(d)
-    epsilon = epsilon / np.sqrt(d)
+    normalization = np.sqrt(d)
+
+    logger.info(f"Normalization: {normalization}")
+
+    X_test = X_test / normalization
+    epsilon = epsilon / normalization
     nww = np.sqrt(w_gd@w_gd)
-    m = w_gd@teacher_weights 
+    F = w_gd.dot(data_model.Sigma_upsilon@teacher_weights)
     activation = X_test@teacher_weights
 
-    gamma_constraint_argument = y*activation - epsilon*m/nww
+    gamma_constraint_argument = y*activation - epsilon*F/nww
 
     # first term    
     y_first = np.zeros_like(y)
     y_gamma = np.zeros_like(y)
-    y_gamma_t = np.sign( X_test@w_gd + nww/m * (y* gamma - activation ) )
+    y_gamma_t = np.sign( X_test@w_gd + nww/F * (y* gamma - activation ) )
     mask_gamma_smaller = (gamma_constraint_argument < gamma) & (y*activation > gamma)
     y_gamma[mask_gamma_smaller] = y_gamma_t[mask_gamma_smaller]
     y_first[mask_gamma_smaller] = y[mask_gamma_smaller]    
