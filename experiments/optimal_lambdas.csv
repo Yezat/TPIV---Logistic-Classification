@@ -292,3 +292,13 @@ alpha,epsilon,tau,lambda,data_model_type,data_model_name,problem_type
 6.30960000,0.10000000,0.00000000,0.00212174,VanillaGaussian,VanillaGaussian,Logistic
 6.30960000,0.20000000,0.00000000,0.00001001,VanillaGaussian,VanillaGaussian,Logistic
 0.50000000,0.50000000,0.00000000,0.35504540,VanillaGaussian,VanillaGaussian,Ridge
+0.50120000,0.00000000,0.00000000,0.60104858,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+0.50120000,0.20000000,0.00000000,0.58436249,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+0.50120000,0.40000000,0.00000000,0.56552874,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+0.50120000,0.60000000,0.00000000,0.54457928,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+2.23870000,0.00000000,0.00000000,0.14277043,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+2.23870000,0.20000000,0.00000000,0.13696612,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+2.23870000,0.40000000,0.00000000,0.12659681,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+2.23870000,0.60000000,0.00000000,0.11123373,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+10.00000000,0.00000000,0.00000000,0.01966078,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic
+10.00000000,0.20000000,0.00000000,0.01695907,KFeaturesModel,KFeaturesModel_TwoStrongFeatures,Logistic

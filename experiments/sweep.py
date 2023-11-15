@@ -31,7 +31,7 @@ def run_erm(logger, task, data_model):
 
     weights_erm, problem_instance = run_optimizer(task, data_model, data, logger)
     
-    erm_information = ERMExperimentInformation(task, data_model, data, weights_erm, problem_instance)
+    erm_information = ERMExperimentInformation(task, data_model, data, weights_erm, problem_instance, logger)
 
     end = time.time()
     erm_information.duration = end - start
@@ -50,7 +50,7 @@ def run_state_evolution(logger,task, data_model):
 
     overlaps = fixed_point_finder(logger, data_model, task)
 
-    st_exp_info = StateEvolutionExperimentInformation(task,overlaps, data_model)
+    st_exp_info = StateEvolutionExperimentInformation(task,overlaps, data_model,logger)
 
 
     end = time.time()

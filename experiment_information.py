@@ -1,5 +1,5 @@
-from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher
-from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables
+from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher, fair_adversarial_error_erm
+from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps
 from helpers import *
 from ERM import predict_erm, error, adversarial_error
 import numpy as np
@@ -99,7 +99,7 @@ class CalibrationResults:
 
 class StateEvolutionExperimentInformation:
     # define a constructor with all attributes
-    def __init__(self, task,overlaps, data_model):
+    def __init__(self, task,overlaps, data_model, logger):
 
         if task.problem_type == ProblemType.Ridge:
             observables = RidgeObservables()
@@ -146,6 +146,9 @@ class StateEvolutionExperimentInformation:
         self.adversarial_generalization_error: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
         self.adversarial_generalization_error_teacher: float = adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model)
         
+        self.fair_adversarial_error: float = fair_adversarial_error_overlaps(overlaps, task, data_model,0.13,logger)
+        logger.info(f"Fair Adversarial Error: {self.fair_adversarial_error}")
+
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
 
@@ -180,7 +183,7 @@ class StateEvolutionExperimentInformation:
         self.teacher_robustness: float = 1 - self.adversarial_generalization_error_teacher
 
 class ERMExperimentInformation:
-    def __init__(self, task, data_model, data: DataSet, weights, problem_instance):
+    def __init__(self, task, data_model, data: DataSet, weights, problem_instance, logger):
 
         # let's compute and store the overlaps      
         self.Q = weights.dot(data_model.Sigma_x@weights) / task.d
@@ -247,7 +250,8 @@ class ERMExperimentInformation:
         self.adversarial_generalization_error: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_delta)
         self.adversarial_generalization_error_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model.Sigma_delta)
         self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
-
+        self.fair_adversarial_error: float = fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,0.13,data_model.Sigma_delta, logger)
+        logger.info(f"Fair Adversarial Error: {self.fair_adversarial_error}")
         
         # Training Error
         yhat_gd_train = predict_erm(data.X,weights)
@@ -298,6 +302,7 @@ class DatabaseHandler:
                     generalization_error REAL,
                     adversarial_generalization_error REAL,
                     adversarial_generalization_error_teacher REAL,
+                    fair_adversarial_error REAL,
                     training_loss REAL,
                     training_error REAL,
                     date TEXT,
@@ -385,6 +390,7 @@ class DatabaseHandler:
                     adversarial_generalization_error REAL,
                     adversarial_generalization_error_teacher REAL,
                     adversarial_generalization_error_overlap REAL,
+                    fair_adversarial_error REAL,
                     date TEXT,
                     chosen_minimizer TEXT,
                     training_error REAL,
@@ -437,7 +443,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -446,6 +452,7 @@ class DatabaseHandler:
             experiment_information.generalization_error,
             experiment_information.adversarial_generalization_error,
             experiment_information.adversarial_generalization_error_teacher,
+            experiment_information.fair_adversarial_error,
             experiment_information.training_loss,
             experiment_information.training_error,
             experiment_information.date,
@@ -500,7 +507,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -519,6 +526,7 @@ class DatabaseHandler:
             experiment_information.adversarial_generalization_error,
             experiment_information.adversarial_generalization_error_teacher,
             experiment_information.adversarial_generalization_error_overlap,
+            experiment_information.fair_adversarial_error,
             experiment_information.date,
             experiment_information.chosen_minimizer,
             experiment_information.training_error,
@@ -547,7 +555,7 @@ class DatabaseHandler:
 
     # how to implement a select
     # make sure to return a pandas dataframe...
-    # c.execute('SELECT * FROM experiments WHERE result > 0.5')
+    # c.execute('SELECT * FROM experiments WHERE result > 0.0')
     # results = c.fetchall()
     # for row in results:
     #     print(row)

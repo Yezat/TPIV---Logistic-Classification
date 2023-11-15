@@ -318,8 +318,8 @@ def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, Sigma_de
         return None
 
     d = Xtest.shape[1]
-    Xtest = Xtest / d
-    epsilon = epsilon / d
+    Xtest = Xtest / np.sqrt(d)
+    epsilon = epsilon / np.sqrt(d)
 
     
     nww = np.sqrt(w_gd@w_gd)
@@ -330,6 +330,53 @@ def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, Sigma_de
 
     return error(y_attacked_teacher, y)
 
+def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma, Sigma_delta, logger = None):
+    
+    # if Sigma_delta is not the identity, raise an exception
+    if not np.allclose(Sigma_delta, np.eye(Sigma_delta.shape[0])):
+        raise Exception("Sigma_delta is not the identity matrix")
+    
+    d = X_test.shape[1]
+    X_test = X_test / np.sqrt(d)
+    epsilon = epsilon / np.sqrt(d)
+    nww = np.sqrt(w_gd@w_gd)
+    m = w_gd@teacher_weights 
+    activation = X_test@teacher_weights
+
+    gamma_constraint_argument = y*activation - epsilon*m/nww
+
+    # first term    
+    y_first = np.zeros_like(y)
+    y_gamma = np.zeros_like(y)
+    y_gamma_t = np.sign( X_test@w_gd + nww/m * (y* gamma - activation ) )
+    mask_gamma_smaller = (gamma_constraint_argument < gamma) & (y*activation > gamma)
+    y_gamma[mask_gamma_smaller] = y_gamma_t[mask_gamma_smaller]
+    y_first[mask_gamma_smaller] = y[mask_gamma_smaller]    
+    first_error = error(y_first, y_gamma)
+    
+    # second term
+    y_second = np.zeros_like(y)
+    y_max = np.zeros_like(y)
+    mask_gamma_bigger = (gamma_constraint_argument >= gamma) & (y*activation > gamma)    
+    y_max_t = np.sign( X_test@w_gd - y * epsilon * nww )
+    y_max[mask_gamma_bigger] = y_max_t[mask_gamma_bigger]
+    y_second[mask_gamma_bigger] = y[mask_gamma_bigger]
+    second_error = error(y_second, y_max)
+
+
+    # third term
+    y_hat = np.zeros_like(y)
+    y_third = np.zeros_like(y)
+    mask_last_smaller = y*activation <= gamma    
+    y_hat_t = np.sign( X_test@w_gd )    
+    y_hat[mask_last_smaller] = y_hat_t[mask_last_smaller]
+    y_third[mask_last_smaller] = y[mask_last_smaller]
+    third_error = error(y_third, y_hat)
+        
+
+
+    return first_error + second_error + third_error
+    
 
 
 

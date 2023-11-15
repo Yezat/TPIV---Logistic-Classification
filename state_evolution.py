@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Tuple
-from scipy.integrate import quad
+from scipy.integrate import quad, dblquad
 from scipy.special import erfc, erf, logit, owens_t
 from helpers import *
 from data_model import *
@@ -379,6 +379,17 @@ class RidgeObservables:
 ------------------------------------------------------------------------------------------------------------------------
 """
 
+def generalization_error(rho,m,q, tau):
+    """
+    Returns the generalization error in terms of the overlaps
+    """
+    return np.arccos(m / np.sqrt( (rho + tau**2 ) * q ) )/np.pi
+
+
+def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
+    return erf( task.test_against_epsilon * overlaps.m / np.sqrt( 2 * data_model.rho * overlaps.q ) )
+
+
 def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
 
     a = overlaps.m/np.sqrt((overlaps.q* data_model.rho - overlaps.m**2))
@@ -394,16 +405,46 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
     return gen_error
 
 
-def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
-    return erf( task.test_against_epsilon * overlaps.m / np.sqrt( 2 * data_model.rho * overlaps.q ) )
+
+def fair_adversarial_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, gamma, logger=None):
+    
+    
+    V = data_model.rho*overlaps.q - overlaps.m**2
+    gamma_max = gamma+task.test_against_epsilon*overlaps.m/np.sqrt(overlaps.N)
+    gamma_star = max(gamma, gamma_max)
+
+    # first term
+    def first_integrand(nu, y):
+        return erfc( ( y*overlaps.m**2*nu - y* data_model.rho * np.sqrt(overlaps.N) * ( np.abs(nu) - gamma ) ) / (overlaps.m * np.sqrt(2*V*data_model.rho))  ) * np.exp(-(nu)**2 / 2)
+    
+    r1 = quad(lambda nu: first_integrand(nu,-1),-gamma_max,-gamma,limit=500)
+    first_term = r1[0]
+    r2 = quad(lambda nu: first_integrand(nu,1),gamma,gamma_max,limit=500)
+    first_term += r2[0]
+    first_term /= (2*np.sqrt(2*np.pi * data_model.rho))
+    
+
+    # second term
+    def second_integral(nu):
+        return erfc((-task.test_against_epsilon*np.sqrt(overlaps.N)*data_model.rho + overlaps.m*nu)/np.sqrt(2*data_model.rho * V)) * np.exp(-(nu)**2 / (2*data_model.rho))
 
 
-def generalization_error(rho,m,q, tau):
-    """
-    Returns the generalization error in terms of the overlaps
-    """
-    return np.arccos(m / np.sqrt( (rho + tau**2 ) * q ) )/np.pi
+    
+    result2 = quad(lambda nu: second_integral(nu),gamma_star,np.inf,limit=500)
+    second_term = result2[0]
+    second_term /= np.sqrt(2*np.pi * data_model.rho)    
 
+
+
+    # third term
+    def third_integral(nu):
+        return np.exp(-(nu)**2/(2*data_model.rho) ) * erfc( overlaps.m*nu / np.sqrt(2*data_model.rho * V))
+    result3 = quad(lambda nu: third_integral(nu),0,gamma,limit=500)
+    third_term = result3[0]
+    third_term /= np.sqrt(2*np.pi * data_model.rho)
+    
+    
+    return first_term + second_term + third_term
 
 def overlap_calibration(rho,p,m,q_erm,tau, debug = False):
     """
@@ -452,7 +493,7 @@ def fixed_point_finder(
     iter_nb = 0
     
     while err > overlaps.TOL_FPE or iter_nb < overlaps.MIN_ITER_FPE:
-        if iter_nb % 1 == 0 and log:
+        if iter_nb % 10 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             overlaps.log_overlaps(logger)
 
