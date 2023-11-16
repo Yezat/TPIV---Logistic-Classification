@@ -140,9 +140,9 @@ def get_default_experiment():
     experiment_type: ExperimentType = ExperimentType.Sweep
     test_against_largest_epsilon: bool = True
     experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
-    compute_hessian: bool = False
     problem_types: list[ProblemType] = [ProblemType.Logistic]
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon,problem_types, experiment_name,compute_hessian)
+    gamma_fair_error: float = 0.09
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon,problem_types,gamma_fair_error, experiment_name)
     return experiment
 experiment = get_default_experiment()
 
@@ -158,7 +158,7 @@ logger.info(f"Experiment: {experiment}")
 
 try:
     # Force a creation of a new data_model
-    experiment.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=data_model_name, description=data_model_description, feature_ratios=feature_ratios, features_x=features_x, features_theta=features_theta)
+    ExperimentInformation.get_data_model(logger,source_pickle_path="../",delete_existing=True, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=data_model_name, description=data_model_description, feature_ratios=feature_ratios, features_x=features_x, features_theta=features_theta)
 except Exception as e:
     # if you overwrite an existing data_model, you will get an exception. Still overwrite an experiment definition to ensure that you can run the experiment with the existing data_model.
     logger.info(f"Exception '{e}' occured.")

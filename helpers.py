@@ -104,7 +104,7 @@ class ProblemType(Enum):
     Ridge = 1
 
 class Task:
-    def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, compute_hessian: bool = False):
+    def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, gamma_fair_error: float):
         self.id = id
         self.experiment_id = experiment_id
         self.method = method
@@ -119,7 +119,7 @@ class Task:
         self.ps = ps
         self.dp = dp
         self.data_model_type: DataModelType = data_model_type
-        self.compute_hessian: bool = compute_hessian
+        self.gamma_fair_error: float = gamma_fair_error
         self.problem_type: ProblemType = problem_type
 
     def __str__(self):

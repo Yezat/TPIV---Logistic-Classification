@@ -12,6 +12,7 @@ import json
 import sqlite3
 import pandas as pd
 from data_model import *
+import ast
 
 # create an ExperimentType enum
 class ExperimentType(Enum):
@@ -24,7 +25,7 @@ class ExperimentType(Enum):
 
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_largest_epsilon: bool, problem_types: list[ProblemType], experiment_name: str = "", compute_hessian: bool = False):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_largest_epsilon: bool, problem_types: list[ProblemType],  gamma_fair_error: float, experiment_name: str = ""):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -45,17 +46,48 @@ class ExperimentInformation:
         self.data_model_type: DataModelType = data_model_type
         self.data_model_name: str = data_model_name
         self.data_model_description: str = data_model_description
-        self.compute_hessian: bool = compute_hessian
         self.problem_types: list[ProblemType] = problem_types
+        self.gamma_fair_error: float = gamma_fair_error
 
     @classmethod
     def fromdict(cls, d):
         return cls(**d)
+    
+    @classmethod
+    def from_df(cls, df):
+        experiment_dict = df.to_dict()
+        # store experiment_id and code_version
+        experiment_id = experiment_dict["experiment_id"]
+        code_version = experiment_dict["code_version"]
+        experiment_date = experiment_dict["date"]
+        duration = experiment_dict["duration"]
+        completed = experiment_dict["completed"]
+        # remove the entries for experiment_id, code_version and date
+        experiment_dict.pop("experiment_id")
+        experiment_dict.pop("code_version")
+        experiment_dict.pop("date")
+        experiment_dict.pop("duration")
+        experiment_dict.pop("completed")
+        experiment = cls(**experiment_dict)
+        # restore experiment_id and code_version
+        experiment.experiment_id = experiment_id
+        experiment.code_version = code_version
+        experiment.date = experiment_date
+        experiment.duration = duration
+        experiment.completed = completed
+
+        experiment.data_model_type = DataModelType[experiment.data_model_type]
+        experiment.experiment_type = ExperimentType[experiment.experiment_type]
+        experiment.problem_types = [ProblemType[problem_type] for problem_type in ast.literal_eval(experiment.problem_types)]
+
+
+        return experiment
 
     # overwrite the to string method to print all attributes and their type
     def __str__(self):
         # return for each attribute the content and the type
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
+    
     
     def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name: str = "", description: str = "", feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None):
         """
@@ -146,7 +178,7 @@ class StateEvolutionExperimentInformation:
         self.adversarial_generalization_error: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
         self.adversarial_generalization_error_teacher: float = adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model)
         
-        self.fair_adversarial_error: float = fair_adversarial_error_overlaps(overlaps, task, data_model,0.13,logger)
+        self.fair_adversarial_error: float = fair_adversarial_error_overlaps(overlaps, task, data_model,task.gamma_fair_error,logger)
 
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
@@ -256,7 +288,7 @@ class ERMExperimentInformation:
         self.adversarial_generalization_error: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_upsilon)
         self.adversarial_generalization_error_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model)
         self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
-        self.fair_adversarial_error: float = fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,0.13,data_model, logger)
+        self.fair_adversarial_error: float = fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,task.gamma_fair_error,data_model, logger)
         
         # Training Error
         yhat_gd_train = predict_erm(data.X,weights)
@@ -370,7 +402,8 @@ class DatabaseHandler:
                 completed BOOLEAN,
                 data_model_type TEXT,
                 data_model_name TEXT,
-                data_model_description TEXT
+                data_model_description TEXT,
+                gamma_fair_error REAL
             )''')
             self.connection.commit()
 
@@ -421,7 +454,7 @@ class DatabaseHandler:
     def insert_experiment(self, experiment_information: ExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.experiment_id,
             experiment_information.experiment_name,
             experiment_information.duration,
@@ -442,7 +475,8 @@ class DatabaseHandler:
             experiment_information.completed,
             experiment_information.data_model_type.name,
             experiment_information.data_model_name,
-            experiment_information.data_model_description
+            experiment_information.data_model_description,
+            experiment_information.gamma_fair_error
             ))
         self.connection.commit()
 
