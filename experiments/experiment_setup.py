@@ -127,22 +127,23 @@ experiment_filename = "sweep_experiment.json"
 def get_default_experiment():
     state_evolution_repetitions: int = 1
     erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.5,2.0,3) #np.linspace(0.1,10,15) #
+    alphas: np.ndarray = np.linspace(0.5,2.0,2) #np.linspace(0.1,10,15) #
     epsilons: np.ndarray = np.array([0,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
-    lambdas: np.ndarray = np.array([0.01]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
+    lambdas: np.ndarray = np.array([0.01,10]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = None # np.array([0.6,0.75,0.9])
     dp: float = 0.01
     # round the lambdas, epsilons and alphas for 4 digits
     alphas = np.round(alphas,4)
+    test_against_epsilons: np.ndarray = np.array([0.001,0.2])
     epsilons = np.round(epsilons,4)
     lambdas = np.round(lambdas,4)
-    experiment_type: ExperimentType = ExperimentType.Sweep
-    test_against_largest_epsilon: bool = True
+    test_against_epsilons = np.round(test_against_epsilons,4)
+    experiment_type: ExperimentType = ExperimentType.Sweep    
     experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
     problem_types: list[ProblemType] = [ProblemType.Logistic]
-    gamma_fair_error: float = 0.09
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_largest_epsilon,problem_types,gamma_fair_error, experiment_name)
+    gamma_fair_error: float = 0.01
+    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_type,data_model_name, data_model_description, test_against_epsilons,problem_types,gamma_fair_error, experiment_name)
     return experiment
 experiment = get_default_experiment()
 
@@ -163,7 +164,7 @@ except Exception as e:
     # if you overwrite an existing data_model, you will get an exception. Still overwrite an experiment definition to ensure that you can run the experiment with the existing data_model.
     logger.info(f"Exception '{e}' occured.")
     # Log the exception stack trace
-    logger.exception(e)
+    # logger.exception(e)
 
 # use json dump to save the experiment parameters
 with open(experiment_filename,"w") as f:

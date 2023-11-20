@@ -104,13 +104,13 @@ class ProblemType(Enum):
     Ridge = 1
 
 class Task:
-    def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilon, lam, tau,d,ps, dp, data_model_type: DataModelType, gamma_fair_error: float):
+    def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilons: np.ndarray, lam, tau,d,ps, dp, data_model_type: DataModelType, gamma_fair_error: float):
         self.id = id
         self.experiment_id = experiment_id
         self.method = method
         self.alpha = alpha
         self.epsilon = epsilon
-        self.test_against_epsilon = test_against_epsilon
+        self.test_against_epsilons: np.ndarray = test_against_epsilons
         self.lam = lam
         self.tau = tau
         self.d = d
@@ -123,7 +123,8 @@ class Task:
         self.problem_type: ProblemType = problem_type
 
     def __str__(self):
-        return f"Task {self.id} on {self.problem_type.name} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, test_against_epsilon={self.test_against_epsilon}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
+        return f"Task {self.id} on {self.problem_type.name} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, test_against_epsilons={self.test_against_epsilons}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
+    
 
 
 """

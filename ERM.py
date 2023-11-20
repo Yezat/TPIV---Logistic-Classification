@@ -334,33 +334,59 @@ def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, data_mod
 def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma, data_model, logger = None):
     
     d = X_test.shape[1]
-    normalization = np.sqrt(d)
 
-    logger.info(f"Normalization: {normalization}")
-
-    X_test = X_test / normalization
-    epsilon = epsilon / normalization
-    nww = np.sqrt(w_gd@w_gd)
+    N = w_gd@w_gd 
+    A = w_gd.dot(data_model.Sigma_upsilon@w_gd) 
     F = w_gd.dot(data_model.Sigma_upsilon@teacher_weights)
-    activation = X_test@teacher_weights
+    teacher_activation = X_test@teacher_weights/np.sqrt(d)
+    student_activation = X_test@w_gd/np.sqrt(d)
 
-    gamma_constraint_argument = y*activation - epsilon*F/nww
+    assert F > 0, f"F is {F} and should be positive"
+
+    gamma_constraint_argument = y*teacher_activation - epsilon*F/np.sqrt(N*d)
 
     # first term    
     y_first = np.zeros_like(y)
     y_gamma = np.zeros_like(y)
-    y_gamma_t = np.sign( X_test@w_gd + nww/F * (y* gamma - activation ) )
-    mask_gamma_smaller = (gamma_constraint_argument < gamma) & (y*activation > gamma)
+    moved_argument = student_activation + A/F * (y* gamma - teacher_activation )
+    teacher_moved_argument = teacher_activation + (y* gamma -teacher_activation)
+    if logger is not None:
+        # log gamma, and y and y * gamma
+        logger.info(f"Gamma: {gamma}, y: {y}, y*gamma: {y*gamma}")
+    y_moved_teacher = np.sign(teacher_moved_argument)
+    # assert y is equal to y_moved_teacher
+    assert np.all(y == y_moved_teacher), f"y is not equal to y_moved_teacher. y: {y}, y_moved_teacher: {y_moved_teacher}, teacher_moved_argument: {teacher_moved_argument}"
+
+
+    y_gamma_t = np.sign( moved_argument )
+    # count and print the number of occurences where the argument is almost zero
+    almost_zero = np.count_nonzero(np.abs(moved_argument) < 1e-10)
+    if logger is not None:
+        logger.info(f"Number of occurences where the argument is almost zero: {almost_zero}")
+
+    mask_gamma_smaller = (y*teacher_activation < gamma + epsilon*F/np.sqrt(N*d)) & (y*teacher_activation > gamma)
+    # log the range of the absolute value of the teacher activation, that is gamma and gamma + epsilon*F/np.sqrt(N*d)
+    if logger is not None:
+        logger.info(f"Gamma: {gamma}, Gamma + epsilon*F/np.sqrt(N*d): {gamma + epsilon*F/np.sqrt(N*d)}")
     y_gamma[mask_gamma_smaller] = y_gamma_t[mask_gamma_smaller]
     y_first[mask_gamma_smaller] = y[mask_gamma_smaller]    
     first_error = error(y_first, y_gamma)
+
+    # return mask_gamma_smaller
+
+    test = np.mean(y_first != y_gamma)
+
+    assert test == first_error, f"First error is {first_error} and should be {test}"
+
+
+
     
     # second term
     y_second = np.zeros_like(y)
     y_max = np.zeros_like(y)
-    mask_gamma_bigger = (gamma_constraint_argument >= gamma) & (y*activation > gamma)    
-    y_max_t = np.sign( X_test@w_gd - y * epsilon * nww )
-    y_max[mask_gamma_bigger] = y_max_t[mask_gamma_bigger]
+    mask_gamma_bigger = (gamma_constraint_argument >= gamma) & (y*teacher_activation > gamma)    
+    y_max_t = np.sign( student_activation - y * epsilon * A/np.sqrt(N*d) )
+    y_max[mask_gamma_bigger]  = y_max_t[mask_gamma_bigger]
     y_second[mask_gamma_bigger] = y[mask_gamma_bigger]
     second_error = error(y_second, y_max)
 
@@ -368,7 +394,7 @@ def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma,
     # third term
     y_hat = np.zeros_like(y)
     y_third = np.zeros_like(y)
-    mask_last_smaller = y*activation <= gamma    
+    mask_last_smaller = y*teacher_activation <= gamma    
     y_hat_t = np.sign( X_test@w_gd )    
     y_hat[mask_last_smaller] = y_hat_t[mask_last_smaller]
     y_third[mask_last_smaller] = y[mask_last_smaller]

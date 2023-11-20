@@ -345,7 +345,7 @@ class LogisticObservables:
         return (Iplus + Iminus) * 0.5
 
     @staticmethod
-    def test_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+    def test_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, epsilon: float, int_lims: float):
         def integrand(xi, y):
             e = overlaps.m * overlaps.m / (data_model.rho * overlaps.q)
             w_0 = np.sqrt(data_model.rho*e) * xi
@@ -355,7 +355,7 @@ class LogisticObservables:
             # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
             w = np.sqrt(overlaps.q) * xi
 
-            loss_value = adversarial_loss(y,w,task.test_against_epsilon*overlaps.A/np.sqrt(overlaps.N))
+            loss_value = adversarial_loss(y,w,epsilon*overlaps.A/np.sqrt(overlaps.N))
 
             return z_0 * gaussian(xi) * loss_value
 
@@ -397,15 +397,15 @@ def generalization_error(rho,m,q, tau):
     return np.arccos(m / np.sqrt( (rho + tau**2 ) * q ) )/np.pi
 
 
-def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
-    return erf( task.test_against_epsilon * overlaps.F / np.sqrt( 2 * data_model.rho * overlaps.N ) )
+def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, epsilon: float):
+    return erf( epsilon * overlaps.F / np.sqrt( 2 * data_model.rho * overlaps.N ) )
 
 
-def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel):
+def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, epsilon:float):
 
     a = overlaps.m/np.sqrt((overlaps.q* data_model.rho - overlaps.m**2))
 
-    b = task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q)
+    b = epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q)
 
     owen = 2 * owens_t(a*b , 1/a)
 
@@ -417,34 +417,44 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
 
 
 
-def fair_adversarial_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, gamma, logger=None):
-    
+def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger=None):
     
     V = data_model.rho*overlaps.q - overlaps.m**2
-    gamma_max = gamma+task.test_against_epsilon*overlaps.F/np.sqrt(overlaps.N)
-    gamma_star = max(gamma, gamma_max)
+    gamma_max = gamma+epsilon*overlaps.F/np.sqrt(overlaps.N)
 
-    # first term
-    def first_integrand(nu, y):
-        return erfc( ( y*overlaps.m*overlaps.F*nu - y* data_model.rho * np.sqrt(overlaps.N) * ( np.abs(nu) - gamma ) ) / (overlaps.F * np.sqrt(2*V*data_model.rho))  ) * np.exp(-(nu)**2 / 2)
+    def erfc_term(nu):
+        return np.exp((-(nu**2))/(2*data_model.rho)) * erfc( ( overlaps.F*overlaps.m*nu + overlaps.A*data_model.rho*( gamma - nu ) ) / (overlaps.F * np.sqrt( 2 * data_model.rho * V )))
     
-    r1 = quad(lambda nu: first_integrand(nu,-1),-gamma_max,-gamma,limit=500)
-    first_term = r1[0]
-    r2 = quad(lambda nu: first_integrand(nu,1),gamma,gamma_max,limit=500)
-    first_term += r2[0]
+    def erf_term(nu):
+        return np.exp((-(nu**2))/(2 * data_model.rho)) * (1 + erf( ( overlaps.F * overlaps.m * nu - overlaps.A * data_model.rho * ( nu + gamma) ) / (overlaps.F * np.sqrt(2 * data_model.rho * V)) ))
+    
+    if logger is not None:
+        logger.info(f"Gamma: {gamma}, Gamma + epsilon*F/np.sqrt(N): {gamma_max}")
+
+    first_term = quad(lambda nu: erfc_term(nu),gamma,gamma_max,limit=500)[0]
+    if logger is not None:
+        logger.info(f"First term: {first_term}")
+    first_term += quad(lambda nu: erf_term(nu),-gamma_max,-gamma,limit=500)[0]
+    if logger is not None:
+        logger.info(f"First term: {first_term}")
     first_term /= (2*np.sqrt(2*np.pi * data_model.rho))
-    
+    if logger is not None:
+        logger.info(f"First term: {first_term}")
+
+    # log the epsilon
+
+    if logger is not None:
+        logger.info(f"epsilon: {epsilon}")
+
+
 
     # second term
     def second_integral(nu):
-        return erfc((-task.test_against_epsilon*np.sqrt(overlaps.N)*data_model.rho + overlaps.m*nu)/np.sqrt(2*data_model.rho * V)) * np.exp(-(nu)**2 / (2*data_model.rho))
+        return erfc((-epsilon*overlaps.A*data_model.rho + np.sqrt(overlaps.N)*overlaps.m*nu)/np.sqrt(overlaps.N*2*data_model.rho * V)) * np.exp(-(nu)**2 / (2*data_model.rho))
 
-
-    
-    result2 = quad(lambda nu: second_integral(nu),gamma_star,np.inf,limit=500)
+    result2 = quad(lambda nu: second_integral(nu),gamma_max,np.inf,limit=500)
     second_term = result2[0]
-    second_term /= np.sqrt(2*np.pi * data_model.rho)    
-
+    second_term /= np.sqrt(2*np.pi * data_model.rho)
 
 
     # third term
@@ -452,7 +462,7 @@ def fair_adversarial_error_overlaps(overlaps: OverlapSet, task: Task, data_model
         return np.exp(-(nu)**2/(2*data_model.rho) ) * erfc( overlaps.m*nu / np.sqrt(2*data_model.rho * V))
     result3 = quad(lambda nu: third_integral(nu),0,gamma,limit=500)
     third_term = result3[0]
-    third_term /= np.sqrt(2*np.pi * data_model.rho)    
+    third_term /= np.sqrt(2*np.pi * data_model.rho)
     
     return first_term + second_term + third_term
 

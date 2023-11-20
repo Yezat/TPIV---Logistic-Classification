@@ -236,10 +236,7 @@ def master(num_processes, logger, experiment):
                 for epsilon in experiment.epsilons:
                     for tau in experiment.taus:
                         
-                        test_against_epsilon = epsilon
-                        if experiment.test_against_largest_epsilon:
-                            test_against_epsilon = np.max(experiment.epsilons)
-
+                        
                         if ExperimentType.OptimalLambda == experiment.experiment_type:
                             
                             
@@ -248,16 +245,16 @@ def master(num_processes, logger, experiment):
                             initial_lambda = 1
 
                             if not optimal_result.get_key() in optimal_lambdas.keys():
-                                tasks.append(Task(idx,experiment_id,"optimal_lambda",problem,alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type,experiment.gamma_fair_error))
+                                tasks.append(Task(idx,experiment_id,"optimal_lambda",problem,alpha,epsilon, experiment.test_against_epsilons,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type,experiment.gamma_fair_error))
                                 idx += 1
 
                         elif ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
-                            optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,test_against_epsilon,tau,0,experiment.data_model_type, experiment.data_model_name)
+                            optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons,tau,0,experiment.data_model_type, experiment.data_model_name)
 
                             initial_lambda = 1
 
                             if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
-                                tasks.append(Task(idx,experiment_id,"optimal_adversarial_lambda",problem,alpha,epsilon, test_against_epsilon,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type,experiment.gamma_fair_error))
+                                tasks.append(Task(idx,experiment_id,"optimal_adversarial_lambda",problem,alpha,epsilon, experiment.test_against_epsilons,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type,experiment.gamma_fair_error))
                                 idx += 1
 
                             
@@ -280,11 +277,11 @@ def master(num_processes, logger, experiment):
                             for lam in lambdas:                    
 
                                 for _ in range(experiment.state_evolution_repetitions):
-                                    tasks.append(Task(idx,experiment_id,"state_evolution",problem,alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type,experiment.gamma_fair_error))
+                                    tasks.append(Task(idx,experiment_id,"state_evolution",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,None, experiment.data_model_type,experiment.gamma_fair_error))
                                     idx += 1
 
                                 for _ in range(experiment.erm_repetitions):
-                                    tasks.append(Task(idx,experiment_id,"sklearn",problem,alpha,epsilon,test_against_epsilon,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type,experiment.gamma_fair_error))
+                                    tasks.append(Task(idx,experiment_id,"sklearn",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,experiment.dp, experiment.data_model_type,experiment.gamma_fair_error))
                                     idx += 1
 
     # Initialize the progress bar

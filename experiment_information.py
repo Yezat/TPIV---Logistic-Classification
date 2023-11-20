@@ -25,7 +25,7 @@ class ExperimentType(Enum):
 
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_largest_epsilon: bool, problem_types: list[ProblemType],  gamma_fair_error: float, experiment_name: str = ""):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_epsilons: np.ndarray, problem_types: list[ProblemType],  gamma_fair_error: float, experiment_name: str = ""):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -35,7 +35,7 @@ class ExperimentInformation:
         self.erm_repetitions: int = erm_repetitions
         self.alphas: np.ndarray = alphas
         self.epsilons: np.ndarray = epsilons
-        self.test_against_largest_epsilon: bool = test_against_largest_epsilon
+        self.test_against_epsilons: np.ndarray = test_against_epsilons
         self.lambdas: np.ndarray = lambdas
         self.taus: np.ndarray = taus
         self.ps: np.ndarray = ps
@@ -167,7 +167,7 @@ class StateEvolutionExperimentInformation:
         # Experiment Parameters
         self.alpha: float = task.alpha
         self.epsilon: float = task.epsilon
-        self.test_against_epsilon: float = task.test_against_epsilon
+        self.test_against_epsilons: np.ndarray = task.test_against_epsilons
         self.tau: float = task.tau
         self.lam: float = task.lam
 
@@ -175,17 +175,17 @@ class StateEvolutionExperimentInformation:
         self.generalization_error: float = generalization_error(data_model.rho, overlaps.m, overlaps.q, task.tau)
 
         # Adversarial Generalization Error
-        self.adversarial_generalization_error: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
-        self.adversarial_generalization_error_teacher: float = adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model)
+        self.adversarial_generalization_errors: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ] )
+        self.adversarial_generalization_errors_teacher: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ])
         
-        self.fair_adversarial_error: float = fair_adversarial_error_overlaps(overlaps, task, data_model,task.gamma_fair_error,logger)
+        self.fair_adversarial_errors: float = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps,logger) ) for eps in task.test_against_epsilons])
 
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
 
         # Loss
         self.training_loss: float = observables.training_loss(task, overlaps, data_model, self.int_lims)
-        self.test_loss: float = observables.test_loss(task, overlaps, data_model, self.int_lims)
+        self.test_losses: np.ndarray = np.array([(eps,observables.test_loss(task, overlaps, data_model, eps, self.int_lims) ) for eps in task.test_against_epsilons ])
         
         
         # Overlaps
@@ -210,10 +210,6 @@ class StateEvolutionExperimentInformation:
         
         # Angle
         self.angle: float = self.m / np.sqrt((self.q)*data_model.rho)
-        
-        # Robustness
-        self.robustness: float = 1 - self.adversarial_generalization_error
-        self.teacher_robustness: float = 1 - self.adversarial_generalization_error_teacher
 
 class ERMExperimentInformation:
     def __init__(self, task, data_model, data: DataSet, weights, problem_instance, logger):
@@ -257,6 +253,9 @@ class ERMExperimentInformation:
         overlaps.P = self.P
         overlaps.F = self.F
 
+        # log the overlaps A,N and F
+        logger.info(f"Overlaps: A={overlaps.A}, N={overlaps.N}, P={overlaps.P}, F={overlaps.F}")
+
         # store basic information
         self.problem_type: ProblemType = task.problem_type
         self.id: str = str(uuid.uuid4())
@@ -268,7 +267,7 @@ class ERMExperimentInformation:
 
         # store the experiment parameters
         self.epsilon: float = task.epsilon
-        self.test_against_epsilon: float = task.test_against_epsilon
+        self.test_against_epsilons: float = task.test_against_epsilons
         self.lam: float = task.lam
         self.d: int = task.d
         self.tau: float = task.tau
@@ -285,10 +284,10 @@ class ERMExperimentInformation:
         
 
         # Adversarial Generalization Error
-        self.adversarial_generalization_error: float = adversarial_error(data.y_test,data.X_test,weights,task.test_against_epsilon, data_model.Sigma_upsilon)
-        self.adversarial_generalization_error_teacher: float = adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,data_model)
-        self.adversarial_generalization_error_overlap: float = adversarial_generalization_error_overlaps(overlaps, task, data_model)
-        self.fair_adversarial_error: float = fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,task.test_against_epsilon,task.gamma_fair_error,data_model, logger)
+        self.adversarial_generalization_errors: np.ndarray = np.array( [(eps,adversarial_error(data.y_test,data.X_test,weights,eps, data_model.Sigma_upsilon)) for eps in task.test_against_epsilons ])
+        self.adversarial_generalization_errors_teacher: np.ndarray = np.array( [(eps,adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,eps,data_model)) for eps in task.test_against_epsilons ])
+        self.adversarial_generalization_errors_overlap: np.ndarray = np.array( [(eps,adversarial_generalization_error_overlaps(overlaps, task, data_model, eps)) for eps in task.test_against_epsilons ])
+        self.fair_adversarial_errors: np.ndarray = np.array( [(eps,fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,eps,task.gamma_fair_error,data_model, logger)) for eps in task.test_against_epsilons ])
         
         # Training Error
         yhat_gd_train = predict_erm(data.X,weights)
@@ -297,11 +296,8 @@ class ERMExperimentInformation:
 
         # Loss
         self.training_loss: float = problem_instance.training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)       
-        self.test_loss: float = problem_instance.training_loss(weights,data.X_test,data.y_test,task.test_against_epsilon, Sigma_delta=data_model.Sigma_upsilon)
+        self.test_losses: np.ndarray = np.array( [(eps,problem_instance.training_loss(weights,data.X_test,data.y_test,eps, Sigma_delta=data_model.Sigma_upsilon)) for eps in task.test_against_epsilons ])
 
-        # Robustness
-        self.robustness: float = 1 - self.adversarial_generalization_error
-        self.teacher_robustness: float = 1 - self.adversarial_generalization_error_teacher
         
 
 
@@ -337,9 +333,9 @@ class DatabaseHandler:
                     problem_type TEXT,
                     experiment_id TEXT,
                     generalization_error REAL,
-                    adversarial_generalization_error REAL,
-                    adversarial_generalization_error_teacher REAL,
-                    fair_adversarial_error REAL,
+                    adversarial_generalization_errors REAL,
+                    adversarial_generalization_errors_teacher REAL,
+                    fair_adversarial_errors REAL,
                     training_loss REAL,
                     training_error REAL,
                     date TEXT,
@@ -352,7 +348,7 @@ class DatabaseHandler:
                     rho REAL,
                     alpha REAL,
                     epsilon REAL,
-                    test_against_epsilon REAL,
+                    test_against_epsilons BLOB,
                     tau REAL,
                     lam REAL,
                     calibrations BLOB,
@@ -370,9 +366,7 @@ class DatabaseHandler:
                     F REAL,
                     A_hat REAL,
                     N_hat REAL,
-                    test_loss REAL,
-                    robustness REAL,
-                    teacher_robustness REAL
+                    test_losses REAL
                 )
             ''')
             self.connection.commit()
@@ -392,7 +386,7 @@ class DatabaseHandler:
                 erm_repetitions INTEGER,
                 alphas BLOB,
                 epsilons BLOB,
-                test_against_largest_epsilon BOOLEAN, 
+                test_against_epsilons BLOB, 
                 lambdas BLOB,
                 taus BLOB,
                 ps BLOB,
@@ -423,14 +417,14 @@ class DatabaseHandler:
                     m REAL,
                     angle REAL,
                     epsilon REAL,
-                    test_against_epsilon REAL,
+                    test_against_epsilons BLOB,
                     lam REAL,
                     generalization_error_erm REAL,
                     generalization_error_overlap REAL,
-                    adversarial_generalization_error REAL,
-                    adversarial_generalization_error_teacher REAL,
-                    adversarial_generalization_error_overlap REAL,
-                    fair_adversarial_error REAL,
+                    adversarial_generalization_errors BLOB,
+                    adversarial_generalization_errors_teacher BLOB,
+                    adversarial_generalization_errors_overlap BLOB,
+                    fair_adversarial_errors BLOB,
                     date TEXT,
                     chosen_minimizer TEXT,
                     training_error REAL,
@@ -440,13 +434,11 @@ class DatabaseHandler:
                     alpha REAL,
                     analytical_calibrations BLOB,
                     erm_calibrations BLOB,
-                    test_loss REAL,
+                    test_losses BLOB,
                     A REAL,
                     N REAL,
                     P REAL,
-                    F REAL,
-                    robustness REAL,
-                    teacher_robustness REAL
+                    F REAL
                 )
             ''')
             self.connection.commit()
@@ -465,7 +457,7 @@ class DatabaseHandler:
             experiment_information.erm_repetitions,
             json.dumps(experiment_information.alphas, cls=NumpyEncoder),
             json.dumps(experiment_information.epsilons, cls=NumpyEncoder),
-            experiment_information.test_against_largest_epsilon,
+            json.dumps(experiment_information.test_against_epsilons, cls=NumpyEncoder),
             json.dumps(experiment_information.lambdas, cls=NumpyEncoder),
             json.dumps(experiment_information.taus, cls=NumpyEncoder),
             json.dumps(experiment_information.ps, cls=NumpyEncoder),
@@ -486,16 +478,16 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
             experiment_information.problem_type.name,
             experiment_information.experiment_id,
             experiment_information.generalization_error,
-            experiment_information.adversarial_generalization_error,
-            experiment_information.adversarial_generalization_error_teacher,
-            experiment_information.fair_adversarial_error,
+            json.dumps(experiment_information.adversarial_generalization_errors, cls=NumpyEncoder),
+            json.dumps(experiment_information.adversarial_generalization_errors_teacher, cls=NumpyEncoder),
+            json.dumps(experiment_information.fair_adversarial_errors, cls=NumpyEncoder),
             experiment_information.training_loss,
             experiment_information.training_error,
             experiment_information.date,
@@ -508,7 +500,7 @@ class DatabaseHandler:
             experiment_information.rho,
             float(experiment_information.alpha),
             float(experiment_information.epsilon),
-            float(experiment_information.test_against_epsilon),
+            json.dumps(experiment_information.test_against_epsilons),
             float(experiment_information.tau),
             float(experiment_information.lam),
             experiment_information.calibrations.to_json(),
@@ -526,9 +518,7 @@ class DatabaseHandler:
             experiment_information.F,
             experiment_information.A_hat,
             experiment_information.N_hat,
-            experiment_information.test_loss,
-            experiment_information.robustness,
-            experiment_information.teacher_robustness
+            json.dumps(experiment_information.test_losses, cls=NumpyEncoder)
         ))
         self.connection.commit()
 
@@ -552,7 +542,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -564,14 +554,14 @@ class DatabaseHandler:
             experiment_information.m,
             experiment_information.angle,
             float(experiment_information.epsilon),
-            float(experiment_information.test_against_epsilon),
+            json.dumps(experiment_information.test_against_epsilons),
             float(experiment_information.lam),
             experiment_information.generalization_error_erm,
             experiment_information.generalization_error_overlap,
-            experiment_information.adversarial_generalization_error,
-            experiment_information.adversarial_generalization_error_teacher,
-            experiment_information.adversarial_generalization_error_overlap,
-            experiment_information.fair_adversarial_error,
+            json.dumps(experiment_information.adversarial_generalization_errors, cls=NumpyEncoder),
+            json.dumps(experiment_information.adversarial_generalization_errors_teacher, cls=NumpyEncoder),
+            json.dumps(experiment_information.adversarial_generalization_errors_overlap, cls=NumpyEncoder),
+            json.dumps(experiment_information.fair_adversarial_errors, cls=NumpyEncoder),
             experiment_information.date,
             experiment_information.chosen_minimizer,
             experiment_information.training_error,
@@ -581,13 +571,11 @@ class DatabaseHandler:
             float(experiment_information.alpha),
             experiment_information.analytical_calibrations.to_json(),
             experiment_information.erm_calibrations.to_json(),
-            experiment_information.test_loss,
+            json.dumps(experiment_information.test_losses, cls=NumpyEncoder),
             experiment_information.A,
             experiment_information.N,
             experiment_information.P,
-            experiment_information.F,
-            experiment_information.robustness,
-            experiment_information.teacher_robustness
+            experiment_information.F
         ))
         self.connection.commit()
 
