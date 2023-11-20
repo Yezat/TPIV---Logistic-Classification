@@ -73,7 +73,10 @@ def minimizer_lambda(logger, task, data_model, lam):
     if task.method == "optimal_lambda":
         gen_error =  generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
     elif task.method == "optimal_adversarial_lambda":
-        gen_error = adversarial_generalization_error_overlaps(overlaps.m,overlaps.q, data_model.rho, task.tau, task.test_against_epsilon * overlaps.A / np.sqrt(overlaps.N))
+        test_against_epsilon = task.test_against_epsilons[0]
+        if len(task.test_against_epsilons) > 1:
+            logger.error(f"Optimizing over Adversarial Test Error can only be done with one test against epsilon, for this round we picked the first one which is {test_against_epsilon}")
+        gen_error = adversarial_generalization_error_overlaps(overlaps,task,data_model,test_against_epsilon)
 
     logger.info(f"Generalization error for lambda {task.lam} is {gen_error}")
     return gen_error
@@ -85,11 +88,11 @@ def get_optimal_lambda(logger,task, data_model):
     logger.info(f"Starting optimal lambda {task}")
     start = time.time()
 
-    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-0.001,1e2],options={'xatol': 1e-8,'maxiter':100})
+    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-1,1e2],options={'xatol': 1e-8,'maxiter':100})
     logger.info(f"Minimized success: {res.success}; Message: {res.message}")
     if not res.success:
         raise Exception("Optimization of lambda failed: " + str(res.message))
-    
+
     end = time.time()
     experiment_duration = end-start
 
@@ -97,7 +100,7 @@ def get_optimal_lambda(logger,task, data_model):
     if task.method == "optimal_lambda":
         result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name,task.problem_type)
     elif task.method == "optimal_adversarial_lambda":
-        result = OptimalAdversarialLambdaResult(task.alpha, task.epsilon, task.test_against_epsilon, task.tau, res.x,data_model.model_type, data_model.name,task.problem_type)
+        result = OptimalAdversarialLambdaResult(task.alpha, task.epsilon, task.test_against_epsilons[0], task.tau, res.x,data_model.model_type, data_model.name,task.problem_type)
     return result
 
 
@@ -249,7 +252,8 @@ def master(num_processes, logger, experiment):
                                 idx += 1
 
                         elif ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
-                            optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons,tau,0,experiment.data_model_type, experiment.data_model_name)
+                            
+                            optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,experiment.data_model_type, experiment.data_model_name, problem)
 
                             initial_lambda = 1
 

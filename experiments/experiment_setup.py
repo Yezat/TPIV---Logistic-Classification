@@ -102,11 +102,11 @@ d = 1000
 data_model_type = DataModelType.KFeaturesModel
 feature_ratios = np.array([0.5,0.5])
 features_x = np.array([2,1])
-features_theta = np.array([1,10])
-# data_model_name = f"KFeaturesModel_TwoFeatures_IdentityAttack_{feature_ratios}_{features_x}_{features_theta}"
+features_theta = np.array([1,1])
+# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingFirst_AttackingSecond_{feature_ratios}_{features_x}_{features_theta}"
+data_model_name = ""
 data_model_description = "2 Features, Theta Identity, Sigma_delta Identity"
 Sigma_w = np.eye(d)
-Sigma_w[0,0] = 100
 Sigma_delta = np.eye(d)
 # only attack the first half
 Sigma_delta[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
@@ -135,11 +135,11 @@ def get_default_experiment():
     dp: float = 0.01
     # round the lambdas, epsilons and alphas for 4 digits
     alphas = np.round(alphas,4)
-    test_against_epsilons: np.ndarray = np.array([0.001,0.2])
+    test_against_epsilons: np.ndarray = np.array([0.2])
     epsilons = np.round(epsilons,4)
     lambdas = np.round(lambdas,4)
     test_against_epsilons = np.round(test_against_epsilons,4)
-    experiment_type: ExperimentType = ExperimentType.Sweep    
+    experiment_type: ExperimentType = ExperimentType.OptimalLambdaAdversarialTestError    
     experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
     problem_types: list[ProblemType] = [ProblemType.Logistic]
     gamma_fair_error: float = 0.01

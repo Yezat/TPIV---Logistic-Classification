@@ -340,8 +340,7 @@ def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma,
     F = w_gd.dot(data_model.Sigma_upsilon@teacher_weights)
     teacher_activation = X_test@teacher_weights/np.sqrt(d)
     student_activation = X_test@w_gd/np.sqrt(d)
-
-    assert F > 0, f"F is {F} and should be positive"
+ 
 
     gamma_constraint_argument = y*teacher_activation - epsilon*F/np.sqrt(N*d)
 
@@ -349,35 +348,11 @@ def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma,
     y_first = np.zeros_like(y)
     y_gamma = np.zeros_like(y)
     moved_argument = student_activation + A/F * (y* gamma - teacher_activation )
-    teacher_moved_argument = teacher_activation + (y* gamma -teacher_activation)
-    if logger is not None:
-        # log gamma, and y and y * gamma
-        logger.info(f"Gamma: {gamma}, y: {y}, y*gamma: {y*gamma}")
-    y_moved_teacher = np.sign(teacher_moved_argument)
-    # assert y is equal to y_moved_teacher
-    assert np.all(y == y_moved_teacher), f"y is not equal to y_moved_teacher. y: {y}, y_moved_teacher: {y_moved_teacher}, teacher_moved_argument: {teacher_moved_argument}"
-
-
     y_gamma_t = np.sign( moved_argument )
-    # count and print the number of occurences where the argument is almost zero
-    almost_zero = np.count_nonzero(np.abs(moved_argument) < 1e-10)
-    if logger is not None:
-        logger.info(f"Number of occurences where the argument is almost zero: {almost_zero}")
-
     mask_gamma_smaller = (y*teacher_activation < gamma + epsilon*F/np.sqrt(N*d)) & (y*teacher_activation > gamma)
-    # log the range of the absolute value of the teacher activation, that is gamma and gamma + epsilon*F/np.sqrt(N*d)
-    if logger is not None:
-        logger.info(f"Gamma: {gamma}, Gamma + epsilon*F/np.sqrt(N*d): {gamma + epsilon*F/np.sqrt(N*d)}")
     y_gamma[mask_gamma_smaller] = y_gamma_t[mask_gamma_smaller]
     y_first[mask_gamma_smaller] = y[mask_gamma_smaller]    
     first_error = error(y_first, y_gamma)
-
-    # return mask_gamma_smaller
-
-    test = np.mean(y_first != y_gamma)
-
-    assert test == first_error, f"First error is {first_error} and should be {test}"
-
 
 
     

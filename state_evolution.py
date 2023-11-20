@@ -422,30 +422,16 @@ def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger
     V = data_model.rho*overlaps.q - overlaps.m**2
     gamma_max = gamma+epsilon*overlaps.F/np.sqrt(overlaps.N)
 
+    # first term
     def erfc_term(nu):
         return np.exp((-(nu**2))/(2*data_model.rho)) * erfc( ( overlaps.F*overlaps.m*nu + overlaps.A*data_model.rho*( gamma - nu ) ) / (overlaps.F * np.sqrt( 2 * data_model.rho * V )))
     
     def erf_term(nu):
         return np.exp((-(nu**2))/(2 * data_model.rho)) * (1 + erf( ( overlaps.F * overlaps.m * nu - overlaps.A * data_model.rho * ( nu + gamma) ) / (overlaps.F * np.sqrt(2 * data_model.rho * V)) ))
-    
-    if logger is not None:
-        logger.info(f"Gamma: {gamma}, Gamma + epsilon*F/np.sqrt(N): {gamma_max}")
 
     first_term = quad(lambda nu: erfc_term(nu),gamma,gamma_max,limit=500)[0]
-    if logger is not None:
-        logger.info(f"First term: {first_term}")
     first_term += quad(lambda nu: erf_term(nu),-gamma_max,-gamma,limit=500)[0]
-    if logger is not None:
-        logger.info(f"First term: {first_term}")
     first_term /= (2*np.sqrt(2*np.pi * data_model.rho))
-    if logger is not None:
-        logger.info(f"First term: {first_term}")
-
-    # log the epsilon
-
-    if logger is not None:
-        logger.info(f"epsilon: {epsilon}")
-
 
 
     # second term
