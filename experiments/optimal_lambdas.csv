@@ -327,3 +327,477 @@ alpha,epsilon,tau,lambda,data_model_type,data_model_name,problem_type
 50.00000000,0.40000000,0.00000000,-0.00099999,VanillaGaussian,VanillaGaussian,Logistic
 50.00000000,0.20000000,0.00000000,-0.00099999,VanillaGaussian,VanillaGaussian,Logistic
 100.00000000,0.20000000,0.00000000,-0.00099999,VanillaGaussian,VanillaGaussian,Logistic
+0.15850000,0.00000000,0.00000000,0.05575388,VanillaGaussian,VanillaGaussian,Logistic
+0.15850000,0.20000000,0.00000000,55.85294191,VanillaGaussian,VanillaGaussian,Logistic
+0.15850000,0.40000000,0.00000000,0.05646021,VanillaGaussian,VanillaGaussian,Logistic
+0.15850000,0.60000000,0.00000000,0.05588890,VanillaGaussian,VanillaGaussian,Logistic
+0.24120000,0.00000000,0.00000000,0.26449369,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.17430000,0.00000000,0.00000000,0.28360911,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.12590000,0.00000000,0.00000000,0.29820014,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.17430000,0.20000000,0.00000000,0.33915620,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.12590000,0.20000000,0.00000000,0.34838247,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.33380000,0.00000000,0.00000000,0.23955655,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.24120000,0.20000000,0.00000000,0.32456065,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.24120000,0.60000000,0.00000000,0.36092603,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.33380000,0.20000000,0.00000000,0.30336301,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.46210000,0.00000000,0.00000000,0.20901291,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.33380000,0.60000000,0.00000000,0.33578278,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.46210000,0.20000000,0.00000000,0.27502244,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.24120000,0.00000000,0.00000000,0.26449369,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.00000000,0.00000000,0.28360911,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.00000000,0.00000000,0.29820014,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.60000000,0.00000000,0.30199132,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.63960000,0.00000000,0.00000000,0.17407946,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.12590000,0.20000000,0.00000000,0.29916107,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.40000000,0.00000000,0.30038057,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.60000000,0.00000000,0.30136098,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.60000000,0.00000000,0.28774020,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.40000000,0.00000000,0.28688095,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.20000000,0.00000000,0.28534701,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.40000000,0.00000000,0.26827277,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.00000000,0.00000000,0.23955655,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.20000000,0.00000000,0.26669191,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.60000000,0.00000000,0.26903566,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.00000000,0.00000000,0.20901291,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.40000000,0.00000000,0.24378347,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.20000000,0.00000000,0.24021047,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.46210000,0.20000000,0.00000000,0.21180038,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.20000000,0.00000000,0.24221695,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.60000000,0.00000000,0.24417457,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.00000000,0.00000000,0.17407946,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.40000000,0.00000000,0.21318702,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.60000000,0.00000000,0.21292861,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.20000000,0.00000000,0.17692839,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.00000000,0.00000000,0.13787164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.60000000,0.00000000,0.25984354,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.63960000,0.40000000,0.00000000,0.17785853,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.60000000,0.00000000,0.17655209,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.20000000,0.00000000,0.14054660,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.40000000,0.00000000,0.14073776,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.00000000,0.00000000,0.10399209,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.60000000,0.00000000,0.13790094,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.00000000,0.00000000,0.26449369,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.00000000,0.00000000,0.28360911,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.00000000,0.00000000,0.29820014,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.00000000,0.00000000,0.13787164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.22530000,0.20000000,0.00000000,0.10632511,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.20000000,0.00000000,0.29916107,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.60000000,0.00000000,0.30136098,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.60000000,0.00000000,0.28774020,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.40000000,0.00000000,0.30038057,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.40000000,0.00000000,0.28688095,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.20000000,0.00000000,0.28534701,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.40000000,0.00000000,0.10546069,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.40000000,0.00000000,0.26827277,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.00000000,0.00000000,0.23955655,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.20000000,0.00000000,0.26669191,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.00000000,0.00000000,0.20901291,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.60000000,0.00000000,0.26903566,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.00000000,0.00000000,0.05204115,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.40000000,0.00000000,0.24378347,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.20000000,0.00000000,0.24221695,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.20000000,0.00000000,0.21180038,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.20000000,0.00000000,0.20067102,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.69590000,0.20000000,0.00000000,0.07697356,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.00000000,0.00000000,0.26449369,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.00000000,0.00000000,0.28360911,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.00000000,0.00000000,0.29820014,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.60000000,0.00000000,0.24417457,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.00000000,0.00000000,0.17407946,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.69590000,0.40000000,0.00000000,0.07476319,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.40000000,0.00000000,0.30038057,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.20000000,0.00000000,0.29916107,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.40000000,0.00000000,0.28688095,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.40000000,0.00000000,0.21318702,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.60000000,0.00000000,0.10057132,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.60000000,0.00000000,0.30136098,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.20000000,0.00000000,0.28534701,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.60000000,0.00000000,0.28774020,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.60000000,0.00000000,0.21292861,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.69590000,0.60000000,0.00000000,0.06724468,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.40000000,0.00000000,0.26827277,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.20000000,0.00000000,0.26669191,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.00000000,0.00000000,0.23955655,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.60000000,0.00000000,0.26903566,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.00000000,0.00000000,0.20901291,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.20000000,0.00000000,0.17692839,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.00000000,0.00000000,0.13787164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.40000000,0.00000000,0.24378347,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.20000000,0.00000000,0.05332325,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.20000000,0.00000000,0.21180038,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.40000000,0.00000000,0.17785853,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.20000000,0.00000000,0.24221695,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.60000000,0.00000000,0.17655209,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.60000000,0.00000000,0.24417457,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.20000000,0.00000000,0.14054660,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.00000000,0.00000000,0.17407946,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.40000000,0.00000000,0.14073776,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.00000000,0.00000000,0.10399209,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.40000000,0.00000000,0.21318702,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.60000000,0.00000000,0.21292861,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.60000000,0.00000000,0.13790094,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.40000000,0.00000000,0.04943540,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+3.24910000,0.00000000,0.00000000,0.03446443,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.20000000,0.00000000,0.17692839,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.20000000,0.00000000,0.10632511,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.00000000,0.00000000,0.13787164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.40000000,0.00000000,0.17785853,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.60000000,0.00000000,0.17655209,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.20000000,0.00000000,0.14054660,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.00000000,0.00000000,0.05526696,VanillaGaussian,VanillaGaussian,Logistic
+0.12590000,0.00000000,0.00000000,0.05718555,VanillaGaussian,VanillaGaussian,Logistic
+1.22530000,0.40000000,0.00000000,0.10546069,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.00000000,0.00000000,0.05203910,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.40000000,0.00000000,0.14073776,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.00000000,0.00000000,0.05320316,VanillaGaussian,VanillaGaussian,Logistic
+1.22530000,0.00000000,0.00000000,0.10399209,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.17430000,0.20000000,0.00000000,60.43319336,VanillaGaussian,VanillaGaussian,Logistic
+0.12590000,0.20000000,0.00000000,47.36016611,VanillaGaussian,VanillaGaussian,Logistic
+0.12590000,0.40000000,0.00000000,48.89195346,VanillaGaussian,VanillaGaussian,Logistic
+0.88520000,0.60000000,0.00000000,0.13790094,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.12590000,0.60000000,0.00000000,0.05718094,VanillaGaussian,VanillaGaussian,Logistic
+0.17430000,0.60000000,0.00000000,0.05524177,VanillaGaussian,VanillaGaussian,Logistic
+0.17430000,0.40000000,0.00000000,0.05593615,VanillaGaussian,VanillaGaussian,Logistic
+0.33380000,0.00000000,0.00000000,0.05008813,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.20000000,0.00000000,0.07697356,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.20000000,0.00000000,0.10632511,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.20000000,0.00000000,0.05375026,VanillaGaussian,VanillaGaussian,Logistic
+0.24120000,0.60000000,0.00000000,0.05238930,VanillaGaussian,VanillaGaussian,Logistic
+2.34740000,0.60000000,0.00000000,0.03869162,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.24120000,0.40000000,0.00000000,0.05365206,VanillaGaussian,VanillaGaussian,Logistic
+0.46210000,0.00000000,0.00000000,0.04592558,VanillaGaussian,VanillaGaussian,Logistic
+1.22530000,0.40000000,0.00000000,0.10546069,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.20000000,0.00000000,0.05081346,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.40000000,0.00000000,0.07476319,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.60000000,0.00000000,0.10057132,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.40000000,0.00000000,0.05037564,VanillaGaussian,VanillaGaussian,Logistic
+4.49720000,0.00000000,0.00000000,0.02168444,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.00000000,0.00000000,0.05203910,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.33380000,0.60000000,0.00000000,0.04825709,VanillaGaussian,VanillaGaussian,Logistic
+0.46210000,0.20000000,0.00000000,0.04677219,VanillaGaussian,VanillaGaussian,Logistic
+0.63960000,0.00000000,0.00000000,0.04064266,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.60000000,0.00000000,0.06724468,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.46210000,0.40000000,0.00000000,0.04579492,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.20000000,0.00000000,0.07697356,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.00000000,0.00000000,0.03420846,VanillaGaussian,VanillaGaussian,Logistic
+0.46210000,0.60000000,0.00000000,0.04240789,VanillaGaussian,VanillaGaussian,Logistic
+0.63960000,0.20000000,0.00000000,0.04143991,VanillaGaussian,VanillaGaussian,Logistic
+2.34740000,0.20000000,0.00000000,0.05332325,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.40000000,0.00000000,0.03964909,VanillaGaussian,VanillaGaussian,Logistic
+3.24910000,0.20000000,0.00000000,0.03500997,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.63960000,0.60000000,0.00000000,0.03442314,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.40000000,0.00000000,0.07476319,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.60000000,0.00000000,0.10057132,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.00000000,0.00000000,0.02698267,VanillaGaussian,VanillaGaussian,Logistic
+3.24910000,0.00000000,0.00000000,0.03446443,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.20000000,0.00000000,0.03481376,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.60000000,0.00000000,0.06724468,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.40000000,0.00000000,0.04943540,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.40000000,0.00000000,0.03183972,VanillaGaussian,VanillaGaussian,Logistic
+2.34740000,0.20000000,0.00000000,0.05332325,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.88520000,0.60000000,0.00000000,0.02407373,VanillaGaussian,VanillaGaussian,Logistic
+1.22530000,0.20000000,0.00000000,0.02722081,VanillaGaussian,VanillaGaussian,Logistic
+3.24910000,0.00000000,0.00000000,0.03446443,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.40000000,0.00000000,0.04943540,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.40000000,0.00000000,0.02261098,VanillaGaussian,VanillaGaussian,Logistic
+2.34740000,0.00000000,0.00000000,0.01323192,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.20000000,0.00000000,0.01937800,VanillaGaussian,VanillaGaussian,Logistic
+1.22530000,0.60000000,0.00000000,0.01174680,VanillaGaussian,VanillaGaussian,Logistic
+2.34740000,0.60000000,0.00000000,0.03869162,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.69590000,0.40000000,0.00000000,0.01270607,VanillaGaussian,VanillaGaussian,Logistic
+4.49720000,0.00000000,0.00000000,0.02168444,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.22470000,0.00000000,0.00000000,0.01293940,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.60000000,0.00000000,0.03869162,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+3.24910000,0.00000000,0.00000000,0.00821538,VanillaGaussian,VanillaGaussian,Logistic
+2.34740000,0.20000000,0.00000000,0.01218012,VanillaGaussian,VanillaGaussian,Logistic
+3.24910000,0.20000000,0.00000000,0.03500997,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.49720000,0.00000000,0.00000000,0.02168444,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+3.24910000,0.20000000,0.00000000,0.03500997,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.49720000,0.00000000,0.00000000,0.00478525,VanillaGaussian,VanillaGaussian,Logistic
+3.24910000,0.20000000,0.00000000,0.00633479,VanillaGaussian,VanillaGaussian,Logistic
+0.88520000,0.60000000,0.00000000,0.21047465,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+6.22470000,0.00000000,0.00000000,0.01293940,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.22470000,0.00000000,0.00000000,0.01293940,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.40000000,0.00000000,0.00362489,VanillaGaussian,VanillaGaussian,Logistic
+1.22530000,0.00000000,0.00000000,0.10399209,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+3.24910000,0.60000000,0.00000000,0.01517179,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.20000000,0.00000000,0.15821797,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.69590000,0.60000000,0.00000000,-0.00024291,VanillaGaussian,VanillaGaussian,Logistic
+4.49720000,0.40000000,0.00000000,0.01314762,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.22530000,0.60000000,0.00000000,0.15534744,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+3.24910000,0.60000000,0.00000000,0.01517179,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+3.24910000,0.60000000,0.00000000,0.01517179,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.49720000,0.40000000,0.00000000,0.01314762,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.49720000,0.40000000,0.00000000,0.01314762,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.22470000,0.20000000,0.00000000,0.01164685,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.69590000,0.20000000,0.00000000,0.11366103,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+4.49720000,0.20000000,0.00000000,0.00215262,VanillaGaussian,VanillaGaussian,Logistic
+1.69590000,0.60000000,0.00000000,0.09649310,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.69590000,0.40000000,0.00000000,0.12013263,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+2.34740000,0.00000000,0.00000000,0.05204115,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+6.22470000,0.20000000,0.00000000,0.01164685,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+3.24910000,0.00000000,0.00000000,0.03446443,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+6.22470000,0.20000000,0.00000000,0.01164685,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.34740000,0.20000000,0.00000000,0.06750342,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+4.49720000,0.00000000,0.00000000,0.02168444,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+2.34740000,0.40000000,0.00000000,0.06708078,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+2.34740000,0.60000000,0.00000000,0.03713545,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+6.22470000,0.00000000,0.00000000,0.01293940,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+8.61580000,0.00000000,0.00000000,0.00144223,VanillaGaussian,VanillaGaussian,Logistic
+11.92530000,0.00000000,0.00000000,0.00076779,VanillaGaussian,VanillaGaussian,Logistic
+3.24910000,0.40000000,0.00000000,-0.00265664,VanillaGaussian,VanillaGaussian,Logistic
+4.49720000,0.60000000,0.00000000,-0.00155093,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+16.50620000,0.00000000,0.00000000,0.00217809,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.49720000,0.60000000,0.00000000,-0.00155093,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.49720000,0.60000000,0.00000000,-0.00155093,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.49720000,0.60000000,0.00000000,-0.07840981,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+16.50620000,0.00000000,0.00000000,0.00217809,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+16.50620000,0.00000000,0.00000000,0.00217809,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.22470000,0.20000000,0.00000000,-0.00025973,VanillaGaussian,VanillaGaussian,Logistic
+16.50620000,0.00000000,0.00000000,0.00040500,VanillaGaussian,VanillaGaussian,Logistic
+16.50620000,0.00000000,0.00000000,0.00217809,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+22.84670000,0.00000000,0.00000000,0.00021258,VanillaGaussian,VanillaGaussian,Logistic
+31.62280000,0.60000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.18650000,0.00000000,0.00000000,0.28018942,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.00000000,0.00000000,0.28018942,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.00000000,0.00000000,0.05489063,VanillaGaussian,VanillaGaussian,Logistic
+0.27620000,0.00000000,0.00000000,0.25474613,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.00000000,0.00000000,0.25474613,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.00000000,0.00000000,0.04762305,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.00000000,0.00000000,0.22108261,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.00000000,0.00000000,0.22108261,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.00000000,0.00000000,0.05189811,VanillaGaussian,VanillaGaussian,Logistic
+0.60580000,0.00000000,0.00000000,0.04162177,VanillaGaussian,VanillaGaussian,Logistic
+0.89730000,0.00000000,0.00000000,0.13639130,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.00000000,0.00000000,0.13639130,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.00000000,0.00000000,0.18009775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.00000000,0.00000000,0.18009775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.40000000,0.00000000,0.25880575,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.40000000,0.00000000,0.25880575,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.20000000,0.00000000,0.28194009,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.20000000,0.00000000,0.28194009,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.20000000,0.00000000,0.25719321,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.20000000,0.00000000,0.25719321,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.00000000,0.00000000,0.03391868,VanillaGaussian,VanillaGaussian,Logistic
+0.18650000,0.20000000,0.00000000,0.05545657,VanillaGaussian,VanillaGaussian,Logistic
+0.27620000,0.60000000,0.00000000,0.25942150,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.60000000,0.00000000,0.28429241,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.60000000,0.00000000,0.25942150,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.60000000,0.00000000,0.28429241,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.20000000,0.00000000,0.05264243,VanillaGaussian,VanillaGaussian,Logistic
+0.18650000,0.40000000,0.00000000,0.05552982,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.40000000,0.00000000,0.22533288,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.40000000,0.00000000,0.28341394,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.40000000,0.00000000,0.28341394,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.40000000,0.00000000,0.22533288,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.20000000,0.00000000,0.22384574,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.40000000,0.00000000,0.05242381,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.20000000,0.00000000,0.22384574,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.20000000,0.00000000,0.04843180,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.40000000,0.00000000,0.04768561,VanillaGaussian,VanillaGaussian,Logistic
+0.27620000,0.60000000,0.00000000,0.05084541,VanillaGaussian,VanillaGaussian,Logistic
+0.18650000,0.60000000,0.00000000,0.05473382,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.60000000,0.00000000,0.22536640,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.60000000,0.00000000,0.22536640,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.20000000,0.00000000,0.04242212,VanillaGaussian,VanillaGaussian,Logistic
+0.60580000,0.20000000,0.00000000,0.18295067,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.20000000,0.00000000,0.18295067,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.40000000,0.00000000,0.04079186,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.60000000,0.00000000,0.04483315,VanillaGaussian,VanillaGaussian,Logistic
+0.60580000,0.60000000,0.00000000,0.18287983,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.60000000,0.00000000,0.18287983,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.40000000,0.00000000,0.13920156,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.00000000,0.00000000,0.09624119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.00000000,0.00000000,0.09624119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.40000000,0.00000000,0.13920156,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.00000000,0.00000000,0.28018942,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.60000000,0.00000000,0.03591933,VanillaGaussian,VanillaGaussian,Logistic
+0.89730000,0.20000000,0.00000000,0.03451193,VanillaGaussian,VanillaGaussian,Logistic
+1.32900000,0.00000000,0.00000000,0.02513450,VanillaGaussian,VanillaGaussian,Logistic
+0.18650000,0.00000000,0.00000000,0.28018942,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.18650000,0.00000000,0.00000000,0.28018942,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.00000000,0.00000000,0.25474613,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.00000000,0.00000000,0.22108261,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.00000000,0.00000000,0.25474613,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.27620000,0.00000000,0.00000000,0.25474613,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.40000000,0.00000000,0.18398919,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.40000000,0.00000000,0.03148024,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.00000000,0.00000000,0.22108261,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.40900000,0.00000000,0.00000000,0.22108261,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.40000000,0.00000000,0.18398919,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.00000000,0.00000000,0.13639130,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.00000000,0.00000000,0.18009775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.40000000,0.00000000,0.25880575,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.00000000,0.00000000,0.18009775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.89730000,0.00000000,0.00000000,0.13639130,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.89730000,0.00000000,0.00000000,0.13639130,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.20000000,0.00000000,0.13905529,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.00000000,0.00000000,0.18009775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.20000000,0.00000000,0.33660691,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.27620000,0.40000000,0.00000000,0.25880575,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.20000000,0.00000000,0.28194009,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.20000000,0.00000000,0.25719321,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.20000000,0.00000000,0.13905529,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.00000000,0.00000000,0.06381651,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.60000000,0.00000000,0.28429241,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.60000000,0.00000000,0.25942150,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.00000000,0.00000000,0.06381651,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.20000000,0.00000000,0.28194009,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.60000000,0.00000000,0.13629025,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.20000000,0.00000000,0.25719321,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.40000000,0.00000000,0.22533288,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.40000000,0.00000000,0.28341394,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.60000000,0.00000000,0.25942150,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.60000000,0.00000000,0.28429241,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.20000000,0.00000000,0.22384574,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.60000000,0.00000000,0.13629025,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.27620000,0.20000000,0.00000000,0.31657024,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.40900000,0.60000000,0.00000000,0.22536640,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.40000000,0.00000000,0.28341394,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.20000000,0.00000000,0.22384574,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.20000000,0.00000000,0.09846935,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.40900000,0.20000000,0.00000000,0.28650110,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.40900000,0.40000000,0.00000000,0.22533288,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.20000000,0.00000000,0.09846935,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.00000000,0.00000000,0.01658604,VanillaGaussian,VanillaGaussian,Logistic
+0.40900000,0.60000000,0.00000000,0.22536640,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.20000000,0.00000000,0.02524987,VanillaGaussian,VanillaGaussian,Logistic
+0.60580000,0.20000000,0.00000000,0.18295067,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.18650000,0.60000000,0.00000000,0.37522769,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.27620000,0.60000000,0.00000000,0.35146429,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.60580000,0.60000000,0.00000000,0.18287983,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.20000000,0.00000000,0.18295067,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.60000000,0.00000000,0.02359168,VanillaGaussian,VanillaGaussian,Logistic
+1.32900000,0.60000000,0.00000000,0.09180406,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.20000000,0.00000000,0.24642136,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.32900000,0.60000000,0.00000000,0.09180406,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.40000000,0.00000000,0.13920156,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.00000000,0.00000000,0.09624119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.60000000,0.00000000,0.18287983,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.40000000,0.00000000,0.09729656,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.00000000,0.00000000,0.03975300,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.40000000,0.00000000,0.09729656,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.00000000,0.00000000,0.03975300,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.40000000,0.00000000,0.13920156,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.00000000,0.00000000,0.09624119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.40000000,0.00000000,0.18398919,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.60580000,0.60000000,0.00000000,0.26743274,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+2.91550000,0.00000000,0.00000000,0.00970683,VanillaGaussian,VanillaGaussian,Logistic
+1.32900000,0.00000000,0.00000000,0.09624119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.32900000,0.40000000,0.00000000,0.02015810,VanillaGaussian,VanillaGaussian,Logistic
+0.60580000,0.40000000,0.00000000,0.18398919,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.20000000,0.00000000,0.13905529,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.60000000,0.00000000,0.20827716,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.89730000,0.60000000,0.00000000,0.13629025,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.00000000,0.00000000,0.06381651,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.40000000,0.00000000,0.06250029,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.40000000,0.00000000,0.06250029,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.20000000,0.00000000,0.13905529,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.20000000,0.00000000,0.09846935,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.00000000,0.00000000,0.06381651,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.60000000,0.00000000,0.13629025,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.89730000,0.20000000,0.00000000,0.19894459,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.89730000,0.40000000,0.00000000,0.21565188,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.32900000,0.20000000,0.00000000,0.09846935,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.60000000,0.00000000,0.09180406,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.00000000,0.00000000,0.02304515,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.00000000,0.00000000,0.06381651,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+4.31810000,0.00000000,0.00000000,0.02304515,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.40000000,0.00000000,0.09729656,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.20000000,0.00000000,0.01594675,VanillaGaussian,VanillaGaussian,Logistic
+2.91550000,0.00000000,0.00000000,0.03975300,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.60000000,0.00000000,0.05356399,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.20000000,0.00000000,0.06542973,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.60000000,0.00000000,0.09180406,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.20000000,0.00000000,0.06542973,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.60000000,0.00000000,0.05356399,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.00000000,0.00000000,0.03975300,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.40000000,0.00000000,0.09729656,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.20000000,0.00000000,0.04056349,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.20000000,0.00000000,0.04056349,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.20000000,0.00000000,0.06543085,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.40000000,0.00000000,0.06250029,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.20000000,0.00000000,0.14727192,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.96840000,0.20000000,0.00000000,0.06543085,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.40000000,0.00000000,0.06250029,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.32900000,0.60000000,0.00000000,0.00856798,VanillaGaussian,VanillaGaussian,Logistic
+2.91550000,0.00000000,0.00000000,0.03975300,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+4.31810000,0.00000000,0.00000000,0.02304515,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.60000000,0.00000000,0.05356399,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.20000000,0.00000000,0.00810666,VanillaGaussian,VanillaGaussian,Logistic
+1.96840000,0.20000000,0.00000000,0.09256843,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.96840000,0.40000000,0.00000000,0.00830523,VanillaGaussian,VanillaGaussian,Logistic
+4.31810000,0.00000000,0.00000000,0.02304515,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.60000000,0.00000000,0.05356399,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.20000000,0.00000000,0.04056350,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.00000000,0.00000000,0.00253405,VanillaGaussian,VanillaGaussian,Logistic
+2.91550000,0.40000000,0.00000000,0.03533460,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.40000000,0.00000000,0.03533460,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.20000000,0.00000000,0.04056350,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.00000000,0.00000000,0.02304515,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+1.96840000,0.40000000,0.00000000,0.09601056,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+2.91550000,0.40000000,0.00000000,0.03533460,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.00000000,0.00000000,0.01236670,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.00000000,0.00000000,0.01236670,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.40000000,0.00000000,0.03533460,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.00000000,0.00000000,0.01236670,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.20000000,0.00000000,0.02282474,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.00000000,0.00000000,0.01236670,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.20000000,0.00000000,0.02282474,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.20000000,0.00000000,0.02282474,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.20000000,0.00000000,0.02282474,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.00000000,0.00000000,0.01236670,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+9.47260000,0.00000000,0.00000000,0.00620775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+9.47260000,0.00000000,0.00000000,0.00620775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+9.47260000,0.00000000,0.00000000,0.00620775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.20000000,0.00000000,0.03793109,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+4.31810000,0.20000000,0.00000000,0.00257881,VanillaGaussian,VanillaGaussian,Logistic
+9.47260000,0.00000000,0.00000000,0.00620775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.60000000,0.00000000,-0.00150801,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+4.31810000,0.40000000,0.00000000,0.01489008,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.40000000,0.00000000,0.01489008,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.40000000,0.00000000,0.01489008,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.40000000,0.00000000,0.01489008,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+9.47260000,0.00000000,0.00000000,0.00620775,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+14.03000000,0.00000000,0.00000000,0.00297720,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+14.03000000,0.00000000,0.00000000,0.00297720,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+14.03000000,0.00000000,0.00000000,0.00297720,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+14.03000000,0.00000000,0.00000000,0.00297720,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+2.91550000,0.40000000,0.00000000,-0.00087000,VanillaGaussian,VanillaGaussian,Logistic
+14.03000000,0.00000000,0.00000000,0.00297720,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+4.31810000,0.60000000,0.00000000,0.00012350,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.60000000,0.00000000,0.00012350,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.60000000,0.00000000,0.00012350,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+1.96840000,0.60000000,0.00000000,-0.00485703,VanillaGaussian,VanillaGaussian,Logistic
+20.78010000,0.00000000,0.00000000,0.00139134,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.60000000,0.00000000,0.00012350,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+4.31810000,0.20000000,0.00000000,-0.00191244,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+20.78010000,0.00000000,0.00000000,0.00139134,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+20.78010000,0.00000000,0.00000000,0.00139134,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+20.78010000,0.00000000,0.00000000,0.00139134,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+9.47260000,0.20000000,0.00000000,0.00375609,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+9.47260000,0.20000000,0.00000000,0.00375609,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+9.47260000,0.20000000,0.00000000,0.00375609,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+9.47260000,0.20000000,0.00000000,0.00375609,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.40000000,0.00000000,0.00142119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.40000000,0.00000000,0.00142119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+45.58520000,0.60000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+6.39560000,0.40000000,0.00000000,0.00142119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+6.39560000,0.40000000,0.00000000,0.00142119,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+30.77760000,0.60000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+67.51680000,0.60000000,0.00000000,-0.99999998,VanillaGaussian,VanillaGaussian,Logistic
+20.78010000,0.00000000,0.00000000,0.00139134,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+45.58520000,0.60000000,0.00000000,-0.99999998,VanillaGaussian,VanillaGaussian,Logistic
+67.51680000,0.60000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+67.51680000,0.40000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+100.00000000,0.60000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+6.39560000,0.20000000,0.00000000,-0.00039518,VanillaGaussian,VanillaGaussian,Logistic
+100.00000000,0.40000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+30.77760000,0.00000000,0.00000000,0.00064173,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+30.77760000,0.00000000,0.00000000,0.00064173,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+30.77760000,0.00000000,0.00000000,0.00064173,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+30.77760000,0.00000000,0.00000000,0.00064173,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+30.77760000,0.00000000,0.00000000,0.00011746,VanillaGaussian,VanillaGaussian,Logistic
+30.77760000,0.00000000,0.00000000,0.00064173,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+45.58520000,0.40000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+100.00000000,0.20000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
