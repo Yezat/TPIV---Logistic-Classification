@@ -30,7 +30,15 @@ features_theta = None
 """
 d = 1000
 
-# data_model_type = DataModelType.VanillaGaussian
+data_model_type = DataModelType.VanillaGaussian
+data_model_name = "VanillaGaussian"
+data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = np.eye(d)
+
+########## Attacking the first half of the features ##########
+
 # data_model_name = "VanillaGaussian"
 # data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
 # Sigma_w = np.eye(d)
@@ -99,47 +107,83 @@ d = 1000
 """
 
 
-data_model_type = DataModelType.KFeaturesModel
-feature_ratios = np.array([0.5,0.5])
-features_x = np.array([2,1])
-features_theta = np.array([1,1])
-# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingFirst_AttackingSecond_{feature_ratios}_{features_x}_{features_theta}"
-data_model_name = ""
-data_model_description = "2 Features, Theta Identity, Sigma_delta Identity"
-Sigma_w = np.eye(d)
-Sigma_delta = np.eye(d)
-# only attack the first half
-Sigma_delta[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
-Sigma_upsilon = np.eye(d)
-# only attack the second half
-Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
+# data_model_type = DataModelType.KFeaturesModel
+# feature_ratios = np.array([0.5,0.5])
+# features_x = np.array([10,1])
+# features_theta = np.array([1,1])
+# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}"
+# data_model_description = "2 Features, Theta Identity, Sigma_delta Identity"
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.eye(d)
+# Sigma_upsilon = np.eye(d)
 
-experiment_filename = "sweep_experiment.json"
+######### Attacking the first half of the features ##########
+
+# data_model_type = DataModelType.KFeaturesModel
+# feature_ratios = np.array([0.5,0.5])
+# features_x = np.array([10,1])
+# features_theta = np.array([1,1])
+# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_{feature_ratios}_{features_x}_{features_theta}"
+# data_model_description = "2 Features, Theta Identity, Sigma_delta Identity, Sigma_upsilon 10*Identity for the first half of the features"
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.eye(d)
+# Sigma_upsilon = np.eye(d)
+# Sigma_upsilon[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
+
+######### Attacking the second half of the features ##########
+
+# data_model_type = DataModelType.KFeaturesModel
+# feature_ratios = np.array([0.5,0.5])
+# features_x = np.array([10,1])
+# features_theta = np.array([1,1])
+# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecondHalf_{feature_ratios}_{features_x}_{features_theta}"
+# data_model_description = "2 Features, Theta Identity, Sigma_delta Identity, Sigma_upsilon 10*Identity for the second half of the features"
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.eye(d)
+# Sigma_upsilon = np.eye(d)
+# Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
+
+######### Attacking and protecting the second half of the features ##########
+
+# data_model_type = DataModelType.KFeaturesModel
+# feature_ratios = np.array([0.5,0.5])
+# features_x = np.array([10,1])
+# features_theta = np.array([1,1])
+# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_{feature_ratios}_{features_x}_{features_theta}_SD_1_10_SU_1_10"
+# data_model_description = "2 Features, Theta Identity, Sigma_delta Identity, Sigma_upsilon 10*Identity for the second half of the features, Sigma_delta 10*Identity for the second half of the features"
+# Sigma_w = np.eye(d)
+# Sigma_delta = np.eye(d)
+# Sigma_delta[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
+# Sigma_upsilon = np.eye(d)
+# Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
+
 
 """
 ------------------------------------------------------------------------------------------------------------------------
     Next, define your experiment.
 ------------------------------------------------------------------------------------------------------------------------
 """
+experiment_filename = "sweep_experiment_11.json"
 
 
 # # Create a SweepExperiment
 def get_default_experiment():
     state_evolution_repetitions: int = 1
-    erm_repetitions: int = 2
-    alphas: np.ndarray = np.linspace(0.5,2.0,2) #np.linspace(0.1,10,15) #
-    epsilons: np.ndarray = np.array([0,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
-    lambdas: np.ndarray = np.array([0.01,10]) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
+    erm_repetitions: int = 15
+    alphas: np.ndarray = np.logspace(-0.9,2,18) #np.linspace(0.1,10,15) #
+    epsilons: np.ndarray = np.array([0,0.2,0.4,0.6]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+    lambdas: np.ndarray = np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
     taus: np.ndarray = np.array([0])
     ps: np.ndarray = None # np.array([0.6,0.75,0.9])
     dp: float = 0.01
     # round the lambdas, epsilons and alphas for 4 digits
     alphas = np.round(alphas,4)
-    test_against_epsilons: np.ndarray = np.array([0.2])
+    test_against_epsilons: np.ndarray = np.array([0.2,0.6])
     epsilons = np.round(epsilons,4)
     lambdas = np.round(lambdas,4)
     test_against_epsilons = np.round(test_against_epsilons,4)
-    experiment_type: ExperimentType = ExperimentType.SweepAtOptimalLambdaAdversarialTestError    
+    # experiment_type: ExperimentType = ExperimentType.OptimalLambdaAdversarialTestError
+    experiment_type: ExperimentType = ExperimentType.SweepAtOptimalLambda
     experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
     problem_types: list[ProblemType] = [ProblemType.Logistic]
     gamma_fair_error: float = 0.01
