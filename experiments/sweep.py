@@ -277,6 +277,21 @@ def master(num_processes, logger, experiment):
                                     raise Exception("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda")
 
                                 lambdas = [optimal_lambdas[optimal_result.get_key()]]
+
+                            elif ExperimentType.SweepAtOptimalLambdaAdversarialTestError == experiment.experiment_type:
+                            
+                                optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,experiment.data_model_type, experiment.data_model_name, problem)
+
+                                if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
+                                    logger.info(f"The key is '{optimal_result.get_key()}'")
+                                    # logger.info(f"{optimal_lambdas.keys()}")
+                                    # log all keys of optimal_lambdas
+                                    for key in optimal_adversarial_lambdas.keys():
+                                        logger.info(f"Key: '{key}'")
+                                    raise Exception("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda")
+
+                                lambdas = [optimal_adversarial_lambdas[optimal_result.get_key()]]
+
                         
                             for lam in lambdas:                    
 
@@ -353,7 +368,7 @@ def master(num_processes, logger, experiment):
     end = time.time()
     duration = end - start
     logger.info("Experiment took %d seconds", duration)
-    if experiment.experiment_type == ExperimentType.Sweep or experiment.experiment_type == ExperimentType.SweepAtOptimalLambda:
+    if experiment.experiment_type == ExperimentType.Sweep or experiment.experiment_type == ExperimentType.SweepAtOptimalLambda or experiment.experiment_type == ExperimentType.SweepAtOptimalLambdaAdversarialTestError:
         with DatabaseHandler(logger) as db:
             db.complete_experiment(experiment_id, duration)
     logger.info("Done")

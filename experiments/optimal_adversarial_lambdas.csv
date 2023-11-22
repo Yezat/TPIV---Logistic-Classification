@@ -652,3 +652,7 @@ alpha,epsilon,test_epsilon,tau,lambda,data_model_type,data_model_name,problem_ty
 45.58520000,0.40000000,0.20000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
 100.00000000,0.40000000,0.20000000,0.00000000,-0.24901164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
 100.00000000,0.40000000,0.20000000,0.00000000,-0.24901164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
+0.50000000,0.00000000,0.20000000,0.00000000,99.99999846,KFeaturesModel,,Logistic
+2.00000000,0.00000000,0.20000000,0.00000000,99.99999757,KFeaturesModel,,Logistic
+0.50000000,0.40000000,0.20000000,0.00000000,99.99999704,KFeaturesModel,,Logistic
+2.00000000,0.40000000,0.20000000,0.00000000,99.99999752,KFeaturesModel,,Logistic

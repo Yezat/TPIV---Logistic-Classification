@@ -21,6 +21,7 @@ class ExperimentType(Enum):
     SweepAtOptimalLambda = 2
     OptimalEpsilon = 3
     OptimalLambdaAdversarialTestError = 4
+    SweepAtOptimalLambdaAdversarialTestError = 5
 
 
 

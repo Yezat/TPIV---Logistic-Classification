@@ -139,7 +139,7 @@ def get_default_experiment():
     epsilons = np.round(epsilons,4)
     lambdas = np.round(lambdas,4)
     test_against_epsilons = np.round(test_against_epsilons,4)
-    experiment_type: ExperimentType = ExperimentType.OptimalLambdaAdversarialTestError    
+    experiment_type: ExperimentType = ExperimentType.SweepAtOptimalLambdaAdversarialTestError    
     experiment_name: str = f"Sweep Alpha - {data_model_type.name} - {data_model_name} - {data_model_description}"
     problem_types: list[ProblemType] = [ProblemType.Logistic]
     gamma_fair_error: float = 0.01
