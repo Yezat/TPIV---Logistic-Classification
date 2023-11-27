@@ -179,7 +179,7 @@ class StateEvolutionExperimentInformation:
         self.adversarial_generalization_errors: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ] )
         self.adversarial_generalization_errors_teacher: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ])
         
-        self.fair_adversarial_errors: float = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps,logger) ) for eps in task.test_against_epsilons])
+        self.fair_adversarial_errors: float = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps, task.tau,logger) ) for eps in task.test_against_epsilons])
 
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
@@ -253,9 +253,6 @@ class ERMExperimentInformation:
         overlaps.q = self.Q
         overlaps.P = self.P
         overlaps.F = self.F
-
-        # log the overlaps A,N and F
-        logger.info(f"Overlaps: A={overlaps.A}, N={overlaps.N}, P={overlaps.P}, F={overlaps.F}")
 
         # store basic information
         self.problem_type: ProblemType = task.problem_type
@@ -475,6 +472,8 @@ class DatabaseHandler:
 
     def complete_experiment(self, experiment_id: str, duration: float):
         self.cursor.execute(f"UPDATE {EXPERIMENTS_TABLE} SET completed=1, duration={duration} WHERE experiment_id='{experiment_id}'")
+        # Set the date to the current date
+        self.cursor.execute(f"UPDATE {EXPERIMENTS_TABLE} SET date='{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}' WHERE experiment_id='{experiment_id}'")
         self.connection.commit()
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):

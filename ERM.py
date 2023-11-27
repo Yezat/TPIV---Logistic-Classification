@@ -5,10 +5,10 @@ import numpy as np
 from scipy.optimize import minimize
 from sklearn.utils.validation import check_array, check_consistent_length
 from scipy.sparse.linalg import eigsh
-from helpers import sigmoid, log1pexp, stable_cosh_squared, adversarial_loss, Task, ProblemType
+from helpers import sigmoid,sigmoid_numba, log1pexp, log1pexp_numba, stable_cosh_squared, adversarial_loss, Task, ProblemType
 from scipy.special import erfc
 from data_model import *
-
+import numba as nb
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ def preprocessing(coef, X, y, lam, epsilon, problem_type: ProblemType):
 
     if problem_type == ProblemType.Ridge:
         target = y
-    elif problem_type == ProblemType.Logistic:    
+    elif problem_type == ProblemType.Logistic or problem_type == ProblemType.NumbaLogistic:    
         mask = y == 1
         y_bin = np.ones(y.shape, dtype=X.dtype)
         y_bin[~mask] = 0.0
@@ -75,10 +75,16 @@ def sklearn_optimize(coef,X,y,lam,epsilon, problem_type: ProblemType, covariance
 
     method = "L-BFGS-B"    
 
+    loss_gd = None
     if problem_type == ProblemType.Ridge:
         problem_instance = RidgeProblem()
+        loss_gd = problem_instance.loss_gradient
     elif problem_type == ProblemType.Logistic:
         problem_instance = LogisticProblem()
+        loss_gd = problem_instance.loss_gradient
+    elif problem_type == ProblemType.NumbaLogistic:
+        problem_instance = LogisticProblem()
+        loss_gd = numba_loss_gradient
     else:
         raise Exception(f"Problem type {problem_type} not implemented")
 
@@ -86,7 +92,7 @@ def sklearn_optimize(coef,X,y,lam,epsilon, problem_type: ProblemType, covariance
     #     w0 = np.linalg.inv(X.T@X + lam * covariance_prior) @ X.T @ target
     # else:
     opt_res = minimize(
-                    problem_instance.loss_gradient,
+                    loss_gd,
                     w0,
                     method=method,
                     jac=True,
@@ -167,6 +173,51 @@ class RidgeProblem:
     Logistic Losses and Gradients
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+# @nb.njit(parallel=True)
+def numba_loss_gradient(coef, X, y, l2_reg_strength, epsilon, covariance_prior, sigma_delta):
+    n_features = X.shape[1]
+    weights = coef
+    raw_prediction = X @ weights / np.sqrt(n_features)    
+
+    l2_reg_strength /= 2
+
+    wSw = weights.dot(sigma_delta@weights)
+    nww = np.sqrt(weights@weights)
+
+    optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+
+    loss = numba_loss(raw_prediction,optimal_attack,y)
+    loss = loss.sum()
+    loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
+
+
+    epsilon_gradient_per_sample = numba_compute_gradient_attack(raw_prediction,optimal_attack,y)   
+    gradient_per_sample = numba_compute_gradient_data(raw_prediction,optimal_attack,y)
+
+    derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+
+    adv_grad_summand = np.outer(epsilon_gradient_per_sample, derivative_optimal_attack).sum(axis=0)
+    
+    grad = np.empty_like(coef, dtype=weights.dtype)
+    grad[:n_features] = X.T @ gradient_per_sample / np.sqrt(n_features) +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
+
+    return loss, grad
+
+@nb.vectorize([nb.float64(nb.float64, nb.float64, nb.float64)])
+def numba_loss(y: float, z: float, e:float) -> float:
+    return -y*z + y*e + (1-y)*log1pexp_numba(z+e) + y*log1pexp_numba(z-e)
+
+# vectorize these
+@nb.vectorize([nb.float64(nb.float64, nb.float64, nb.float64)])
+def numba_compute_gradient_attack(z: float, e : float,y: float) -> float:
+    return (1-y)*sigmoid_numba(z+e) + y*sigmoid_numba(-z+e)
+
+@nb.vectorize([nb.float64(nb.float64, nb.float64, nb.float64)])
+def numba_compute_gradient_data(z: float, e : float,y: float) -> float:
+    return (1-y)*sigmoid_numba(z+e) - y*sigmoid_numba(-z+e)
+    
+
 
 class LogisticProblem:
 
@@ -318,16 +369,12 @@ def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, data_mod
         return None
 
     d = Xtest.shape[1]
-    normalization = np.sqrt(d)
-    Xtest = Xtest / normalization
-    epsilon = epsilon / normalization
-
     
     nww = np.sqrt(w_gd@w_gd)
 
     tSw = teacher_weights.dot(data_model.Sigma_upsilon@w_gd) # shape (d,)
     
-    y_attacked_teacher = np.sign( Xtest@teacher_weights - y*epsilon * tSw/nww  )
+    y_attacked_teacher = np.sign( Xtest@teacher_weights/np.sqrt(d) - y*epsilon/np.sqrt(d) * tSw/nww  )
 
     return error(y_attacked_teacher, y)
 

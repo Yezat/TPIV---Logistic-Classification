@@ -3,6 +3,7 @@ from scipy.special import erfc
 from enum import Enum
 from data_model import DataModelType
 import os
+import numba as nb
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -37,6 +38,14 @@ def stable_cosh(x):
     out[idx] = np.exp(-x[idx]) / (1 + np.exp(-2*x[idx]))
     return out
 
+@nb.vectorize("float64(float64)")
+def stable_cosh_numba(x: float) -> float:
+    if x <= 0:
+        return np.exp(x) / (1 + np.exp(2*x))
+    else:
+        return np.exp(-x) / (1 + np.exp(-2*x))
+
+
 def stable_cosh_squared(x):
     out = np.zeros_like(x)
     idx = x <= 0
@@ -53,6 +62,14 @@ def sigmoid(x):
     out[idx] = 1 / (1 + np.exp(-x[idx]))
     return out
 
+@nb.vectorize("float64(float64)")
+def sigmoid_numba(x: float) -> float:
+    if x <= 0:
+        return np.exp(x) / (1 + np.exp(x))
+    else:
+        return 1 / (1 + np.exp(-x))
+
+
 def log1pexp(x):
     out = np.zeros_like(x)
     idx0 = x <= -37
@@ -67,6 +84,22 @@ def log1pexp(x):
     out[idx4] = x[idx4]
     return out
 
+import numba as nb
+
+@nb.vectorize("float64(float64)")
+def log1pexp_numba(x: float) -> float:
+    if x <= -37:
+        return np.exp(x)
+    elif -37 < x <= -2:
+        return np.log1p(np.exp(x))
+    elif -2 < x <= 18:
+        return np.log(1. + np.exp(x))
+    elif 18 < x <= 33.3:
+        return x + np.exp(-x)
+    else:
+        return x
+
+
 """
 ------------------------------------------------------------------------------------------------------------------------
     Losses and Activations
@@ -80,12 +113,22 @@ def sigma_star(x):
     return 0.5 * erfc(-x/np.sqrt(2))
 
 
+@nb.vectorize("float64(float64, float64, float64)")
+def numba_adversarial_loss(y: float, z: float, epsilon_term: float) -> float:
+    return log1pexp_numba(-y*z + epsilon_term)
+
 def adversarial_loss(y,z, epsilon_term):
     return log1pexp(-y*z + epsilon_term)
 
 def second_derivative_loss(y: float, z: float, epsilon_term: float) -> float:
     return y**2 * stable_cosh(0.5*y*z - 0.5*epsilon_term)**(2)
 
+@nb.vectorize("float64(float64, float64, float64)")
+def numba_second_derivative_loss(y: float, z: float, epsilon_term: float) -> float:
+    return y**2 * stable_cosh_numba(0.5*y*z - 0.5*epsilon_term)**(2)
+
+
+@nb.vectorize("float64(float64, float64, float64)")
 def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
     '''
     Gaussian measure
@@ -102,6 +145,7 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
 class ProblemType(Enum):
     Logistic = 0
     Ridge = 1
+    NumbaLogistic = 2
 
 class Task:
     def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilons: np.ndarray, lam, tau,d,ps, dp, data_model_type: DataModelType, gamma_fair_error: float):

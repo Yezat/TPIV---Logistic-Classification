@@ -5,6 +5,8 @@ from scipy.special import erfc, erf, logit, owens_t
 from helpers import *
 from data_model import *
 from scipy.optimize import root_scalar
+import numba as nb
+import math
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -71,26 +73,28 @@ class OverlapSet():
     Proximals
 ------------------------------------------------------------------------------------------------------------------------
 """
-def optim(z,y,V,w_prime):
-    a = y*z
-    if a <= 0:
-        return y*V/(1+ np.exp(y*z)) + w_prime - z
-    else:
-        return y*V*np.exp(-y*z)/(1+ np.exp(-y*z)) + w_prime - z
 
-def proximal_logistic_root_scalar(V: float, y: float, epsilon_term: float, w:float) -> float:
+import ctypes
+# if ./brentq.so exists load it, otherwise load ../brentq.so
+try:
+    DSO = ctypes.CDLL('./brentq.so')
+except: 
+    DSO = ctypes.CDLL('../brentq.so')
+
+
+# Add typing information
+c_func = DSO.brentq
+c_func.restype = ctypes.c_longdouble
+c_func.argtypes = [ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_int, ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_longdouble]
+
+@nb.njit
+def evaluate_proximal(V: float, y: float, epsilon_term: float, w: float) -> float:
     if y == 0:
         return w
-    try:
-        w_prime = w - epsilon_term / y
-        result = root_scalar(lambda z: optim(z,y,V,w_prime) , bracket=[-50000000,50000000],xtol=10e-10,rtol=10e-10)
-        z = result.root
-        return z + epsilon_term / y
-    except Exception as e:
-        # print all parameters
-        print("V: ", V, "y: ", y, "epsilon_term:", epsilon_term, "w: ", w)
-        raise e
 
+    w_prime = w - epsilon_term / y
+    z = c_func(-50000000, 50000000, 10e-10, 10e-10, 500, y, V, w_prime)
+    return z + epsilon_term / y
 
 
 """
@@ -98,122 +102,116 @@ def proximal_logistic_root_scalar(V: float, y: float, epsilon_term: float, w:flo
     Hat Overlap Equations
 ------------------------------------------------------------------------------------------------------------------------
 """
+@nb.njit
+def integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+    e = m * m / (rho * q)
+    w_0 = np.sqrt(rho*e) * xi
+    V_0 = rho * (1-e)
 
-def logistic_m_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+    # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+    w = np.sqrt(q) * xi
 
-    def integrand(xi, y):
-        e = overlaps.m * overlaps.m / (rho * overlaps.q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
+    partial_prox =  evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w) - w
 
-        # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-        w = np.sqrt(overlaps.q) * xi
+    return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi,0,1)
 
-        partial_prox =  proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w) - w
+def logistic_m_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
 
-        return partial_prox * gaussian(w_0,0,V_0+tau**2) * gaussian(xi)
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+    Iplus = quad(lambda xi: integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
     return alpha / overlaps.sigma * (Iplus - Iminus)
 
-def logistic_q_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+@nb.njit
+def _q_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+    e = m * m / (rho * q)
+    w_0 = np.sqrt(rho*e) * xi
+    V_0 = rho * (1-e)
 
-    def integrand(xi, y):
-        e = overlaps.m * overlaps.m / (rho * overlaps.q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
+    z_0 = math.erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
 
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+    w = np.sqrt(q) * xi
+    proximal = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)
+    partial_proximal = ( proximal - w ) ** 2
 
-        w = np.sqrt(overlaps.q) * xi
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
-        partial_proximal = ( proximal - w ) ** 2
+    return z_0 * (partial_proximal/ (sigma ** 2) ) * gaussian(xi,0,1)
 
-        return z_0 * (partial_proximal/ (overlaps.sigma ** 2) ) * gaussian(xi)
+def logistic_q_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
 
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-
-    return  0.5 * alpha * (Iplus + Iminus)
-
-def logistic_sigma_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau: float, lam: float, int_lims: float = 20.0, logger = None):
-
-    """
-    Derivative of f_out
-    """
-    def alternative_derivative_f_out(xi,y):
-        w = np.sqrt(overlaps.q) * xi
-        proximal = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
-
-        second_derivative = second_derivative_loss(y,proximal,epsilon*overlaps.P/np.sqrt(overlaps.N))
-
-        return second_derivative / ( 1 + overlaps.sigma * second_derivative)
-
-    def integrand(xi, y):
-        z_0 = erfc(  ( (-y * overlaps.m) / np.sqrt(overlaps.q) * xi) / np.sqrt(2*(tau**2 + (rho - overlaps.m**2/overlaps.q))))
-
-        derivative_f_out = alternative_derivative_f_out(xi,y)
-
-        return z_0 * ( derivative_f_out ) * gaussian(xi)
-
- 
-    Iplus = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
+    Iplus = quad(lambda xi: _q_hat_integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: _q_hat_integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
 
     return  0.5 * alpha * (Iplus + Iminus)
 
+"""
+Derivative of f_out
+"""
+@nb.njit
+def alternative_derivative_f_out(xi: float, y: float, m: float, q: float, sigma: float, epsilon: float, P: float, N: float) -> float:
+    w = np.sqrt(q) * xi
+    proximal = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)
 
-def logistic_P_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
+    second_derivative = numba_second_derivative_loss(y,proximal,epsilon*P/np.sqrt(N))
 
-    def integrand(xi, y):
-        e = overlaps.m * overlaps.m / (rho * overlaps.q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
+    return second_derivative / ( 1 + sigma * second_derivative)
 
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+@nb.njit
+def _sigma_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+    z_0 = math.erfc(  ( (-y * m) / np.sqrt(q) * xi) / np.sqrt(2*(tau**2 + (rho - m**2/q))))
 
-        w = np.sqrt(overlaps.q) * xi
+    derivative_f_out = alternative_derivative_f_out(xi,y,m,q,sigma,epsilon,P,N)
 
-        z_star = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
-        
-        arg = y*z_star - epsilon * overlaps.P/np.sqrt(overlaps.N)
-        m_derivative = sigmoid(-arg)
+    return z_0 * ( derivative_f_out ) * gaussian(xi,0,1)
     
 
-        m_derivative *= epsilon / np.sqrt(overlaps.N)
+def logistic_sigma_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau: float, int_lims: float = 20.0, logger = None):
+ 
+    Iplus = quad(lambda xi: _sigma_hat_integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma) , -int_lims, int_lims, limit=500)[0]
+    Iminus = quad(lambda xi: _sigma_hat_integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma) , -int_lims, int_lims, limit=500)[0]
 
-        return z_0 * m_derivative * gaussian(xi)
+    return  0.5 * alpha * (Iplus + Iminus)
 
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+@nb.njit
+def _P_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+    e = m * m / (rho * q)
+    w_0 = np.sqrt(rho*e) * xi
+    V_0 = rho * (1-e)
+
+    z_0 = math.erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+
+    w = np.sqrt(q) * xi
+
+    z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)
+    
+    arg = y*z_star - epsilon * P/np.sqrt(N)
+    m_derivative = sigmoid_numba(-arg)
+
+    m_derivative *= epsilon / np.sqrt(N)
+
+    return z_0 * m_derivative * gaussian(xi,0,1)
+    
+def logistic_P_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
+    Iplus = quad(lambda xi: _P_hat_integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: _P_hat_integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
 
     return alpha * (Iplus + Iminus)
 
+@nb.njit
+def _N_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+    e = m * m / (rho * q)
+    w_0 = np.sqrt(rho*e) * xi
+    V_0 = rho * (1-e)
+    z_0 = math.erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+    w = np.sqrt(q) * xi
 
-def logistic_N_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, lam: float, int_lims: float = 20.0):
-    def integrand(xi, y):
-        e = overlaps.m * overlaps.m / (rho * overlaps.q)
-        w_0 = np.sqrt(rho*e) * xi
-        V_0 = rho * (1-e)
+    z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)    
+    arg = y*z_star - epsilon * P/np.sqrt(N)
+    m_derivative = sigmoid_numba(-arg)
+    m_derivative *= -0.5*epsilon*P/(N**(3/2))    
+    return z_0 * m_derivative * gaussian(xi,0,1)
 
-        z_0 = erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
-
-        w = np.sqrt(overlaps.q) * xi
-
-        z_star = proximal_logistic_root_scalar(overlaps.sigma,y,epsilon*overlaps.P/np.sqrt(overlaps.N),w)
-        
-
-        arg = y*z_star - epsilon * overlaps.P/np.sqrt(overlaps.N)
-        m_derivative = sigmoid(-arg)
-
-        m_derivative *= -0.5*epsilon*overlaps.P/(overlaps.N**(3/2))
-
-        return z_0 * m_derivative * gaussian(xi)
-
-    Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
-
+def logistic_N_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
+    Iplus = quad(lambda xi: _N_hat_integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: _N_hat_integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
     return alpha * (Iplus + Iminus)
 
 
@@ -223,9 +221,7 @@ def logistic_N_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon:
 ------------------------------------------------------------------------------------------------------------------------
 """
 
-        # Vhat = self.alpha * 1/(1+V)
-        # qhat = self.alpha * (1 + q - 2*m*np.sqrt(2/(np.pi*self.data_model.rho))) / (1+V)**2
-        # mhat = self.alpha/np.sqrt(self.data_model.gamma) * 1/(1+V) * np.sqrt(2/(np.pi*self.data_model.rho))
+# TODO adapt to tau, the noisy model
 
 def ridge_m_hat_func(task,overlaps,data_model,logger):
     adv = (1 + task.epsilon * overlaps.P/np.sqrt(overlaps.N))
@@ -265,11 +261,11 @@ def var_hat_func(task, overlaps, data_model, logger=None):
         overlaps.P_hat = ridge_P_hat_func(task,overlaps,data_model,logger)
         overlaps.N_hat = ridge_N_hat_func(task,overlaps,data_model,logger)
     elif task.problem_type == ProblemType.Logistic:
-        overlaps.m_hat = logistic_m_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)/np.sqrt(data_model.gamma)
-        overlaps.q_hat = logistic_q_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
-        overlaps.sigma_hat = logistic_sigma_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS,logger=logger)
-        overlaps.P_hat = logistic_P_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
-        overlaps.N_hat = logistic_N_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,task.lam,overlaps.INT_LIMS)
+        overlaps.m_hat = logistic_m_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)/np.sqrt(data_model.gamma)
+        overlaps.q_hat = logistic_q_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)
+        overlaps.sigma_hat = logistic_sigma_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS,logger=logger)
+        overlaps.P_hat = logistic_P_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)
+        overlaps.N_hat = logistic_N_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)
     else:
         raise Exception(f"var_hat_func - problem_type {task.problem_type} not implemented")
     return overlaps
@@ -299,6 +295,50 @@ def var_func(task, overlaps, data_model, logger):
 ------------------------------------------------------------------------------------------------------------------------
 """
 
+@nb.njit
+def _training_error_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+    e = m * m / (rho * q)
+    w_0 = np.sqrt(rho*e) * xi
+    V_0 = rho * (1-e)
+
+    z_0 = math.erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+
+    # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
+    w = np.sqrt(q) * xi
+
+    proximal = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)
+
+    activation = np.sign(proximal)
+
+    return z_0* gaussian(xi,0,1) * (activation != y)
+
+@nb.njit
+def _training_loss_integrand(xi: float, y: float, q: float, m: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+    w = np.sqrt(q) * xi
+    z_0 = math.erfc(  ( (-y * m * xi) / np.sqrt(q) ) / np.sqrt(2*(tau**2 + (rho - m**2/q))))
+
+    proximal = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)
+
+    l = log1pexp_numba(-y*proximal + epsilon*P/np.sqrt(N))
+
+    return z_0 * l * gaussian(xi,0,1)
+
+
+@nb.njit
+def _test_loss_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, A: float, N: float) -> float:
+    e = m * m / (rho * q)
+    w_0 = np.sqrt(rho*e) * xi
+    V_0 = rho * (1-e)
+
+
+    z_0 = math.erfc((-y * w_0) / np.sqrt(2*(tau**2 + V_0)))
+    
+    w = np.sqrt(q) * xi
+
+    loss_value = log1pexp_numba( - y *w + epsilon*A/np.sqrt(N))
+
+    return z_0 * gaussian(xi,0,1) * loss_value
+
 class LogisticObservables:
 
     @staticmethod
@@ -307,61 +347,26 @@ class LogisticObservables:
 
     @staticmethod
     def training_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
-
-        def integrand(xi,y):
-            w = np.sqrt(overlaps.q) * xi
-            z_0 = erfc(  ( (-y * overlaps.m * xi) / np.sqrt(overlaps.q) ) / np.sqrt(2*(task.tau**2 + (data_model.rho - overlaps.m**2/overlaps.q))))
-
-            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.P/np.sqrt(overlaps.N),w)
-
-            l = adversarial_loss(y,proximal, task.epsilon*overlaps.P/np.sqrt(overlaps.N))
-
-            return z_0 * l * gaussian(xi)
-
-        I1 = quad(lambda xi: integrand(xi,1) , -int_lims, int_lims, limit=500)[0]
-        I2 = quad(lambda xi: integrand(xi,-1) , -int_lims, int_lims, limit=500)[0]
+        I1 = quad(lambda xi: _training_loss_integrand(xi,1, overlaps.q, overlaps.m, data_model.rho, task.tau, task.epsilon, overlaps.P, overlaps.N, overlaps.sigma) , -int_lims, int_lims, limit=500)[0]
+        I2 = quad(lambda xi: _training_loss_integrand(xi,-1, overlaps.q, overlaps.m, data_model.rho, task.tau, task.epsilon, overlaps.P, overlaps.N, overlaps.sigma) , -int_lims, int_lims, limit=500)[0]
         return (I1 + I2)/2
 
+    
     @staticmethod
     def training_error(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
-        def integrand(xi, y):
-            e = overlaps.m * overlaps.m / (data_model.rho * overlaps.q)
-            w_0 = np.sqrt(data_model.rho*e) * xi
-            V_0 = data_model.rho * (1-e)
-
-            z_0 = erfc((-y * w_0) / np.sqrt(2*(task.tau**2 + V_0)))
-
-            # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-            w = np.sqrt(overlaps.q) * xi
-
-            proximal = proximal_logistic_root_scalar(overlaps.sigma,y,task.epsilon*overlaps.P/np.sqrt(overlaps.N),w)
-
-            activation = np.sign(proximal)
-
-            return z_0* gaussian(xi) * (activation != y)
-
-        Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-        Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+        Iplus = quad(lambda xi: _training_error_integrand(xi,1,overlaps.m,overlaps.q,data_model.rho,task.tau,task.epsilon,overlaps.P,overlaps.N,overlaps.sigma),-int_lims,int_lims,limit=500)[0]
+        Iminus = quad(lambda xi: _training_error_integrand(xi,-1,overlaps.m,overlaps.q,data_model.rho,task.tau,task.epsilon,overlaps.P,overlaps.N,overlaps.sigma),-int_lims,int_lims,limit=500)[0]
         return (Iplus + Iminus) * 0.5
 
+    
     @staticmethod
     def test_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, epsilon: float, int_lims: float):
-        def integrand(xi, y):
-            e = overlaps.m * overlaps.m / (data_model.rho * overlaps.q)
-            w_0 = np.sqrt(data_model.rho*e) * xi
-            V_0 = data_model.rho * (1-e)
 
-            z_0 = erfc((-y * w_0) / np.sqrt(2*(task.tau**2 + V_0)))
-            # z_out_0 and f_out_0 simplify together as the erfc cancels. See computation
-            w = np.sqrt(overlaps.q) * xi
-
-            loss_value = adversarial_loss(y,w,epsilon*overlaps.A/np.sqrt(overlaps.N))
-
-            return z_0 * gaussian(xi) * loss_value
-
-        Iplus = quad(lambda xi: integrand(xi,1),-int_lims,int_lims,limit=500)[0]
-        Iminus = quad(lambda xi: integrand(xi,-1),-int_lims,int_lims,limit=500)[0]
+        Iplus = quad(lambda xi: _test_loss_integrand(xi,1,overlaps.m,overlaps.q,data_model.rho,task.tau,epsilon,overlaps.A,overlaps.N),-int_lims,int_lims,limit=500)[0]
+        Iminus = quad(lambda xi: _test_loss_integrand(xi,-1,overlaps.m,overlaps.q,data_model.rho,task.tau,epsilon,overlaps.A,overlaps.N),-int_lims,int_lims,limit=500)[0]
         return (Iplus + Iminus) * 0.5
+
+    
 
 
 """
@@ -397,13 +402,25 @@ def generalization_error(rho,m,q, tau):
     return np.arccos(m / np.sqrt( (rho + tau**2 ) * q ) )/np.pi
 
 
+@nb.njit
+def teacher_error(nu: float, tau: float, rho: float) -> float:
+    return np.exp(- (nu**2) / (2*rho)) * (1 + math.erf( nu / (np.sqrt(2) * tau ) ))
+
 def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, epsilon: float):
+
+    # if tau is not zero, we can use the simpler formula
+    if task.tau >= 1e-10:
+    
+        I = quad(lambda nu: teacher_error(nu, task.tau, data_model.rho), epsilon * overlaps.F / np.sqrt(overlaps.N), np.inf )[0]
+        return 1 - I / (np.sqrt(2 * np.pi * data_model.rho))
+
+
     return erf( epsilon * overlaps.F / np.sqrt( 2 * data_model.rho * overlaps.N ) )
 
 
 def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, epsilon:float):
 
-    a = overlaps.m/np.sqrt((overlaps.q* data_model.rho - overlaps.m**2))
+    a = overlaps.m/np.sqrt((overlaps.q* (data_model.rho + task.tau**2 ) - overlaps.m**2))
 
     b = epsilon * overlaps.A / np.sqrt(overlaps.N* overlaps.q)
 
@@ -417,38 +434,38 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
 
 
 
-def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger=None):
+def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, tau, logger=None):
     
-    V = data_model.rho*overlaps.q - overlaps.m**2
+    V = (data_model.rho )*overlaps.q - overlaps.m**2
     gamma_max = gamma+epsilon*overlaps.F/np.sqrt(overlaps.N)
 
     # first term
     def erfc_term(nu):
-        return np.exp((-(nu**2))/(2*data_model.rho)) * erfc( ( overlaps.F*overlaps.m*nu + overlaps.A*data_model.rho*( gamma - nu ) ) / (overlaps.F * np.sqrt( 2 * data_model.rho * V )))
+        return np.exp((-(nu**2))/(2*(data_model.rho ))) * erfc( ( overlaps.F*overlaps.m*nu + overlaps.A*(data_model.rho )*( gamma - nu ) ) / (overlaps.F * np.sqrt( 2 * (data_model.rho ) * V )))
     
     def erf_term(nu):
-        return np.exp((-(nu**2))/(2 * data_model.rho)) * (1 + erf( ( overlaps.F * overlaps.m * nu - overlaps.A * data_model.rho * ( nu + gamma) ) / (overlaps.F * np.sqrt(2 * data_model.rho * V)) ))
+        return np.exp((-(nu**2))/(2 * (data_model.rho ))) * (1 + erf( ( overlaps.F * overlaps.m * nu - overlaps.A * (data_model.rho ) * ( nu + gamma) ) / (overlaps.F * np.sqrt(2 * (data_model.rho ) * V)) ))
 
     first_term = quad(lambda nu: erfc_term(nu),gamma,gamma_max,limit=500)[0]
     first_term += quad(lambda nu: erf_term(nu),-gamma_max,-gamma,limit=500)[0]
-    first_term /= (2*np.sqrt(2*np.pi * data_model.rho))
+    first_term /= (2*np.sqrt(2*np.pi * (data_model.rho )))
 
 
     # second term
     def second_integral(nu):
-        return erfc((-epsilon*overlaps.A*data_model.rho + np.sqrt(overlaps.N)*overlaps.m*nu)/np.sqrt(overlaps.N*2*data_model.rho * V)) * np.exp(-(nu)**2 / (2*data_model.rho))
+        return erfc((-epsilon*overlaps.A*(data_model.rho ) + np.sqrt(overlaps.N)*overlaps.m*nu)/np.sqrt(overlaps.N*2*(data_model.rho ) * V)) * np.exp(-(nu)**2 / (2*(data_model.rho )))
 
     result2 = quad(lambda nu: second_integral(nu),gamma_max,np.inf,limit=500)
     second_term = result2[0]
-    second_term /= np.sqrt(2*np.pi * data_model.rho)
+    second_term /= np.sqrt(2*np.pi * (data_model.rho ))
 
 
     # third term
     def third_integral(nu):
-        return np.exp(-(nu)**2/(2*data_model.rho) ) * erfc( overlaps.m*nu / np.sqrt(2*data_model.rho * V))
+        return np.exp(-(nu)**2/(2*(data_model.rho )) ) * erfc( overlaps.m*nu / np.sqrt(2*(data_model.rho ) * V))
     result3 = quad(lambda nu: third_integral(nu),0,gamma,limit=500)
     third_term = result3[0]
-    third_term /= np.sqrt(2*np.pi * data_model.rho)
+    third_term /= np.sqrt(2*np.pi * (data_model.rho ))
     
     return first_term + second_term + third_term
 
@@ -510,9 +527,10 @@ def fixed_point_finder(
 
         err = overlaps.update_overlaps(new_m, new_q, new_sigma, new_A, new_N, new_P, new_F)
 
-
         iter_nb += 1
         if iter_nb > overlaps.MAX_ITER_FPE:
             raise Exception("fixed_point_finder - reached max_iterations")
     return overlaps
+
+
 

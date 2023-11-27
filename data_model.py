@@ -228,12 +228,12 @@ class VanillaGaussianDataModel(AbstractDataModel):
 
     def generate_data(self, n, tau) -> DataSet:
         the = np.random.normal(0,1, self.d)
-        c = np.random.normal(0,1,(n,self.d))
-        u = c
-        y = np.sign(u @ the / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,))) 
-        X = u
-        X_test = np.random.normal(0,1,(100000,self.d))
-        y_test = np.sign(X_test @ the  / np.sqrt(self.d) + tau * np.random.normal(0,1,(100000,)))
+        # X = np.random.normal(0,1,(n,self.d))
+        X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
+        y = np.sign(X @ the / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,))) 
+        # X_test = np.random.normal(0,1,(100000,self.d))
+        X_test = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, 100000, method="cholesky")  
+        y_test = np.sign(X_test @ the / np.sqrt(self.d)  + tau * np.random.normal(0,1,(100000,)))
         return DataSet(X, y, X_test, y_test, the)
     
 
