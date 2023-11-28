@@ -272,6 +272,8 @@ class KFeaturesModel(AbstractDataModel):
                 spec_Omega0[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_x[i]
             self.Sigma_x=np.diag(spec_Omega0)
             
+            self.feature_sizes = feature_sizes
+
             self.theta = np.ones(d)
 
             self.logger.info(f"feature_sizes: {feature_sizes}")
@@ -308,6 +310,10 @@ class KFeaturesModel(AbstractDataModel):
         y_test = np.sign(X_test @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
 
         return DataSet(X, y, X_test, y_test, self.theta)
+    
+
+
+
     
 
 class SourceCapacityDataModel(AbstractDataModel):

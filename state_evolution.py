@@ -270,22 +270,27 @@ def var_hat_func(task, overlaps, data_model, logger=None):
         raise Exception(f"var_hat_func - problem_type {task.problem_type} not implemented")
     return overlaps
 
-def var_func(task, overlaps, data_model, logger):
+def var_func(task, overlaps, data_model, logger, slice_from = None, slice_to = None):
 
-    Lambda = task.lam * data_model.spec_Sigma_w + overlaps.sigma_hat * data_model.spec_Sigma_x + overlaps.P_hat * data_model.spec_Sigma_delta + overlaps.N_hat * np.ones(data_model.d)
-    H = data_model.spec_Sigma_x * overlaps.q_hat + overlaps.m_hat**2 * data_model.spec_PhiPhit 
+    if slice_to is None:
+        slice_to = data_model.d
+    if slice_from is None:
+        slice_from = 0
+
+    Lambda = task.lam * data_model.spec_Sigma_w[slice_from: slice_to] + overlaps.sigma_hat * data_model.spec_Sigma_x[slice_from: slice_to] + overlaps.P_hat * data_model.spec_Sigma_delta[slice_from: slice_to] + overlaps.N_hat * np.ones(slice_to-slice_from)
+    H = data_model.spec_Sigma_x[slice_from: slice_to] * overlaps.q_hat + overlaps.m_hat**2 * data_model.spec_PhiPhit[slice_from: slice_to]
 
     
-    sigma = np.mean(data_model.spec_Sigma_x/Lambda)       
-    q = np.mean((H * data_model.spec_Sigma_x) / Lambda**2) 
-    m = overlaps.m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit/Lambda)
+    sigma = np.mean(data_model.spec_Sigma_x[slice_from: slice_to]/Lambda)       
+    q = np.mean((H * data_model.spec_Sigma_x[slice_from: slice_to]) / Lambda**2) 
+    m = overlaps.m_hat/np.sqrt(data_model.gamma) * np.mean(data_model.spec_PhiPhit[slice_from: slice_to]/Lambda)
     
-    P = np.mean( H * data_model.spec_Sigma_delta / Lambda**2)
+    P = np.mean( H * data_model.spec_Sigma_delta[slice_from: slice_to] / Lambda**2)
 
-    N = np.mean( H * np.ones(data_model.d) / Lambda**2)
+    N = np.mean( H * np.ones(slice_to-slice_from) / Lambda**2)
 
-    A = np.mean( H * data_model.spec_Sigma_upsilon / Lambda**2)
-    F = 0.5* overlaps.m_hat * np.mean( data_model.spec_FTerm / Lambda)
+    A = np.mean( H * data_model.spec_Sigma_upsilon[slice_from: slice_to] / Lambda**2)
+    F = 0.5* overlaps.m_hat * np.mean( data_model.spec_FTerm[slice_from: slice_to]/ Lambda)
 
     return m, q, sigma, A, N, P, F
 

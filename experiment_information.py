@@ -1,5 +1,5 @@
 from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher, fair_adversarial_error_erm
-from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps
+from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps, var_func
 from helpers import *
 from ERM import predict_erm, error, adversarial_error
 import numpy as np
@@ -12,6 +12,7 @@ import json
 import sqlite3
 import pandas as pd
 from data_model import *
+import time
 import ast
 
 # create an ExperimentType enum
@@ -206,11 +207,56 @@ class StateEvolutionExperimentInformation:
         self.q_hat : float = overlaps.q_hat
         self.m_hat : float = overlaps.m_hat
         self.A_hat : float = overlaps.A_hat
-        self.N_hat : float = overlaps.N_hat
-
-        
+        self.N_hat : float = overlaps.N_hat        
         # Angle
         self.angle: float = self.m / np.sqrt((self.q)*data_model.rho)
+
+        # subspace overlaps
+        self.subspace_overlaps = {}
+        if data_model.model_type == DataModelType.KFeaturesModel:
+            # it makes sense to talk about subspaces only if we have a KFeaturesModel
+            feature_sizes = data_model.feature_sizes
+        else:
+            feature_sizes = [task.d]
+        d = task.d
+
+        Sigmas = []
+        ms = []
+        Qs = []
+        As = []
+        Ns = []
+        Ps = []
+        Fs = []
+
+
+        for i, size in enumerate(feature_sizes):
+            slice_from = np.sum(feature_sizes[:i])
+            if i == len(feature_sizes)-1:
+                slice_to = d
+            else:
+                slice_to = np.sum(feature_sizes[:i+1])
+
+            m, q, sigma, A, N, P, F = var_func(task, overlaps, data_model, logger, slice_from, slice_to)
+
+            # log the computed overlaps
+            logger.info(f"Subspace {i}: m={m}, q={q}, sigma={sigma}, A={A}, N={N}, P={P}, F={F}")
+            
+            Sigmas.append(sigma)
+            ms.append(m)
+            Qs.append(q)
+            As.append(A)
+            Ns.append(N)
+            Ps.append(P)
+            Fs.append(F)
+        
+        self.subspace_overlaps["Sigmas"] = Sigmas
+        self.subspace_overlaps["ms"] = ms
+        self.subspace_overlaps["Qs"] = Qs
+        self.subspace_overlaps["As"] = As
+        self.subspace_overlaps["Ns"] = Ns
+        self.subspace_overlaps["Ps"] = Ps
+        self.subspace_overlaps["Fs"] = Fs
+
 
 class ERMExperimentInformation:
     def __init__(self, task, data_model, data: DataSet, weights, problem_instance, logger):
@@ -296,7 +342,63 @@ class ERMExperimentInformation:
         self.training_loss: float = problem_instance.training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)       
         self.test_losses: np.ndarray = np.array( [(eps,problem_instance.training_loss(weights,data.X_test,data.y_test,eps, Sigma_delta=data_model.Sigma_upsilon)) for eps in task.test_against_epsilons ])
 
-        
+        # subspace overlaps
+        self.subspace_overlaps = {}
+        if data_model.model_type == DataModelType.KFeaturesModel:
+            # it makes sense to talk about subspaces only if we have a KFeaturesModel
+            feature_sizes = data_model.feature_sizes
+        else:
+            feature_sizes = [task.d]
+        d = task.d
+
+        rhos = []
+        ms = []
+        Qs = []
+        As = []
+        Ns = []
+        Ps = []
+        Fs = []
+
+
+        for i, size in enumerate(feature_sizes):
+            slice_from = np.sum(feature_sizes[:i])
+            if i == len(feature_sizes)-1:
+                slice_to = d
+            else:
+                slice_to = np.sum(feature_sizes[:i+1])
+            subspace_weights = weights[slice_from:slice_to]
+            subspace_teacher_weights = data.theta[slice_from:slice_to]
+
+            subspace_Sigma_x = data_model.Sigma_x[slice_from:slice_to,slice_from:slice_to]
+            subspace_Sigma_upsilon = data_model.Sigma_upsilon[slice_from:slice_to,slice_from:slice_to]
+            subspace_Sigma_delta = data_model.Sigma_delta[slice_from:slice_to,slice_from:slice_to]
+
+            
+            rho = subspace_teacher_weights.dot(subspace_Sigma_x@subspace_teacher_weights) / size
+            m = subspace_teacher_weights.dot(subspace_Sigma_x@subspace_weights) / size
+            F = subspace_teacher_weights.dot(subspace_Sigma_upsilon@subspace_weights) / size
+            Q = subspace_weights.dot(subspace_Sigma_x@subspace_weights) / size
+            A = subspace_weights.dot(subspace_Sigma_upsilon@subspace_weights) / size
+            N = subspace_weights.dot(subspace_weights) / size
+            P = subspace_weights.dot(subspace_Sigma_delta@subspace_weights) / size
+
+            rhos.append(rho)
+            ms.append(m)
+            Qs.append(Q)
+            As.append(A)
+            Ns.append(N)
+            Ps.append(P)
+            Fs.append(F)
+
+        self.subspace_overlaps["rhos"] = rhos
+        self.subspace_overlaps["ms"] = ms
+        self.subspace_overlaps["Qs"] = Qs
+        self.subspace_overlaps["As"] = As
+        self.subspace_overlaps["Ns"] = Ns
+        self.subspace_overlaps["Ps"] = Ps
+        self.subspace_overlaps["Fs"] = Fs
+
+                
 
 
     # overwrite the to string method to print all attributes and their type
@@ -364,7 +466,8 @@ class DatabaseHandler:
                     F REAL,
                     A_hat REAL,
                     N_hat REAL,
-                    test_losses REAL
+                    test_losses REAL,
+                    subspace_overlaps BLOB
                 )
             ''')
             self.connection.commit()
@@ -410,7 +513,7 @@ class DatabaseHandler:
                     problem_type TEXT,
                     code_version TEXT,
                     experiment_id TEXT,
-                    Q REAL,
+                    q REAL,
                     rho REAL,
                     m REAL,
                     angle REAL,
@@ -436,39 +539,52 @@ class DatabaseHandler:
                     A REAL,
                     N REAL,
                     P REAL,
-                    F REAL
+                    F REAL,
+                    subspace_overlaps BLOB
                 )
             ''')
             self.connection.commit()
 
     def insert_experiment(self, experiment_information: ExperimentInformation):
-        # self.logger.info(str(experiment_information))
-        self.cursor.execute(f'''
-        INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
-            experiment_information.experiment_id,
-            experiment_information.experiment_name,
-            experiment_information.duration,
-            json.dumps([problem_type.name for problem_type in experiment_information.problem_types], cls=NumpyEncoder),
-            experiment_information.code_version,
-            experiment_information.date,
-            experiment_information.state_evolution_repetitions,
-            experiment_information.erm_repetitions,
-            json.dumps(experiment_information.alphas, cls=NumpyEncoder),
-            json.dumps(experiment_information.epsilons, cls=NumpyEncoder),
-            json.dumps(experiment_information.test_against_epsilons, cls=NumpyEncoder),
-            json.dumps(experiment_information.lambdas, cls=NumpyEncoder),
-            json.dumps(experiment_information.taus, cls=NumpyEncoder),
-            json.dumps(experiment_information.ps, cls=NumpyEncoder),
-            float(experiment_information.dp),
-            experiment_information.d,
-            experiment_information.experiment_type.name,
-            experiment_information.completed,
-            experiment_information.data_model_type.name,
-            experiment_information.data_model_name,
-            experiment_information.data_model_description,
-            experiment_information.gamma_fair_error
-            ))
-        self.connection.commit()
+        for _ in range(3): # we try at most three times
+            try:
+                self.cursor.execute(f'''
+                INSERT INTO {EXPERIMENTS_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+                    experiment_information.experiment_id,
+                    experiment_information.experiment_name,
+                    experiment_information.duration,
+                    json.dumps([problem_type.name for problem_type in experiment_information.problem_types], cls=NumpyEncoder),
+                    experiment_information.code_version,
+                    experiment_information.date,
+                    experiment_information.state_evolution_repetitions,
+                    experiment_information.erm_repetitions,
+                    json.dumps(experiment_information.alphas, cls=NumpyEncoder),
+                    json.dumps(experiment_information.epsilons, cls=NumpyEncoder),
+                    json.dumps(experiment_information.test_against_epsilons, cls=NumpyEncoder),
+                    json.dumps(experiment_information.lambdas, cls=NumpyEncoder),
+                    json.dumps(experiment_information.taus, cls=NumpyEncoder),
+                    json.dumps(experiment_information.ps, cls=NumpyEncoder),
+                    float(experiment_information.dp),
+                    experiment_information.d,
+                    experiment_information.experiment_type.name,
+                    experiment_information.completed,
+                    experiment_information.data_model_type.name,
+                    experiment_information.data_model_name,
+                    experiment_information.data_model_description,
+                    experiment_information.gamma_fair_error
+                    ))
+                self.connection.commit()
+                return 
+            except sqlite3.OperationalError as e:
+                # Check if the error is due to a busy database
+                if "database is locked" in str(e):
+                    # wait for a random amount of seconds between 1 and 5
+                    sleep_time = np.random.randint(1,5)
+                    self.logger.info(f"Database is locked, waiting for {sleep_time} seconds...")
+                    time.sleep(sleep_time)
+                else:
+                    raise e
+        raise Exception("Could not insert experiment into database")
 
     def complete_experiment(self, experiment_id: str, duration: float):
         self.cursor.execute(f"UPDATE {EXPERIMENTS_TABLE} SET completed=1, duration={duration} WHERE experiment_id='{experiment_id}'")
@@ -478,7 +594,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -518,7 +634,8 @@ class DatabaseHandler:
             experiment_information.F,
             experiment_information.A_hat,
             experiment_information.N_hat,
-            json.dumps(experiment_information.test_losses, cls=NumpyEncoder)
+            json.dumps(experiment_information.test_losses, cls=NumpyEncoder),
+            json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder)
         ))
         self.connection.commit()
 
@@ -542,7 +659,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -575,7 +692,8 @@ class DatabaseHandler:
             experiment_information.A,
             experiment_information.N,
             experiment_information.P,
-            experiment_information.F
+            experiment_information.F,
+            json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder)
         ))
         self.connection.commit()
 
