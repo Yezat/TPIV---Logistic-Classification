@@ -217,7 +217,7 @@ class StateEvolutionExperimentInformation:
             # it makes sense to talk about subspaces only if we have a KFeaturesModel
             feature_sizes = data_model.feature_sizes
         else:
-            feature_sizes = [task.d]
+            feature_sizes = [int(0)]
         d = task.d
 
         Sigmas = []
@@ -230,11 +230,12 @@ class StateEvolutionExperimentInformation:
 
 
         for i, size in enumerate(feature_sizes):
-            slice_from = np.sum(feature_sizes[:i])
+            slice_from = int(np.sum(feature_sizes[:i]))
             if i == len(feature_sizes)-1:
                 slice_to = d
             else:
-                slice_to = np.sum(feature_sizes[:i+1])
+                slice_to = int(np.sum(feature_sizes[:i+1]))
+
 
             m, q, sigma, A, N, P, F = var_func(task, overlaps, data_model, logger, slice_from, slice_to)
 
@@ -348,7 +349,7 @@ class ERMExperimentInformation:
             # it makes sense to talk about subspaces only if we have a KFeaturesModel
             feature_sizes = data_model.feature_sizes
         else:
-            feature_sizes = [task.d]
+            feature_sizes = [int(0)]
         d = task.d
 
         rhos = []
@@ -361,11 +362,14 @@ class ERMExperimentInformation:
 
 
         for i, size in enumerate(feature_sizes):
-            slice_from = np.sum(feature_sizes[:i])
+            slice_from = int(np.sum(feature_sizes[:i]))
             if i == len(feature_sizes)-1:
                 slice_to = d
             else:
-                slice_to = np.sum(feature_sizes[:i+1])
+                slice_to = int(np.sum(feature_sizes[:i+1]))
+            
+            size = slice_to - slice_from
+
             subspace_weights = weights[slice_from:slice_to]
             subspace_teacher_weights = data.theta[slice_from:slice_to]
 
