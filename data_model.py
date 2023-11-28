@@ -164,6 +164,7 @@ class AbstractDataModel(ABC):
             'Max EV Sigma_theta': np.max(self.spec_Sigma_theta),
             'Min EV PhiPhiT': np.min(self.spec_PhiPhit),
             'Max EV PhiPhiT': np.max(self.spec_PhiPhit),
+            'Spec Sigma_Upsilon': np.linalg.norm(self.spec_Sigma_upsilon),
             # 'Norm Sigma_w': np.linalg.norm(self.Sigma_w),
             # 'Norm Sigma_delta': np.linalg.norm(self.Sigma_delta),
             # 'Norm Sigma_x': np.linalg.norm(self.Sigma_x),

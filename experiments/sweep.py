@@ -271,8 +271,8 @@ def master(num_processes, logger, experiment):
 
                                 if not optimal_result.get_key() in optimal_lambdas.keys():
                                     logger.info(f"The key is '{optimal_result.get_key()}'")
-                                    logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. Using zero as optimal lambda")
-                                    lambdas = [0]
+                                    logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. Using 0.001 as optimal lambda")
+                                    lambdas = [0.001]
                                 else:
                                     lambdas = [optimal_lambdas[optimal_result.get_key()]]
 
@@ -282,8 +282,8 @@ def master(num_processes, logger, experiment):
 
                                 if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
                                     logger.info(f"The key is '{optimal_result.get_key()}'")
-                                    logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. Using zero as lambda")
-                                    lambdas = [0]
+                                    logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. Using 0.001 as lambda")
+                                    lambdas = [0.001]
                                 else:
                                     lambdas = [optimal_adversarial_lambdas[optimal_result.get_key()]]
 

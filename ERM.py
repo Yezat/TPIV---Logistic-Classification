@@ -378,7 +378,7 @@ def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, data_mod
 
     return error(y_attacked_teacher, y)
 
-def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma, data_model, logger = None):
+def fair_adversarial_error_erm(X_test, w_gd, teacher_weights, epsilon, gamma, data_model, logger = None):
     
     d = X_test.shape[1]
 
@@ -388,6 +388,7 @@ def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma,
     teacher_activation = X_test@teacher_weights/np.sqrt(d)
     student_activation = X_test@w_gd/np.sqrt(d)
  
+    y = np.sign(teacher_activation)
 
     gamma_constraint_argument = y*teacher_activation - epsilon*F/np.sqrt(N*d)
 
@@ -416,7 +417,7 @@ def fair_adversarial_error_erm(y, X_test, w_gd, teacher_weights, epsilon, gamma,
     # third term
     y_hat = np.zeros_like(y)
     y_third = np.zeros_like(y)
-    mask_last_smaller = y*teacher_activation <= gamma    
+    mask_last_smaller = (y*teacher_activation <= gamma) & (y * teacher_activation > 0)
     y_hat_t = np.sign( X_test@w_gd )    
     y_hat[mask_last_smaller] = y_hat_t[mask_last_smaller]
     y_third[mask_last_smaller] = y[mask_last_smaller]

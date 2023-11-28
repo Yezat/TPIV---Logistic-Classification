@@ -84,8 +84,8 @@ except:
 
 # Add typing information
 c_func = DSO.brentq
-c_func.restype = ctypes.c_longdouble
-c_func.argtypes = [ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_int, ctypes.c_longdouble, ctypes.c_longdouble, ctypes.c_longdouble]
+c_func.restype = ctypes.c_double
+c_func.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_double, ctypes.c_double, ctypes.c_double]
 
 @nb.njit
 def evaluate_proximal(V: float, y: float, epsilon_term: float, w: float) -> float:
@@ -434,7 +434,7 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
 
 
 
-def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, tau, logger=None):
+def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger=None):
     
     V = (data_model.rho )*overlaps.q - overlaps.m**2
     gamma_max = gamma+epsilon*overlaps.F/np.sqrt(overlaps.N)
@@ -459,7 +459,7 @@ def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, tau, l
     second_term = result2[0]
     second_term /= np.sqrt(2*np.pi * (data_model.rho ))
 
-
+    
     # third term
     def third_integral(nu):
         return np.exp(-(nu)**2/(2*(data_model.rho )) ) * erfc( overlaps.m*nu / np.sqrt(2*(data_model.rho ) * V))

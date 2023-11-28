@@ -179,7 +179,7 @@ class StateEvolutionExperimentInformation:
         self.adversarial_generalization_errors: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ] )
         self.adversarial_generalization_errors_teacher: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ])
         
-        self.fair_adversarial_errors: float = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps, task.tau,logger) ) for eps in task.test_against_epsilons])
+        self.fair_adversarial_errors: float = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
 
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
@@ -270,7 +270,7 @@ class ERMExperimentInformation:
         self.d: int = task.d
         self.tau: float = task.tau
         n: int = data.X.shape[0]
-        self.alpha: float = n/task.d
+        self.alpha: float = task.alpha
 
         # Angle
         self.angle: float = self.m / np.sqrt(self.Q*self.rho)
@@ -285,7 +285,7 @@ class ERMExperimentInformation:
         self.adversarial_generalization_errors: np.ndarray = np.array( [(eps,adversarial_error(data.y_test,data.X_test,weights,eps, data_model.Sigma_upsilon)) for eps in task.test_against_epsilons ])
         self.adversarial_generalization_errors_teacher: np.ndarray = np.array( [(eps,adversarial_error_teacher(data.y_test,data.X_test,weights,data.theta,eps,data_model)) for eps in task.test_against_epsilons ])
         self.adversarial_generalization_errors_overlap: np.ndarray = np.array( [(eps,adversarial_generalization_error_overlaps(overlaps, task, data_model, eps)) for eps in task.test_against_epsilons ])
-        self.fair_adversarial_errors: np.ndarray = np.array( [(eps,fair_adversarial_error_erm(data.y_test,data.X_test,weights,data.theta,eps,task.gamma_fair_error,data_model, logger)) for eps in task.test_against_epsilons ])
+        self.fair_adversarial_errors: np.ndarray = np.array( [(eps,fair_adversarial_error_erm(data.X_test,weights,data.theta,eps,task.gamma_fair_error,data_model, logger)) for eps in task.test_against_epsilons ])
         
         # Training Error
         yhat_gd_train = predict_erm(data.X,weights)
