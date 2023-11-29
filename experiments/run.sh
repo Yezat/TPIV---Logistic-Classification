@@ -13,6 +13,7 @@ module purge
 module load gcc openmpi python/3.10.4
 source /home/ktanner/venvs/adv/bin/activate
 
+srun --mpi pmi2 python3 ./create_data_model.py sweep_experiment.json
 srun --mpi=pmi2 python3 ./sweep.py sweep_experiment.json
 
 deactivate

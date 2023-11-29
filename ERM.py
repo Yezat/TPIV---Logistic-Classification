@@ -54,7 +54,7 @@ def preprocessing(coef, X, y, lam, epsilon, problem_type: ProblemType):
 
     if problem_type == ProblemType.Ridge:
         target = y
-    elif problem_type == ProblemType.Logistic or problem_type == ProblemType.NumbaLogistic:    
+    elif problem_type == ProblemType.Logistic:    
         mask = y == 1
         y_bin = np.ones(y.shape, dtype=X.dtype)
         y_bin[~mask] = 0.0
@@ -82,9 +82,6 @@ def sklearn_optimize(coef,X,y,lam,epsilon, problem_type: ProblemType, covariance
     elif problem_type == ProblemType.Logistic:
         problem_instance = LogisticProblem()
         loss_gd = problem_instance.loss_gradient
-    elif problem_type == ProblemType.NumbaLogistic:
-        problem_instance = LogisticProblem()
-        loss_gd = numba_loss_gradient
     else:
         raise Exception(f"Problem type {problem_type} not implemented")
 
@@ -173,51 +170,6 @@ class RidgeProblem:
     Logistic Losses and Gradients
 ------------------------------------------------------------------------------------------------------------------------
 """
-
-# @nb.njit(parallel=True)
-def numba_loss_gradient(coef, X, y, l2_reg_strength, epsilon, covariance_prior, sigma_delta):
-    n_features = X.shape[1]
-    weights = coef
-    raw_prediction = X @ weights / np.sqrt(n_features)    
-
-    l2_reg_strength /= 2
-
-    wSw = weights.dot(sigma_delta@weights)
-    nww = np.sqrt(weights@weights)
-
-    optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
-
-    loss = numba_loss(raw_prediction,optimal_attack,y)
-    loss = loss.sum()
-    loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
-
-
-    epsilon_gradient_per_sample = numba_compute_gradient_attack(raw_prediction,optimal_attack,y)   
-    gradient_per_sample = numba_compute_gradient_data(raw_prediction,optimal_attack,y)
-
-    derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
-
-    adv_grad_summand = np.outer(epsilon_gradient_per_sample, derivative_optimal_attack).sum(axis=0)
-    
-    grad = np.empty_like(coef, dtype=weights.dtype)
-    grad[:n_features] = X.T @ gradient_per_sample / np.sqrt(n_features) +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
-
-    return loss, grad
-
-@nb.vectorize([nb.float64(nb.float64, nb.float64, nb.float64)])
-def numba_loss(y: float, z: float, e:float) -> float:
-    return -y*z + y*e + (1-y)*log1pexp_numba(z+e) + y*log1pexp_numba(z-e)
-
-# vectorize these
-@nb.vectorize([nb.float64(nb.float64, nb.float64, nb.float64)])
-def numba_compute_gradient_attack(z: float, e : float,y: float) -> float:
-    return (1-y)*sigmoid_numba(z+e) + y*sigmoid_numba(-z+e)
-
-@nb.vectorize([nb.float64(nb.float64, nb.float64, nb.float64)])
-def numba_compute_gradient_data(z: float, e : float,y: float) -> float:
-    return (1-y)*sigmoid_numba(z+e) - y*sigmoid_numba(-z+e)
-    
-
 
 class LogisticProblem:
 

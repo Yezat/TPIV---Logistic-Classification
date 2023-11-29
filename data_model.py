@@ -276,11 +276,6 @@ class KFeaturesModel(AbstractDataModel):
 
             self.theta = np.ones(d)
 
-            self.logger.info(f"feature_sizes: {feature_sizes}")
-            self.logger.info(f"theta: {self.theta}")
-            self.logger.info(f"Sigma_x: {self.Sigma_x}")
-            self.logger.info(f"Sigma_delta: {Sigma_delta}")
-
             self.rho = np.mean(spec_Omega0* self.theta**2) 
             self.PhiPhiT = np.diag( spec_Omega0**2 * self.theta**2)
             self.Sigma_theta = np.diag(self.theta**2)

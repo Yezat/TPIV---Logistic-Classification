@@ -84,7 +84,6 @@ def log1pexp(x):
     out[idx4] = x[idx4]
     return out
 
-import numba as nb
 
 @nb.vectorize("float64(float64)")
 def log1pexp_numba(x: float) -> float:
@@ -145,10 +144,9 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
 class ProblemType(Enum):
     Logistic = 0
     Ridge = 1
-    NumbaLogistic = 2
 
 class Task:
-    def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilons: np.ndarray, lam, tau,d,ps, dp, data_model_type: DataModelType, gamma_fair_error: float):
+    def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilons: np.ndarray, lam, tau,d,ps, dp, data_model_type: DataModelType, data_model_name: str, gamma_fair_error: float):
         self.id = id
         self.experiment_id = experiment_id
         self.method = method
@@ -163,11 +161,12 @@ class Task:
         self.ps = ps
         self.dp = dp
         self.data_model_type: DataModelType = data_model_type
+        self.data_model_name: str = data_model_name
         self.gamma_fair_error: float = gamma_fair_error
         self.problem_type: ProblemType = problem_type
 
     def __str__(self):
-        return f"Task {self.id} on {self.problem_type.name} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, test_against_epsilons={self.test_against_epsilons}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name}"
+        return f"Task {self.id} on {self.problem_type.name} with method {self.method} and alpha={self.alpha}, epsilon={self.epsilon}, test_against_epsilons={self.test_against_epsilons}, lambda={self.lam}, tau={self.tau}, d={self.d}, and data model {self.data_model_type.name} {self.data_model_name}"
     
 
 

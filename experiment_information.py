@@ -24,10 +24,57 @@ class ExperimentType(Enum):
     OptimalLambdaAdversarialTestError = 4
     SweepAtOptimalLambdaAdversarialTestError = 5
 
+class DataModelDefinition:
+    def __init__(self, delete_existing: bool, Sigma_w: np.ndarray, Sigma_delta: np.ndarray, Sigma_upsilon: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None) -> None:
+        self.delete_existing: bool = delete_existing
+        self.Sigma_w: np.ndarray = Sigma_w
+        self.Sigma_delta: np.ndarray = Sigma_delta
+        self.Sigma_upsilon: np.ndarray = Sigma_upsilon
+        self.name: str = name
+        self.description: str = description
+        self.data_model_type: DataModelType = data_model_type
+        self.feature_ratios: np.ndarray = feature_ratios
+        self.features_x: np.ndarray = features_x
+        self.features_theta: np.ndarray = features_theta
 
+    @classmethod
+    def from_name(cls, name: str, data_model_type: DataModelType, base_path = "../"):
+        """
+        Loads a data model definition from a json file based on the name and the data_model_type.
+        """
+        filepath = f"{base_path}data/data_model_definitions/{data_model_type.name}/{name}.json"
+        with open(filepath) as f:
+            data_model_definition_dict = json.load(f, cls=NumpyDecoder)
+
+        result = cls(**data_model_definition_dict)
+
+        # make sure Sigma_w, Sigma_delta and Sigma_upsilon are numpy arrays
+        result.Sigma_w = np.array(result.Sigma_w)
+        result.Sigma_delta = np.array(result.Sigma_delta)
+        result.Sigma_upsilon = np.array(result.Sigma_upsilon)
+
+        # same for feature_ratios, features_x and features_theta
+        if result.feature_ratios is not None:
+            result.feature_ratios = np.array(result.feature_ratios)
+        if result.features_x is not None:
+            result.features_x = np.array(result.features_x)
+        if result.features_theta is not None:
+            result.features_theta = np.array(result.features_theta)
+
+        return result
+    
+    def store(self, base_path = "../"):
+        """
+        Stores the data model definition in a json file.
+        """
+        filepath = f"{base_path}data/data_model_definitions/{self.data_model_type.name}/{self.name}.json"
+        # make sure the directory exists
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, "w") as f:
+            json.dump(self.__dict__, f, cls=NumpyEncoder)
 
 class ExperimentInformation:
-    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_type: DataModelType, data_model_name: str, data_model_description: str, test_against_epsilons: np.ndarray, problem_types: list[ProblemType],  gamma_fair_error: float, experiment_name: str = ""):
+    def __init__(self, state_evolution_repetitions: int, erm_repetitions: int, alphas: np.ndarray, epsilons: np.ndarray, lambdas: np.ndarray, taus: np.ndarray, d: int, experiment_type: ExperimentType, ps: np.ndarray, dp: float, data_model_types: list[DataModelType], data_model_names: [str], data_model_descriptions: [str], test_against_epsilons: np.ndarray, problem_types: list[ProblemType],  gamma_fair_error: float, experiment_name: str = ""):
         self.experiment_id: str = str(uuid.uuid4())
         self.experiment_name: str = experiment_name
         self.duration: float = 0.0
@@ -45,9 +92,9 @@ class ExperimentInformation:
         self.d: int = d
         self.experiment_type: ExperimentType = experiment_type
         self.completed: bool = False
-        self.data_model_type: DataModelType = data_model_type
-        self.data_model_name: str = data_model_name
-        self.data_model_description: str = data_model_description
+        self.data_model_types: [DataModelType] = data_model_types
+        self.data_model_names: [str] = data_model_names
+        self.data_model_descriptions: [str] = data_model_descriptions
         self.problem_types: list[ProblemType] = problem_types
         self.gamma_fair_error: float = gamma_fair_error
 
@@ -77,10 +124,14 @@ class ExperimentInformation:
         experiment.date = experiment_date
         experiment.duration = duration
         experiment.completed = completed
+        
+        
+        experiment.data_model_types = [DataModelType[data_model_type] for data_model_type in ast.literal_eval(experiment.data_model_types)]
+        experiment.data_model_names = ast.literal_eval(experiment.data_model_names)
+        experiment.data_model_descriptions = ast.literal_eval(experiment.data_model_descriptions)
 
-        experiment.data_model_type = DataModelType[experiment.data_model_type]
-        experiment.experiment_type = ExperimentType[experiment.experiment_type]
         experiment.problem_types = [ProblemType[problem_type] for problem_type in ast.literal_eval(experiment.problem_types)]
+        experiment.experiment_type = ExperimentType[experiment.experiment_type]
 
 
         return experiment
@@ -91,34 +142,55 @@ class ExperimentInformation:
         return "\n".join(["%s: %s (%s)" % (key, value, type(value)) for key, value in self.__dict__.items()])
     
     
-    def get_data_model(self, logger, source_pickle_path = "../", delete_existing = False, Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name: str = "", description: str = "", feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None):
+    def _load_data_model(self, logger, name, model_type, source_pickle_path = "../"):
         """
-        Instantiates a data model of the type specified in self.data_model_type and stores it to source_pickle_path,
-        custom student prior covariances and adversarial training covariances can be specified
-        parameters:
-        logger: a logger object
-        source_pickle_path: the path where the data model should be stored
-        delete_existing: if true, the data model will be recomputed even if a pickle exists
-        Sigma_w: the covariance matrix of the student prior
-        Sigma_delta: the covariance matrix of the adversarial training 
-        ----------------
-        Both Sigma_w and Sigma_delta only have effect if the data model is newly created, that is either no pickle exists or delete_existing is True
+        Loads an already existing data model from a pickle file based on the model_type and the name.
+        You can pass a source_pickle_path to specify the path to the pickle file.
         ----------------
         returns:
         the data model
         """
         data_model = None
-        if self.data_model_type == DataModelType.VanillaGaussian:
-            data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path,delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description)
-        elif self.data_model_type == DataModelType.SourceCapacity:
-            data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description)
-        elif self.data_model_type == DataModelType.MarginGaussian:
-            data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description)
-        elif self.data_model_type == DataModelType.KFeaturesModel:
-            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path, delete_existing=delete_existing, Sigma_w=Sigma_w, Sigma_delta=Sigma_delta, Sigma_upsilon=Sigma_upsilon, name=name, description=description, feature_ratios = feature_ratios, features_x = features_x, features_theta = features_theta)
+        if model_type == DataModelType.VanillaGaussian:
+            data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path, name=name)
+        elif model_type == DataModelType.SourceCapacity:
+            data_model = SourceCapacityDataModel(self.d, logger, source_pickle_path=source_pickle_path,  name=name)
+        elif model_type == DataModelType.MarginGaussian:
+            data_model = MarginGaussianDataModel(self.d,logger, source_pickle_path=source_pickle_path,  name=name)
+        elif model_type == DataModelType.KFeaturesModel:
+            data_model = KFeaturesModel(self.d,logger, source_pickle_path=source_pickle_path,  name=name)
         else:
             raise Exception("Unknown DataModelType, did you remember to add the initialization?")
         return data_model
+
+    def load_data_model_definitions(self, base_path = "../"):
+        """
+        Loads the data model definitions specified in the experiment_information based on existing json files.
+        """
+        data_model_definitions = []
+        for data_model_type, data_model_name in zip(self.data_model_types, self.data_model_names):
+            data_model_definitions.append(DataModelDefinition.from_name(data_model_name, data_model_type, base_path=base_path))
+        return data_model_definitions
+
+
+    def store_data_model_definitions(self, data_model_definitions: list[DataModelDefinition], base_path = "../"):
+        """
+        Stores the data model definitions in json files.
+        """
+        for data_model_definition in data_model_definitions:
+            data_model_definition.store(base_path=base_path)
+
+
+    def load_data_models(self, logger, source_pickle_path = "../"):
+        """
+        Loads all data models specified in the experiment_information based on existing pickle files.
+        Creates a dictionary with key (data_model_type, data_model_name)
+        """
+        data_models = {}
+        for data_model_type, data_model_name in zip(self.data_model_types, self.data_model_names):
+            data_model = self._load_data_model(logger, data_model_name, data_model_type, source_pickle_path=source_pickle_path)
+            data_models[(data_model_type, data_model_name)] = data_model
+        return data_models
 
 class CalibrationResults:
     def __init__(self, ps: np.ndarray, calibrations: np.ndarray, dp: float):
@@ -157,6 +229,9 @@ class StateEvolutionExperimentInformation:
         self.duration: float = None # the duration is set in sweep after all errors have been computed.
         self.experiment_id: str = task.experiment_id
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.data_model_type: DataModelType = data_model.model_type
+        self.data_model_name: str = data_model.name
+        self.data_model_description: str = data_model.description
 
         # State Evolution Parameters
         self.initial_condition: Tuple[float, float, float] = overlaps.INITIAL_CONDITION
@@ -252,7 +327,7 @@ class StateEvolutionExperimentInformation:
         
         self.subspace_overlaps["Sigmas"] = Sigmas
         self.subspace_overlaps["ms"] = ms
-        self.subspace_overlaps["Qs"] = Qs
+        self.subspace_overlaps["qs"] = Qs
         self.subspace_overlaps["As"] = As
         self.subspace_overlaps["Ns"] = Ns
         self.subspace_overlaps["Ps"] = Ps
@@ -308,7 +383,10 @@ class ERMExperimentInformation:
         self.code_version: str = __version__
         self.experiment_id: str = task.experiment_id
         self.date: datetime = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.chosen_minimizer: str = "sklearn"
+        self.data_model_type: DataModelType = data_model.model_type
+        self.data_model_name: str = data_model.name
+        self.data_model_description: str = data_model.description
+
 
         # store the experiment parameters
         self.epsilon: float = task.epsilon
@@ -396,7 +474,7 @@ class ERMExperimentInformation:
 
         self.subspace_overlaps["rhos"] = rhos
         self.subspace_overlaps["ms"] = ms
-        self.subspace_overlaps["Qs"] = Qs
+        self.subspace_overlaps["qs"] = Qs
         self.subspace_overlaps["As"] = As
         self.subspace_overlaps["Ns"] = Ns
         self.subspace_overlaps["Ps"] = Ps
@@ -471,7 +549,10 @@ class DatabaseHandler:
                     A_hat REAL,
                     N_hat REAL,
                     test_losses REAL,
-                    subspace_overlaps BLOB
+                    subspace_overlaps BLOB,
+                    data_model_type TEXT,
+                    data_model_name TEXT,
+                    data_model_description TEXT
                 )
             ''')
             self.connection.commit()
@@ -499,9 +580,9 @@ class DatabaseHandler:
                 d INTEGER,
                 experiment_type Text,
                 completed BOOLEAN,
-                data_model_type TEXT,
-                data_model_name TEXT,
-                data_model_description TEXT,
+                data_model_types BLOB,
+                data_model_names BLOB,
+                data_model_descriptions BLOB,
                 gamma_fair_error REAL
             )''')
             self.connection.commit()
@@ -531,7 +612,6 @@ class DatabaseHandler:
                     adversarial_generalization_errors_overlap BLOB,
                     fair_adversarial_errors BLOB,
                     date TEXT,
-                    chosen_minimizer TEXT,
                     training_error REAL,
                     training_loss REAL,
                     d INTEGER,
@@ -544,7 +624,10 @@ class DatabaseHandler:
                     N REAL,
                     P REAL,
                     F REAL,
-                    subspace_overlaps BLOB
+                    subspace_overlaps BLOB,
+                    data_model_type TEXT,
+                    data_model_name TEXT,
+                    data_model_description TEXT
                 )
             ''')
             self.connection.commit()
@@ -572,9 +655,9 @@ class DatabaseHandler:
                     experiment_information.d,
                     experiment_information.experiment_type.name,
                     experiment_information.completed,
-                    experiment_information.data_model_type.name,
-                    experiment_information.data_model_name,
-                    experiment_information.data_model_description,
+                    json.dumps(experiment_information.data_model_types, cls=NumpyEncoder),
+                    json.dumps(experiment_information.data_model_names, cls=NumpyEncoder),
+                    json.dumps(experiment_information.data_model_descriptions, cls=NumpyEncoder),
                     experiment_information.gamma_fair_error
                     ))
                 self.connection.commit()
@@ -598,7 +681,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -639,7 +722,10 @@ class DatabaseHandler:
             experiment_information.A_hat,
             experiment_information.N_hat,
             json.dumps(experiment_information.test_losses, cls=NumpyEncoder),
-            json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder)
+            json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder),
+            experiment_information.data_model_type.name,
+            experiment_information.data_model_name,
+            experiment_information.data_model_description
         ))
         self.connection.commit()
 
@@ -663,7 +749,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -684,7 +770,6 @@ class DatabaseHandler:
             json.dumps(experiment_information.adversarial_generalization_errors_overlap, cls=NumpyEncoder),
             json.dumps(experiment_information.fair_adversarial_errors, cls=NumpyEncoder),
             experiment_information.date,
-            experiment_information.chosen_minimizer,
             experiment_information.training_error,
             experiment_information.training_loss,
             experiment_information.d,
@@ -697,7 +782,10 @@ class DatabaseHandler:
             experiment_information.N,
             experiment_information.P,
             experiment_information.F,
-            json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder)
+            json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder),
+            experiment_information.data_model_type.name,
+            experiment_information.data_model_name,
+            experiment_information.data_model_description
         ))
         self.connection.commit()
 
@@ -793,6 +881,16 @@ class NumpyDecoder(json.JSONDecoder):
 
             # Replace the string value with the enumeration type
             obj['problem_types'] = problem_types
+
+        if 'data_model_types' in obj:
+            # get the value of 'data_model_types'
+            data_model_types_str = obj['data_model_types']
+
+            # Map the string value to the enumeration type
+            data_model_types = [DataModelType[data_model_type_str] for data_model_type_str in data_model_types_str]
+
+            # Replace the string value with the enumeration type
+            obj['data_model_types'] = data_model_types
 
         # check if the 'problem_type' field is present in the object
         if 'problem_type' in obj:
