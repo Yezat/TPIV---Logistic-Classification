@@ -155,7 +155,7 @@ def process_task(task, logger, data_model):
     return task
 
 # Define the worker function
-def worker(logger, data_models):
+def worker(logger, experiment):
     # get the rank
     rank = MPI.COMM_WORLD.Get_rank()   
 
@@ -169,7 +169,7 @@ def worker(logger, data_models):
                 break
 
             # get the data model
-            data_model = data_models[(task.data_model_type, task.data_model_name)]
+            data_model = experiment._load_data_model(logger, task.data_model_name, task.data_model_type, source_pickle_path = "../")
 
             # Process the task
             result = process_task(task, logger, data_model)
@@ -420,10 +420,9 @@ if __name__ == "__main__":
         master(size-1, logger, experiment)
         
     else:
-        data_models = experiment.load_data_models(logger, source_pickle_path="../")
 
         # run the worker
-        worker(logger, data_models)
+        worker(logger, experiment)
 
     MPI.Finalize()
     

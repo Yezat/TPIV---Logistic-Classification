@@ -7,7 +7,7 @@
 #SBATCH --mem=100G
 #SBATCH --output=out.txt
 #SBATCH --error=error.txt
-#SBATCH --time=36:00:00
+#SBATCH --time=24:00:00
 
 module purge
 module load gcc openmpi python/3.10.4

@@ -149,7 +149,7 @@ def master(num_processes, logger, experiment):
         # Send the next task to the worker that just finished
         if task_idx < len(data_model_definitions):
             task = data_model_definitions[task_idx]
-            MPI.COMM_WORLD.send(task, dest=status.source, tag=task.id)
+            MPI.COMM_WORLD.send(task, dest=status.source, tag=task_idx)
             task_idx += 1
 
 
