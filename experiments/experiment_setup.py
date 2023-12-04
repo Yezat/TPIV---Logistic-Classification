@@ -82,11 +82,23 @@ vanilla_gaussian_times_10_data_model_definition = DataModelDefinition(delete_exi
 
 ########## Attacking the first half of the features ##########
 
-# data_model_name = "VanillaGaussian"
-# data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
-# Sigma_w = np.eye(d)
-# Sigma_delta = np.eye(d)
-# Sigma_upsilon = np.eye(d)
+data_model_name = "VanillaGaussianAttackingFirstHalf"
+data_model_description = "A Data-Model with Identity Gaussians for all the covariances. But we attack the first half of the features."
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = np.eye(d)
+Sigma_upsilon[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
+vanilla_gaussian_attack_first_half_data_model_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
+
+########## Attacking the second half of the features ##########
+
+data_model_name = "VanillaGaussianAttackingSecondHalf"
+data_model_description = "A Data-Model with Identity Gaussians for all the covariances. But we attack the second half of the features."
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = np.eye(d)
+Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
+vanilla_gaussian_attack_second_half_data_model_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
 
 
 """
@@ -161,6 +173,8 @@ Sigma_delta = np.eye(d)
 Sigma_upsilon = np.eye(d)
 k_features_attacking_identity_protecting_identity_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
+
+
 ######### Attacking the first half of the features ##########
 
 data_model_type = DataModelType.KFeaturesModel
@@ -188,6 +202,7 @@ Sigma_delta = np.eye(d)
 Sigma_upsilon = np.eye(d)
 Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
 k_features_attacking_second_half_protecting_identity_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+
 
 
 """
@@ -557,6 +572,10 @@ data_models_description = "Sweep DataModel Protect Identity vs Attack Second"
 
 
 
+find_robust_half_definitions = [vanilla_gaussian_data_model_definition, vanilla_gaussian_attack_first_half_data_model_definition, vanilla_gaussian_attack_second_half_data_model_definition, vanilla_gaussian_times_10_data_model_definition, k_features_attacking_identity_protecting_identity_definition, k_features_attacking_first_half_protecting_identity_definition, k_features_attacking_second_half_protecting_identity_definition]
+data_model_definitions = find_robust_half_definitions
+data_models_description = "FindRobustHalf"
+
 
 # memory = "400G"
 
@@ -569,8 +588,8 @@ data_models_description = "Sweep DataModel Protect Identity vs Attack Second"
 ------------------------------------------------------------------------------------------------------------------------
 """
 # experiment_filename = "HighAlphaSweep/sweep_experiment_9.json"
-# experiment_filename = f"AlphaSweepsLam10eM3/{data_models_description}/sweep_experiment.json"
-experiment_filename = f"ColorMapSweeps/{data_models_description}/sweep_experiment.json"
+experiment_filename = f"AlphaSweepsLam10eM3/{data_models_description}/sweep_experiment.json"
+# experiment_filename = f"ColorMapSweeps/{data_models_description}/sweep_experiment.json"
 # experiment_filename = "sweep_experiment.json"
 
 
@@ -586,10 +605,10 @@ state_evolution_repetitions: int = 1
 erm_repetitions: int = 5
 
 # sweeps
-alphas: np.ndarray = np.logspace(2.2,2.2,1) #np.linspace(0.1,10,15) #
-epsilons: np.ndarray = np.array([0,0.2,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.logspace(-0.8,2,12) #np.linspace(0.1,10,15) #
+epsilons: np.ndarray = np.array([0]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.0,0.2,0.4])
+test_against_epsilons: np.ndarray = np.array([0.2,0.4])
 taus: np.ndarray = np.array([0,1])
 
 # round the lambdas, epsilons and alphas for 4 digits
