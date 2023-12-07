@@ -23,7 +23,8 @@ features_x = None
 features_theta = None
 
 
-delete_existing = False
+delete_existing = True
+normalize_matrices = False
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -37,9 +38,9 @@ data_model_name = "VanillaGaussian"
 data_model_description = "A Data-Model with Identity Gaussians for all the covariances."
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
-Sigma_upsilon = np.eye(d)
-
-vanilla_gaussian_data_model_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
+Sigma_upsilon = np.eye(d) 
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+vanilla_gaussian_data_model_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
 
 
 ########## Increasing the variance for all features ##########
@@ -77,28 +78,63 @@ features_theta = np.array([1,1])
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
 Sigma_upsilon = np.eye(d)
-vanilla_gaussian_times_10_data_model_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+vanilla_gaussian_times_10_data_model_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+
+## times 10
+data_model_type = DataModelType.KFeaturesModel
+data_model_name = "VanillaGaussianTimes10AttackingFirstHalf"
+data_model_description = "A Data-Model with Identity Gaussians times 10 for all the covariances. We attack the first half"
+feature_ratios = np.array([1.0])
+features_x = np.array([10])
+features_theta = np.array([1,1])
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = np.zeros((d,d))
+Sigma_upsilon[0:int(d/2),0:int(d/2)] = 5*np.eye(int(d/2))
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+vanilla_gaussian_times_10_attacking_first_data_model_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+
+
+## times 10
+data_model_type = DataModelType.KFeaturesModel
+data_model_name = "VanillaGaussianTimes10AttackingSecondHalf"
+data_model_description = "A Data-Model with Identity Gaussians times 10 for all the covariances."
+feature_ratios = np.array([1.0])
+features_x = np.array([10])
+features_theta = np.array([1,1])
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = np.zeros((d,d))
+Sigma_upsilon[int(d/2):d,int(d/2):d] = 5*np.eye(int(d/2))
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+vanilla_gaussian_times_10_attacking_second_data_model_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+
 
 
 ########## Attacking the first half of the features ##########
 
+data_model_type = DataModelType.VanillaGaussian
 data_model_name = "VanillaGaussianAttackingFirstHalf"
 data_model_description = "A Data-Model with Identity Gaussians for all the covariances. But we attack the first half of the features."
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
-Sigma_upsilon = np.eye(d)
-Sigma_upsilon[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
-vanilla_gaussian_attack_first_half_data_model_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
+Sigma_upsilon = np.zeros((d,d))
+Sigma_upsilon[0:int(d/2),0:int(d/2)] = 5*np.eye(int(d/2))
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+vanilla_gaussian_attack_first_half_data_model_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
 
 ########## Attacking the second half of the features ##########
 
+data_model_type = DataModelType.VanillaGaussian
 data_model_name = "VanillaGaussianAttackingSecondHalf"
 data_model_description = "A Data-Model with Identity Gaussians for all the covariances. But we attack the second half of the features."
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
-Sigma_upsilon = np.eye(d)
-Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
-vanilla_gaussian_attack_second_half_data_model_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
+Sigma_upsilon = np.zeros((d,d))
+Sigma_upsilon[int(d/2):d,int(d/2):d] = 5*np.eye(int(d/2))
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+vanilla_gaussian_attack_second_half_data_model_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
 
 
 """
@@ -170,10 +206,9 @@ data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdent
 data_model_description = "2 Features, Theta Identity, Sigma_delta Identity"
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
-Sigma_upsilon = np.eye(d)
-k_features_attacking_identity_protecting_identity_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-
-
+Sigma_upsilon = 5*np.eye(d)
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+k_features_attacking_identity_protecting_identity_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 ######### Attacking the first half of the features ##########
 
@@ -185,9 +220,10 @@ data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirst
 data_model_description = "2 Features, Theta Identity, Sigma_delta Identity, Sigma_upsilon 10*Identity for the first half of the features"
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
-Sigma_upsilon = np.eye(d)
-Sigma_upsilon[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
-k_features_attacking_first_half_protecting_identity_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+Sigma_upsilon = np.zeros((d,d))
+Sigma_upsilon[0:int(d/2),0:int(d/2)] = 5*np.eye(int(d/2))
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+k_features_attacking_first_half_protecting_identity_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 ######### Attacking the second half of the features ##########
 
@@ -199,10 +235,10 @@ data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingSecon
 data_model_description = "2 Features, Theta Identity, Sigma_delta Identity, Sigma_upsilon 10*Identity for the second half of the features"
 Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
-Sigma_upsilon = np.eye(d)
-Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
-k_features_attacking_second_half_protecting_identity_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-
+Sigma_upsilon = np.zeros((d,d))
+Sigma_upsilon[int(d/2):d,int(d/2):d] = 5*np.eye(int(d/2))
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+k_features_attacking_second_half_protecting_identity_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 
 """
@@ -222,7 +258,7 @@ Sigma_delta = np.eye(d)
 Sigma_delta[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
 Sigma_upsilon = np.eye(d)
 Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
-k_features_attacking_second_half_protecting_second_half_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+k_features_attacking_second_half_protecting_second_half_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 ######### Protecting the second half of the features and attacking Identity ##########
 
@@ -236,7 +272,7 @@ Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
 Sigma_delta[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
 Sigma_upsilon = np.eye(d)
-k_features_attacking_identity_protecting_second_half_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+k_features_attacking_identity_protecting_second_half_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 
 # ######### Protecting the second half of the features and attacking the first half ##########
@@ -252,7 +288,7 @@ Sigma_delta = np.eye(d)
 Sigma_delta[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
 Sigma_upsilon = np.eye(d)
 Sigma_upsilon[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
-k_features_attacking_first_half_protecting_second_half_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+k_features_attacking_first_half_protecting_second_half_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 """
 Protecting first half
@@ -271,7 +307,7 @@ Sigma_delta = np.eye(d)
 Sigma_delta[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
 Sigma_upsilon = np.eye(d)
 Sigma_upsilon[int(d/2):d,int(d/2):d] = 10*np.eye(int(d/2))
-k_features_attacking_second_half_protecting_first_half_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+k_features_attacking_second_half_protecting_first_half_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 ######### Protecting the first half of the features and attacking Identity ##########
 
@@ -285,7 +321,7 @@ Sigma_w = np.eye(d)
 Sigma_delta = np.eye(d)
 Sigma_delta[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
 Sigma_upsilon = np.eye(d)
-k_features_attacking_identity_protecting_first_half_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+k_features_attacking_identity_protecting_first_half_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 
 # ######### Protecting the first half of the features and attacking the first half ##########
@@ -301,7 +337,7 @@ Sigma_delta = np.eye(d)
 Sigma_delta[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
 Sigma_upsilon = np.eye(d)
 Sigma_upsilon[0:int(d/2),0:int(d/2)] = 10*np.eye(int(d/2))
-k_features_attacking_first_half_protecting_first_half_definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+k_features_attacking_first_half_protecting_first_half_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 
 """
@@ -332,9 +368,9 @@ memory = "100G"
 # First we want to Sweep From Identity to Protecting the First Half with some Psi_10 and plot it against a sweep where we increasingly attack the first half
 
 data_model_definitions = []
-
-for first_protect in np.logspace(0,2,5):
-    for first_attack in np.logspace(0,2,5):
+data_models_description = "Sweep DataModel Protect First vs Attack First"
+for first_protect in np.linspace(1,15,10):
+    for first_attack in np.linspace(1,15,10):
         # round both to 4 digits
         first_protect = np.round(first_protect,4)
         first_attack = np.round(first_attack,4)
@@ -350,18 +386,18 @@ for first_protect in np.logspace(0,2,5):
         Sigma_delta[0:int(d/2),0:int(d/2)] = first_protect*np.eye(int(d/2))
         Sigma_upsilon = np.eye(d)
         Sigma_upsilon[0:int(d/2),0:int(d/2)] = first_attack*np.eye(int(d/2))
-        definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
         data_model_definitions.append(definition)
 
 
-data_models_description = "Sweep DataModel Protect First vs Attack First"
+
 
 ### Protect First Attack Identity
 
 data_model_definitions = []
-
-for first_protect in np.logspace(0,2,5):
-    for identity_attack in np.logspace(0,2,5):
+data_models_description = "Sweep DataModel Protect First vs Attack Identity"
+for first_protect in np.linspace(1,15,10):
+    for identity_attack in np.linspace(1,15,10):
         # round both to 4 digits
         first_protect = np.round(first_protect,4)
         identity_attack = np.round(identity_attack,4)
@@ -376,19 +412,19 @@ for first_protect in np.logspace(0,2,5):
         Sigma_delta = np.eye(d)
         Sigma_delta[0:int(d/2),0:int(d/2)] = first_protect*np.eye(int(d/2))
         Sigma_upsilon = np.eye(d)* identity_attack
-        definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
         data_model_definitions.append(definition)
 
 
-data_models_description = "Sweep DataModel Protect First vs Attack Identity"
+
 
 
 ### Protect Second Attack Identity
 
 data_model_definitions = []
-
-for second_protect in np.logspace(0,2,5):
-    for identity_attack in np.logspace(0,2,5):
+data_models_description = "Sweep DataModel Protect Second vs Attack Identity"
+for second_protect in np.linspace(1,15,10):
+    for identity_attack in np.linspace(1,15,10):
         # round both to 4 digits
         second_protect = np.round(second_protect,4)
         identity_attack = np.round(identity_attack,4)
@@ -403,19 +439,19 @@ for second_protect in np.logspace(0,2,5):
         Sigma_delta = np.eye(d)
         Sigma_delta[int(d/2):d,int(d/2):d] = second_protect*np.eye(int(d/2))
         Sigma_upsilon = np.eye(d)* identity_attack
-        definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
         data_model_definitions.append(definition)
 
 
-data_models_description = "Sweep DataModel Protect Second vs Attack Identity"
+
 
 
 ### Protect Identity Attack Identity
 
 data_model_definitions = []
-
-for identity_protect in np.logspace(0,2,5):
-    for identity_attack in np.logspace(0,2,5):
+data_models_description = "Sweep DataModel Protect Identity vs Attack Identity"
+for identity_protect in np.linspace(1,15,10):
+    for identity_attack in np.linspace(1,15,10):
         # round both to 4 digits
         identity_protect = np.round(identity_protect,4)
         identity_attack = np.round(identity_attack,4)
@@ -429,20 +465,20 @@ for identity_protect in np.logspace(0,2,5):
         Sigma_w = np.eye(d)
         Sigma_delta = np.eye(d)* identity_protect
         Sigma_upsilon = np.eye(d)* identity_attack
-        definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
         data_model_definitions.append(definition)
 
 
-data_models_description = "Sweep DataModel Protect Identity vs Attack Identity"
+
 
 
 
 ### Protect Identity Attack First
 
 data_model_definitions = []
-
-for identity_protect in np.logspace(0,2,5):
-    for first_attack in np.logspace(0,2,5):
+data_models_description = "Sweep DataModel Protect Identity vs Attack First"
+for identity_protect in np.linspace(1,15,10):
+    for first_attack in np.linspace(1,15,10):
         # round both to 4 digits
         identity_protect = np.round(identity_protect,4)
         first_attack = np.round(first_attack,4)
@@ -457,18 +493,18 @@ for identity_protect in np.logspace(0,2,5):
         Sigma_delta = np.eye(d)* identity_protect
         Sigma_upsilon = np.eye(d)
         Sigma_upsilon[0:int(d/2),0:int(d/2)] = first_attack*np.eye(int(d/2))
-        definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
         data_model_definitions.append(definition)
 
 
-data_models_description = "Sweep DataModel Protect Identity vs Attack First"
+
 
 ### Protect Identity Attack Second
 
 data_model_definitions = []
-
-for identity_protect in np.logspace(0,2,5):
-    for second_attack in np.logspace(0,2,5):
+data_models_description = "Sweep DataModel Protect Identity vs Attack Second"
+for identity_protect in np.linspace(1,15,10):
+    for second_attack in np.linspace(1,15,10):
         # round both to 4 digits
         identity_protect = np.round(identity_protect,4)
         second_attack = np.round(second_attack,4)
@@ -483,76 +519,73 @@ for identity_protect in np.logspace(0,2,5):
         Sigma_delta = np.eye(d)* identity_protect
         Sigma_upsilon = np.eye(d)
         Sigma_upsilon[int(d/2):d,int(d/2):d] = second_attack*np.eye(int(d/2))
-        definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
         data_model_definitions.append(definition)
 
 
-data_models_description = "Sweep DataModel Protect Identity vs Attack Second"
 
 # Then we want to Sweep From Identity to Protecting the Second Half with some Psi_10 and plot it against a sweep where we increasingly attack the second half
 
-# data_model_definitions = []
+data_model_definitions = []
+data_models_description = "Sweep DataModel Protect Second vs Attack Second"
+for second_protect in np.linspace(1,15,10):
+    for second_attack in np.linspace(1,15,10):
+        # round both to 4 digits
+        second_protect = np.round(second_protect,4)
+        second_attack = np.round(second_attack,4)
 
-# for second_protect in np.logspace(0,2,5):
-#     for second_attack in np.logspace(0,2,5):
-#         # round both to 4 digits
-#         second_protect = np.round(second_protect,4)
-#         second_attack = np.round(second_attack,4)
-
-#         data_model_type = DataModelType.KFeaturesModel
-#         feature_ratios = np.array([0.5,0.5])
-#         features_x = np.array([10,1])
-#         features_theta = np.array([1,1])
-#         data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_{feature_ratios}_{features_x}_{features_theta}_SD_1_{second_protect}_SU_1_{second_attack}"
-#         data_model_description = f"2 Features, Theta Identity, Sigma_upsilon {second_attack}*Identity for the second half of the features, Sigma_delta {second_protect}*Identity for the second half of the features"
-#         Sigma_w = np.eye(d)
-#         Sigma_delta = np.eye(d)
-#         Sigma_delta[int(d/2):d,int(d/2):d] = second_protect*np.eye(int(d/2))
-#         Sigma_upsilon = np.eye(d)
-#         Sigma_upsilon[int(d/2):d,int(d/2):d] = second_attack*np.eye(int(d/2))
-#         definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-#         data_model_definitions.append(definition)
+        data_model_type = DataModelType.KFeaturesModel
+        feature_ratios = np.array([0.5,0.5])
+        features_x = np.array([10,1])
+        features_theta = np.array([1,1])
+        data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_{feature_ratios}_{features_x}_{features_theta}_SD_1_{second_protect}_SU_1_{second_attack}"
+        data_model_description = f"2 Features, Theta Identity, Sigma_upsilon {second_attack}*Identity for the second half of the features, Sigma_delta {second_protect}*Identity for the second half of the features"
+        Sigma_w = np.eye(d)
+        Sigma_delta = np.eye(d)
+        Sigma_delta[int(d/2):d,int(d/2):d] = second_protect*np.eye(int(d/2))
+        Sigma_upsilon = np.eye(d)
+        Sigma_upsilon[int(d/2):d,int(d/2):d] = second_attack*np.eye(int(d/2))
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        data_model_definitions.append(definition)
 
 
-# data_models_description = "Sweep DataModel Protect Second vs Attack Second"
 
 # Then we want to Sweep From Identity to Protecting the First Half with some Psi_10 and plot it against a sweep where we increasingly attack the second half
 
-# data_model_definitions = []
+data_model_definitions = []
+data_models_description = "Sweep DataModel Protect First vs Attack Second"
+for first_protect in np.linspace(1,15,10):
+    for second_attack in np.linspace(1,15,10):
+        # round both to 4 digits
+        first_protect = np.round(first_protect,4)
+        second_attack = np.round(second_attack,4)
 
-# for first_protect in np.logspace(0,2,5):
-#     for second_attack in np.logspace(0,2,5):
-#         # round both to 4 digits
-#         first_protect = np.round(first_protect,4)
-#         second_attack = np.round(second_attack,4)
-
-#         data_model_type = DataModelType.KFeaturesModel
-#         feature_ratios = np.array([0.5,0.5])
-#         features_x = np.array([10,1])
-#         features_theta = np.array([1,1])
-#         data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingFirstHalf_AttackingSecondHalf_{feature_ratios}_{features_x}_{features_theta}_SD_{first_protect}_1_SU_1_{second_attack}"
-#         data_model_description = f"2 Features, Theta Identity, Sigma_upsilon {second_attack}*Identity for the second half of the features, Sigma_delta {first_protect}*Identity for the first half of the features"
-#         Sigma_w = np.eye(d)
-#         Sigma_delta = np.eye(d)
-#         Sigma_delta[0:int(d/2),0:int(d/2)] = first_protect*np.eye(int(d/2))
-#         Sigma_upsilon = np.eye(d)
-#         Sigma_upsilon[int(d/2):d,int(d/2):d] = second_attack*np.eye(int(d/2))
-#         definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-#         data_model_definitions.append(definition)
+        data_model_type = DataModelType.KFeaturesModel
+        feature_ratios = np.array([0.5,0.5])
+        features_x = np.array([10,1])
+        features_theta = np.array([1,1])
+        data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingFirstHalf_AttackingSecondHalf_{feature_ratios}_{features_x}_{features_theta}_SD_{first_protect}_1_SU_1_{second_attack}"
+        data_model_description = f"2 Features, Theta Identity, Sigma_upsilon {second_attack}*Identity for the second half of the features, Sigma_delta {first_protect}*Identity for the first half of the features"
+        Sigma_w = np.eye(d)
+        Sigma_delta = np.eye(d)
+        Sigma_delta[0:int(d/2),0:int(d/2)] = first_protect*np.eye(int(d/2))
+        Sigma_upsilon = np.eye(d)
+        Sigma_upsilon[int(d/2):d,int(d/2):d] = second_attack*np.eye(int(d/2))
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        data_model_definitions.append(definition)
 
 
-# data_models_description = "Sweep DataModel Protect First vs Attack Second"
+
 
 # Then we want to Sweep From Identity to Protecting the Second Half with some Psi_10 and plot it against a sweep where we increasingly attack the first half
 
 # data_model_definitions = []
-
-# for second_protect in np.logspace(0,2,5):
-#     for first_attack in np.logspace(0,2,5):
+# data_models_description = "Sweep DataModel Protect Second vs Attack First"
+# for second_protect in np.linspace(1,15,10):
+#     for first_attack in np.linspace(1,15,10):
 #         # round both to 4 digits
 #         second_protect = np.round(second_protect,4)
 #         first_attack = np.round(first_attack,4)
-
 #         data_model_type = DataModelType.KFeaturesModel
 #         feature_ratios = np.array([0.5,0.5])
 #         features_x = np.array([10,1])
@@ -564,20 +597,29 @@ data_models_description = "Sweep DataModel Protect Identity vs Attack Second"
 #         Sigma_delta[int(d/2):d,int(d/2):d] = second_protect*np.eye(int(d/2))
 #         Sigma_upsilon = np.eye(d)
 #         Sigma_upsilon[0:int(d/2),0:int(d/2)] = first_attack*np.eye(int(d/2))
-#         definition = DataModelDefinition(delete_existing, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+#         definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 #         data_model_definitions.append(definition)
 
 
 # data_models_description = "Sweep DataModel Protect Second vs Attack First"
 
 
-
-find_robust_half_definitions = [vanilla_gaussian_data_model_definition, vanilla_gaussian_attack_first_half_data_model_definition, vanilla_gaussian_attack_second_half_data_model_definition, vanilla_gaussian_times_10_data_model_definition, k_features_attacking_identity_protecting_identity_definition, k_features_attacking_first_half_protecting_identity_definition, k_features_attacking_second_half_protecting_identity_definition]
+find_robust_half_definitions = [vanilla_gaussian_data_model_definition,  k_features_attacking_identity_protecting_identity_definition]
+#, k_features_attacking_first_half_protecting_identity_definition, k_features_attacking_second_half_protecting_identity_definition
+# vanilla_gaussian_attack_first_half_data_model_definition, vanilla_gaussian_attack_second_half_data_model_definition,
 data_model_definitions = find_robust_half_definitions
-data_models_description = "FindRobustHalf"
+data_models_description = "FindRobustHalfMedium10"
+
+compare_unnormalized_Sigma_x_robustness_definitions = [vanilla_gaussian_data_model_definition, vanilla_gaussian_times_10_data_model_definition, k_features_attacking_identity_protecting_identity_definition]
+data_model_definitions = compare_unnormalized_Sigma_x_robustness_definitions
+data_models_description = "CompareUnnormalizedSigmaXRobustness"
+
+"""
+--------------------------------- Sweeps in Protection and Data Model ---------------------------------
+"""
 
 
-# memory = "400G"
+memory = "300G"
 
 # data_models_description = "Vanilla vs KFeatures Identity vs Identity"
 # data_models_description = data_model_definitions[0].name
@@ -605,11 +647,11 @@ state_evolution_repetitions: int = 1
 erm_repetitions: int = 5
 
 # sweeps
-alphas: np.ndarray = np.logspace(-0.8,2,12) #np.linspace(0.1,10,15) #
-epsilons: np.ndarray = np.array([0]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.logspace(-0.8,2.5,15) #np.linspace(0.1,10,15) #
+epsilons: np.ndarray = np.array([0,0.2,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.2,0.4])
-taus: np.ndarray = np.array([0,1])
+test_against_epsilons: np.ndarray = np.array([0.02,0.2,0.4])
+taus: np.ndarray = np.array([0,0.2,1])
 
 # round the lambdas, epsilons and alphas for 4 digits
 alphas = np.round(alphas,4)    

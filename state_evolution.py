@@ -411,6 +411,8 @@ def generalization_error(rho,m,q, tau):
 def teacher_error(nu: float, tau: float, rho: float) -> float:
     return np.exp(- (nu**2) / (2*rho)) * (1 + math.erf( nu / (np.sqrt(2) * tau ) ))
 
+
+
 def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, epsilon: float):
 
     # if tau is not zero, we can use the simpler formula

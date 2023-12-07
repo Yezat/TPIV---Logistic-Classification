@@ -76,10 +76,14 @@ class AbstractDataModel(ABC):
         returns a json with all the information about the model
     ----------
     """
-    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", name = "", description = "") -> None:
+    def __init__(self, d, logger, delete_existing = False, normalize_matrices = True, source_pickle_path="../", name = "", description = "") -> None:
         self.d = d
         self.logger = logger
         self.source_pickle_path = source_pickle_path
+        self.normalize_matrices = normalize_matrices
+        
+        self.logger.info(f"Initializing data model of type {self.model_type.name} with d={d}")
+        self.logger.info(f"normalize_matrices: {normalize_matrices}")
 
         self.gamma = 1
 
@@ -111,6 +115,10 @@ class AbstractDataModel(ABC):
         else:
             self.loaded_from_pickle = False
             self.logger.info("no pickle found")
+            if delete_existing:
+                self.logger.info("delete_existing is set to True, deleting existing pickle")
+                if os.path.isfile(self.source_pickle):
+                    os.remove(self.source_pickle)
         
     def _finish_initialization(self):
         """
@@ -122,14 +130,64 @@ class AbstractDataModel(ABC):
         if min_eigval < 0:
             self.logger.warning(f"Assumption on Schur Complement failed: Matrix was not positive semi-definite; min eigval: {min_eigval}")
 
+        self.logger.info(f"d: {self.d}")
+
+        # Normalize all the matrices by dividing by the norm of the matrix
+        self.logger.info(f"normalize_matrices: {self.normalize_matrices}")
+        if self.normalize_matrices:
+            self.logger.info("Normalizing the matrices")
+            self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x) * self.d            
+            self.Sigma_theta = self.Sigma_theta / np.trace(self.Sigma_theta) * self.d
+            self.Sigma_w = self.Sigma_w / np.trace(self.Sigma_w) * self.d
+            self.Sigma_delta = self.Sigma_delta / np.trace(self.Sigma_delta) * self.d
+            self.Sigma_upsilon = self.Sigma_upsilon / np.trace(self.Sigma_upsilon) * self.d
+
+        self.logger.info(f"Norm Sigma_x: {np.trace(self.Sigma_x)}") 
+        self.logger.info(f"Norm Sigma_theta: {np.trace(self.Sigma_theta)}")
+        self.logger.info(f"Norm Sigma_w: {np.trace(self.Sigma_w)}")
+        self.logger.info(f"Norm Sigma_delta: {np.trace(self.Sigma_delta)}")
+        self.logger.info(f"Norm Sigma_upsilon: {np.trace(self.Sigma_upsilon)}")
+        # log entries of Sigma_x
+        self.logger.info(f"Sigma_x: {self.Sigma_x}")
+        self.logger.info(f"Sigma_theta: {self.Sigma_theta}")
+        self.logger.info(f"Sigma_w: {self.Sigma_w}")
+        self.logger.info(f"Sigma_delta: {self.Sigma_delta}")
+        self.logger.info(f"Sigma_upsilon: {self.Sigma_upsilon}")
+
+        # value count the entries of Sigma_x
+        self.logger.info(f"Sigma_x value counts: {np.unique(self.Sigma_x, return_counts=True)}")
+        self.logger.info(f"Sigma_theta value counts: {np.unique(self.Sigma_theta, return_counts=True)}")
+        self.logger.info(f"Sigma_w value counts: {np.unique(self.Sigma_w, return_counts=True)}")
+        self.logger.info(f"Sigma_delta value counts: {np.unique(self.Sigma_delta, return_counts=True)}")
+        self.logger.info(f"Sigma_upsilon value counts: {np.unique(self.Sigma_upsilon, return_counts=True)}")
+
+
+
+        # compute spectra to compute PhiPhiT and rho
+        self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
+        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
+
+        # Compute PhiPhiT
+        self.PhiPhiT = np.diag( self.spec_Sigma_x**2 * self.spec_Sigma_theta)
+        self.rho = np.mean(self.spec_Sigma_x * self.spec_Sigma_theta) 
+
+        # log rho
+        self.logger.info(f"rho: {self.rho}")
+
+        # Compute FTerm
+        self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
+
+
         # compute the spectra
         self.spec_PhiPhit = np.linalg.eigvals(self.PhiPhiT)
-        self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
+        
         self.spec_Sigma_delta = np.linalg.eigvals(self.Sigma_delta)
         self.spec_Sigma_w = np.linalg.eigvals(self.Sigma_w)
-        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
+        
         self.spec_Sigma_upsilon = np.linalg.eigvals(self.Sigma_upsilon)
         self.spec_FTerm = np.linalg.eigvals(self.FTerm)
+
+
 
         # store the pickle
         self.store_self_to_pickle()
@@ -201,9 +259,9 @@ class DataSet():
 """
 
 class VanillaGaussianDataModel(AbstractDataModel):
-    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name = "", description = "") -> None:
+    def __init__(self, d, logger, delete_existing = False, normalize_matrices = True,  source_pickle_path="../", Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name = "", description = "") -> None:
         self.model_type = DataModelType.VanillaGaussian
-        super().__init__(d, logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path,name=name,description=description)
+        super().__init__(d, logger,delete_existing=delete_existing, normalize_matrices=normalize_matrices, source_pickle_path=source_pickle_path,name=name,description=description)
 
         if not self.loaded_from_pickle:
 
@@ -239,7 +297,7 @@ class VanillaGaussianDataModel(AbstractDataModel):
     
 
 class KFeaturesModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta = None, Sigma_upsilon = None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
+    def __init__(self, d,logger, delete_existing = False, normalize_matrices = True, source_pickle_path="../",Sigma_w = None,Sigma_delta = None, Sigma_upsilon = None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
         """
             k = len(feature_ratios)
             feature_ratios = np.array([2,d-2]) # must sum to d and be of length k
@@ -255,7 +313,7 @@ class KFeaturesModel(AbstractDataModel):
             features_theta = np.array([1,1])
 
         self.model_type = DataModelType.KFeaturesModel
-        super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path, name=name,description=description)
+        super().__init__(d,logger,delete_existing=delete_existing, normalize_matrices=normalize_matrices, source_pickle_path=source_pickle_path, name=name,description=description)
 
         if not self.loaded_from_pickle:
 
@@ -274,7 +332,6 @@ class KFeaturesModel(AbstractDataModel):
             
             self.feature_sizes = feature_sizes
 
-            self.theta = np.ones(d)
 
             self.rho = np.mean(spec_Omega0* self.theta**2) 
             self.PhiPhiT = np.diag( spec_Omega0**2 * self.theta**2)
@@ -297,6 +354,7 @@ class KFeaturesModel(AbstractDataModel):
 
     def generate_data(self, n, tau) -> DataSet:
 
+
         X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
         
         y = np.sign(X @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))
@@ -312,10 +370,10 @@ class KFeaturesModel(AbstractDataModel):
     
 
 class SourceCapacityDataModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, source_pickle_path="../",Sigma_w = None,Sigma_delta = None, Sigma_upsilon = None, name="", description = "")->None:
+    def __init__(self, d,logger, delete_existing = False, normalize_matrices = True, source_pickle_path="../",Sigma_w = None,Sigma_delta = None, Sigma_upsilon = None, name="", description = "")->None:
 
         self.model_type = DataModelType.SourceCapacity
-        super().__init__(d,logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path, name=name,description=description)
+        super().__init__(d,logger,delete_existing=delete_existing, normalize_matrices=normalize_matrices, source_pickle_path=source_pickle_path, name=name,description=description)
 
         if not self.loaded_from_pickle:
 
@@ -360,9 +418,9 @@ class SourceCapacityDataModel(AbstractDataModel):
     
 
 class MarginGaussianDataModel(AbstractDataModel):
-    def __init__(self, d, logger, delete_existing = False, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name = "", description = "") -> None:
+    def __init__(self, d, logger, delete_existing = False, normalize_matrices = True, source_pickle_path="../", Sigma_w = None, Sigma_delta = None, Sigma_upsilon = None, name = "", description = "") -> None:
         self.model_type = DataModelType.MarginGaussian
-        super().__init__(d, logger,delete_existing=delete_existing, source_pickle_path=source_pickle_path,name=name,description=description)
+        super().__init__(d, logger,delete_existing=delete_existing, normalize_matrices=normalize_matrices, source_pickle_path=source_pickle_path,name=name,description=description)
 
         if not self.loaded_from_pickle:
 

@@ -25,12 +25,14 @@ class ExperimentType(Enum):
     SweepAtOptimalLambdaAdversarialTestError = 5
 
 class DataModelDefinition:
-    def __init__(self, delete_existing: bool, Sigma_w: np.ndarray, Sigma_delta: np.ndarray, Sigma_upsilon: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None) -> None:
+    def __init__(self,d : int, delete_existing: bool, normalize_matrices: bool, Sigma_w: np.ndarray, Sigma_delta: np.ndarray, Sigma_upsilon: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None) -> None:
         self.delete_existing: bool = delete_existing
+        self.normalize_matrices: bool = normalize_matrices
         self.Sigma_w: np.ndarray = Sigma_w
         self.Sigma_delta: np.ndarray = Sigma_delta
         self.Sigma_upsilon: np.ndarray = Sigma_upsilon
         self.name: str = name
+        self.d = d
         self.description: str = description
         self.data_model_type: DataModelType = data_model_type
         self.feature_ratios: np.ndarray = feature_ratios
@@ -151,6 +153,8 @@ class ExperimentInformation:
         the data model
         """
         data_model = None
+        # log the model type
+        logger.info(f"Loading data model {name} of type {model_type.name} ...")
         if model_type == DataModelType.VanillaGaussian:
             data_model = VanillaGaussianDataModel(self.d,logger,source_pickle_path=source_pickle_path, name=name)
         elif model_type == DataModelType.SourceCapacity:
@@ -324,7 +328,7 @@ class StateEvolutionExperimentInformation:
             Ns.append(N)
             Ps.append(P)
             Fs.append(F)
-        
+
         self.subspace_overlaps["Sigmas"] = Sigmas
         self.subspace_overlaps["ms"] = ms
         self.subspace_overlaps["qs"] = Qs
@@ -332,6 +336,53 @@ class StateEvolutionExperimentInformation:
         self.subspace_overlaps["Ns"] = Ns
         self.subspace_overlaps["Ps"] = Ps
         self.subspace_overlaps["Fs"] = Fs
+
+        # if there is only one subspace, add a copy of the first subspace to the second subspace
+        if len(Sigmas) == 1:
+            Sigmas.append(Sigmas[0])
+            ms.append(ms[0])
+            Qs.append(Qs[0])
+            As.append(As[0])
+            Ns.append(Ns[0])
+            Ps.append(Ps[0])
+            Fs.append(Fs[0])
+
+        # now extract the subspace strengths (we assume there are two subspaces or one in case of vanilla gaussian data)
+        subspace_strengths_X = [data_model.Sigma_x[0,0], data_model.Sigma_x[-1,-1]]
+        subspace_strengths_delta = [data_model.Sigma_delta[0,0], data_model.Sigma_delta[-1,-1]]
+        subspace_strengths_upsilon = [data_model.Sigma_upsilon[0,0], data_model.Sigma_upsilon[-1,-1]]
+        
+        # compute the ratio of each subspace overlap to its strength
+        subspace_strength_ratios_Sigma = []
+        subspace_strength_ratios_m = []
+        subspace_strength_ratios_q = []
+        subspace_strength_ratios_A = []
+        subspace_strength_ratios_N = []
+        subspace_strength_ratios_P = []
+        subspace_strength_ratios_F = []
+
+
+        for i,_ in enumerate(subspace_strengths_X):
+            subspace_strength_ratios_Sigma.append(Sigmas[i]/subspace_strengths_X[i])
+            subspace_strength_ratios_m.append(ms[i]/subspace_strengths_X[i])
+            subspace_strength_ratios_q.append(Qs[i]/subspace_strengths_X[i])
+            subspace_strength_ratios_A.append(As[i]/subspace_strengths_upsilon[i])
+            subspace_strength_ratios_N.append(Ns[i]/1)
+            subspace_strength_ratios_P.append(Ps[i]/subspace_strengths_delta[i])
+            subspace_strength_ratios_F.append(Ps[i]/subspace_strengths_upsilon[i])
+       
+                   
+        # for each of the subspace_strength_ratios, compute the ratio of the first to the second subspace and store it in a dict called subspace_overlaps_ratio
+        self.subspace_overlaps_ratio = {}
+        self.subspace_overlaps_ratio["Sigma"] = subspace_strength_ratios_Sigma[0]/subspace_strength_ratios_Sigma[1]
+        self.subspace_overlaps_ratio["m"] = subspace_strength_ratios_m[0]/subspace_strength_ratios_m[1]
+        self.subspace_overlaps_ratio["q"] = subspace_strength_ratios_q[0]/subspace_strength_ratios_q[1]
+        self.subspace_overlaps_ratio["A"] = subspace_strength_ratios_A[0]/subspace_strength_ratios_A[1]
+        self.subspace_overlaps_ratio["N"] = subspace_strength_ratios_N[0]/subspace_strength_ratios_N[1]
+        self.subspace_overlaps_ratio["P"] = subspace_strength_ratios_P[0]/subspace_strength_ratios_P[1]
+        self.subspace_overlaps_ratio["F"] = subspace_strength_ratios_F[0]/subspace_strength_ratios_F[1]
+        
+
 
 
 class ERMExperimentInformation:
@@ -480,6 +531,51 @@ class ERMExperimentInformation:
         self.subspace_overlaps["Ps"] = Ps
         self.subspace_overlaps["Fs"] = Fs
 
+        # if there is only one subspace, add a copy of the first subspace to the second subspace
+        if len(ms) == 1:
+            ms.append(ms[0])
+            Qs.append(Qs[0])
+            As.append(As[0])
+            Ns.append(Ns[0])
+            Ps.append(Ps[0])
+            Fs.append(Fs[0])
+
+        # now extract the subspace strengths (we assume there are two subspaces or one in case of vanilla gaussian data)
+        subspace_strengths_X = [data_model.Sigma_x[0,0], data_model.Sigma_x[-1,-1]]
+        subspace_strengths_delta = [data_model.Sigma_delta[0,0], data_model.Sigma_delta[-1,-1]]
+        subspace_strengths_upsilon = [data_model.Sigma_upsilon[0,0], data_model.Sigma_upsilon[-1,-1]]
+
+        # log the subspace strengths
+        logger.info(f"Subspace strengths: X={subspace_strengths_X}, delta={subspace_strengths_delta}, upsilon={subspace_strengths_upsilon}")
+        
+        # compute the ratio of each subspace overlap to its strength
+        subspace_strength_ratios_m = []
+        subspace_strength_ratios_q = []
+        subspace_strength_ratios_A = []
+        subspace_strength_ratios_N = []
+        subspace_strength_ratios_P = []
+        subspace_strength_ratios_F = []
+
+
+
+        for i,_ in enumerate(subspace_strengths_X):
+            subspace_strength_ratios_m.append(ms[i]/subspace_strengths_X[i])
+            subspace_strength_ratios_q.append(Qs[i]/subspace_strengths_X[i])
+            subspace_strength_ratios_A.append(As[i]/subspace_strengths_upsilon[i])
+            subspace_strength_ratios_N.append(Ns[i]/1)
+            subspace_strength_ratios_P.append(Ps[i]/subspace_strengths_delta[i])
+            subspace_strength_ratios_F.append(Ps[i]/subspace_strengths_upsilon[i])
+       
+                   
+        # for each of the subspace_strength_ratios, compute the ratio of the first to the second subspace and store it in a dict called subspace_overlaps_ratio
+        self.subspace_overlaps_ratio = {}
+        self.subspace_overlaps_ratio["m"] = subspace_strength_ratios_m[0]/subspace_strength_ratios_m[1]
+        self.subspace_overlaps_ratio["q"] = subspace_strength_ratios_q[0]/subspace_strength_ratios_q[1]
+        self.subspace_overlaps_ratio["A"] = subspace_strength_ratios_A[0]/subspace_strength_ratios_A[1]
+        self.subspace_overlaps_ratio["N"] = subspace_strength_ratios_N[0]/subspace_strength_ratios_N[1]
+        self.subspace_overlaps_ratio["P"] = subspace_strength_ratios_P[0]/subspace_strength_ratios_P[1]
+        self.subspace_overlaps_ratio["F"] = subspace_strength_ratios_F[0]/subspace_strength_ratios_F[1]
+
                 
 
 
@@ -550,6 +646,7 @@ class DatabaseHandler:
                     N_hat REAL,
                     test_losses REAL,
                     subspace_overlaps BLOB,
+                    subspace_overlaps_ratio BLOB,
                     data_model_type TEXT,
                     data_model_name TEXT,
                     data_model_description TEXT
@@ -625,6 +722,7 @@ class DatabaseHandler:
                     P REAL,
                     F REAL,
                     subspace_overlaps BLOB,
+                    subspace_overlaps_ratio BLOB,
                     data_model_type TEXT,
                     data_model_name TEXT,
                     data_model_description TEXT
@@ -681,7 +779,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -723,6 +821,7 @@ class DatabaseHandler:
             experiment_information.N_hat,
             json.dumps(experiment_information.test_losses, cls=NumpyEncoder),
             json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder),
+            json.dumps(experiment_information.subspace_overlaps_ratio, cls=NumpyEncoder),
             experiment_information.data_model_type.name,
             experiment_information.data_model_name,
             experiment_information.data_model_description
@@ -749,7 +848,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -783,6 +882,7 @@ class DatabaseHandler:
             experiment_information.P,
             experiment_information.F,
             json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder),
+            json.dumps(experiment_information.subspace_overlaps_ratio, cls=NumpyEncoder),
             experiment_information.data_model_type.name,
             experiment_information.data_model_name,
             experiment_information.data_model_description

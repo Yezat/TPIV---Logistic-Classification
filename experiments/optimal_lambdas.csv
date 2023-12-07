@@ -801,3 +801,192 @@ alpha,epsilon,tau,lambda,data_model_type,data_model_name,problem_type
 30.77760000,0.00000000,0.00000000,0.00064173,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
 45.58520000,0.40000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
 100.00000000,0.20000000,0.00000000,-0.99999998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondHalf_AttackingSecondHalf_[0.5 0.5]_[10  1]_[1 1]_SD_1_10_SU_1_10,Logistic
+0.18650000,0.00000000,0.00000000,0.08147018,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.27620000,0.00000000,0.00000000,0.07662402,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.40900000,0.00000000,0.00000000,0.06973659,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.12590000,0.20000000,0.00000000,67.63469214,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.60580000,0.00000000,0.00000000,0.06050686,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.12590000,0.00000000,0.00000000,0.07893528,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.18650000,0.40000000,0.00000000,99.12428148,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.18650000,0.20000000,0.00000000,0.08216788,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.12590000,0.60000000,0.00000000,0.08554809,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.40900000,0.20000000,0.00000000,0.07093704,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.12590000,0.40000000,0.00000000,0.08560186,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.27620000,0.60000000,0.00000000,0.07661039,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.60580000,0.20000000,0.00000000,0.06172764,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.27620000,0.20000000,0.00000000,0.07760398,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.18650000,0.60000000,0.00000000,0.08205297,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.40900000,0.40000000,0.00000000,0.07064007,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.27620000,0.40000000,0.00000000,0.07772896,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.60580000,0.40000000,0.00000000,0.06067391,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.40900000,0.60000000,0.00000000,0.06841649,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.89730000,0.00000000,0.00000000,0.04900006,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.32900000,0.00000000,0.00000000,0.03623998,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.89730000,0.20000000,0.00000000,0.05005007,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.60580000,0.60000000,0.00000000,0.05668563,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.96840000,0.00000000,0.00000000,0.02402667,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.89730000,0.40000000,0.00000000,0.04776649,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.89730000,0.60000000,0.00000000,0.04107780,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.32900000,0.20000000,0.00000000,0.03685366,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+2.91550000,0.00000000,0.00000000,0.01419607,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.32900000,0.40000000,0.00000000,0.03271562,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.96840000,0.20000000,0.00000000,0.02391404,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.32900000,0.60000000,0.00000000,0.02228188,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.96840000,0.40000000,0.00000000,0.01727874,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+2.91550000,0.20000000,0.00000000,0.01312743,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+6.39560000,0.00000000,0.00000000,0.00376983,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.12590000,0.00000000,0.00000000,56.62981062,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.40900000,0.00000000,0.00000000,47.62932694,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.12590000,0.20000000,0.00000000,56.80839348,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.12590000,0.40000000,0.00000000,56.84399206,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.18650000,0.20000000,0.00000000,54.77427704,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.27620000,0.00000000,0.00000000,51.82217596,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.18650000,0.00000000,0.00000000,54.73777423,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.27620000,0.40000000,0.00000000,51.99480108,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.18650000,0.40000000,0.00000000,54.81020665,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.18650000,0.60000000,0.00000000,54.84559397,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.27620000,0.20000000,0.00000000,51.95183917,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.40900000,0.20000000,0.00000000,47.62223206,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.27620000,0.60000000,0.00000000,51.94611082,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.60580000,0.00000000,0.00000000,41.59978995,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.40900000,0.60000000,0.00000000,47.69675095,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.12590000,0.60000000,0.00000000,56.87950203,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.60580000,0.20000000,0.00000000,41.65595562,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.40900000,0.40000000,0.00000000,47.65006353,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.89730000,0.00000000,0.00000000,33.91724367,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.60580000,0.60000000,0.00000000,41.76119706,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+1.96840000,0.60000000,0.00000000,0.00361031,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.32900000,0.00000000,0.00000000,25.13455130,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.89730000,0.40000000,0.00000000,34.03652847,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.89730000,0.20000000,0.00000000,33.97806600,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.89730000,0.60000000,0.00000000,34.09260972,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.60580000,0.40000000,0.00000000,41.58410883,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+1.32900000,0.20000000,0.00000000,25.19536224,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.12590000,0.00000000,0.00000000,5.67714874,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.18650000,0.00000000,0.00000000,5.49093186,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.32900000,0.60000000,0.00000000,25.30831397,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.40900000,0.00000000,0.00000000,4.76288934,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.32900000,0.40000000,0.00000000,25.25313560,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+1.96840000,0.00000000,0.00000000,16.58549406,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.27620000,0.60000000,0.00000000,5.21767455,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.27620000,0.00000000,0.00000000,5.19072527,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.12590000,0.40000000,0.00000000,5.69502434,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.12590000,0.60000000,0.00000000,5.68864653,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.18650000,0.40000000,0.00000000,5.49452343,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.60580000,0.00000000,0.00000000,4.16061419,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.40900000,0.20000000,0.00000000,4.77223399,KFeaturesModel,VanillaGaussianTimes100,Logistic
+4.31810000,0.20000000,0.00000000,0.00546879,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.12590000,0.20000000,0.00000000,5.73390911,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.18650000,0.60000000,0.00000000,5.50390419,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.40900000,0.60000000,0.00000000,4.79662235,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.18650000,0.20000000,0.00000000,5.50173053,KFeaturesModel,VanillaGaussianTimes100,Logistic
+2.91550000,0.00000000,0.00000000,9.70660245,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.27620000,0.20000000,0.00000000,5.20332923,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.89730000,0.00000000,0.00000000,3.39175195,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.27620000,0.40000000,0.00000000,5.20680257,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.60580000,0.20000000,0.00000000,4.17764623,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.60580000,0.40000000,0.00000000,4.19246534,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.40900000,0.40000000,0.00000000,4.78585071,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.96840000,0.20000000,0.00000000,16.64048322,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.60580000,0.60000000,0.00000000,4.20593006,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.96840000,0.40000000,0.00000000,16.69174099,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+1.32900000,0.00000000,0.00000000,2.51345539,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.96840000,0.60000000,0.00000000,16.73915574,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.89730000,0.40000000,0.00000000,3.42611174,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.89730000,0.20000000,0.00000000,3.41010031,KFeaturesModel,VanillaGaussianTimes100,Logistic
+9.47260000,0.00000000,0.00000000,0.00179503,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+0.18650000,0.00000000,0.00000000,0.54904832,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.27620000,0.00000000,0.00000000,0.51905057,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.96840000,0.00000000,0.00000000,1.65860660,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.12590000,0.00000000,0.00000000,0.57223683,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.40900000,0.00000000,0.00000000,0.47627498,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.12590000,0.40000000,0.00000000,0.57110016,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.12590000,0.20000000,0.00000000,0.56891797,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.60580000,0.00000000,0.00000000,0.41623136,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.89730000,0.60000000,0.00000000,3.43950925,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.27620000,0.40000000,0.00000000,0.52462035,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.18650000,0.20000000,0.00000000,0.55045648,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.27620000,0.20000000,0.00000000,0.52190621,KFeaturesModel,VanillaGaussianTimes10,Logistic
+2.91550000,0.20000000,0.00000000,9.75147276,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.18650000,0.60000000,0.00000000,0.55434526,KFeaturesModel,VanillaGaussianTimes10,Logistic
+2.91550000,0.40000000,0.00000000,9.79175813,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+0.27620000,0.60000000,0.00000000,0.52624651,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.40900000,0.40000000,0.00000000,0.48278144,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.32900000,0.40000000,0.00000000,2.54667278,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.40900000,0.20000000,0.00000000,0.47998464,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.12590000,0.60000000,0.00000000,0.57279927,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.60580000,0.20000000,0.00000000,0.42081351,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.18650000,0.40000000,0.00000000,0.55252676,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.60580000,0.40000000,0.00000000,0.42361681,KFeaturesModel,VanillaGaussianTimes10,Logistic
+2.91550000,0.60000000,0.00000000,9.82753217,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+2.91550000,0.00000000,0.00000000,0.97068271,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.40900000,0.60000000,0.00000000,0.48425003,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.60580000,0.60000000,0.00000000,0.42435477,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.89730000,0.00000000,0.00000000,0.33918892,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.96840000,0.20000000,0.00000000,1.67469269,KFeaturesModel,VanillaGaussianTimes100,Logistic
+2.91550000,0.40000000,0.00000000,0.00416568,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+1.96840000,0.40000000,0.00000000,1.68679101,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.32900000,0.20000000,0.00000000,2.53167793,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.32900000,0.60000000,0.00000000,2.55831092,KFeaturesModel,VanillaGaussianTimes100,Logistic
+1.32900000,0.00000000,0.00000000,0.25134540,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.96840000,0.60000000,0.00000000,1.69453512,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.89730000,0.20000000,0.00000000,0.34414058,KFeaturesModel,VanillaGaussianTimes10,Logistic
+0.89730000,0.40000000,0.00000000,0.34641042,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.96840000,0.00000000,0.00000000,0.16586054,KFeaturesModel,VanillaGaussianTimes10,Logistic
+4.31810000,0.00000000,0.00000000,0.51343537,KFeaturesModel,VanillaGaussianTimes100,Logistic
+0.89730000,0.60000000,0.00000000,0.34558006,KFeaturesModel,VanillaGaussianTimes10,Logistic
+4.31810000,0.00000000,0.00000000,5.13439926,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+4.31810000,0.40000000,0.00000000,5.19590103,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+1.32900000,0.20000000,0.00000000,0.25598343,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.32900000,0.40000000,0.00000000,0.25695214,KFeaturesModel,VanillaGaussianTimes10,Logistic
+6.39560000,0.00000000,0.00000000,2.53405499,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+2.91550000,0.00000000,0.00000000,0.09706830,KFeaturesModel,VanillaGaussianTimes10,Logistic
+2.91550000,0.20000000,0.00000000,0.98328771,KFeaturesModel,VanillaGaussianTimes100,Logistic
+2.91550000,0.40000000,0.00000000,0.99114031,KFeaturesModel,VanillaGaussianTimes100,Logistic
+2.91550000,0.60000000,0.00000000,0.99364682,KFeaturesModel,VanillaGaussianTimes100,Logistic
+4.31810000,0.60000000,0.00000000,5.21901919,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+1.32900000,0.60000000,0.00000000,0.25352215,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.96840000,0.20000000,0.00000000,0.16953417,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.96840000,0.40000000,0.00000000,0.16840751,KFeaturesModel,VanillaGaussianTimes10,Logistic
+1.96840000,0.60000000,0.00000000,0.16127372,KFeaturesModel,VanillaGaussianTimes10,Logistic
+2.91550000,0.20000000,0.00000000,0.09935083,KFeaturesModel,VanillaGaussianTimes10,Logistic
+4.31810000,0.20000000,0.00000000,0.52222944,KFeaturesModel,VanillaGaussianTimes100,Logistic
+4.31810000,0.20000000,0.00000000,5.16756242,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+2.91550000,0.40000000,0.00000000,0.09556030,KFeaturesModel,VanillaGaussianTimes10,Logistic
+6.39560000,0.00000000,0.00000000,0.25340518,KFeaturesModel,VanillaGaussianTimes100,Logistic
+4.31810000,0.40000000,0.00000000,0.52559176,KFeaturesModel,VanillaGaussianTimes100,Logistic
+2.91550000,0.60000000,0.00000000,0.08382127,KFeaturesModel,VanillaGaussianTimes10,Logistic
+4.31810000,0.60000000,0.00000000,0.52252610,KFeaturesModel,VanillaGaussianTimes100,Logistic
+4.31810000,0.20000000,0.00000000,0.05213782,KFeaturesModel,VanillaGaussianTimes10,Logistic
+6.39560000,0.00000000,0.00000000,0.02534052,KFeaturesModel,VanillaGaussianTimes10,Logistic
+6.39560000,0.40000000,0.00000000,2.57489839,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+6.39560000,0.20000000,0.00000000,2.55707035,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+6.39560000,0.20000000,0.00000000,0.25885002,KFeaturesModel,VanillaGaussianTimes100,Logistic
+4.31810000,0.40000000,0.00000000,0.04541261,KFeaturesModel,VanillaGaussianTimes10,Logistic
+14.03000000,0.00000000,0.00000000,0.00083553,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+6.39560000,0.60000000,0.00000000,2.58708967,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+9.47260000,0.00000000,0.00000000,1.20158080,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+6.39560000,0.20000000,0.00000000,0.02475533,KFeaturesModel,VanillaGaussianTimes10,Logistic
+6.39560000,0.40000000,0.00000000,0.25811806,KFeaturesModel,VanillaGaussianTimes100,Logistic
+4.31810000,0.60000000,0.00000000,0.02920805,KFeaturesModel,VanillaGaussianTimes10,Logistic
+9.47260000,0.20000000,0.00000000,1.21675565,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+14.03000000,0.00000000,0.00000000,0.55809772,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+9.47260000,0.40000000,0.00000000,1.22640609,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+9.47260000,0.60000000,0.00000000,1.22985984,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+9.47260000,0.20000000,0.00000000,0.01022676,KFeaturesModel,VanillaGaussianTimes10,Logistic
+20.78010000,0.00000000,0.00000000,0.00038461,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+6.39560000,0.40000000,0.00000000,0.01529979,KFeaturesModel,VanillaGaussianTimes10,Logistic
+9.47260000,0.60000000,0.00000000,0.10540677,KFeaturesModel,VanillaGaussianTimes100,Logistic
+14.03000000,0.40000000,0.00000000,0.57120049,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+14.03000000,0.20000000,0.00000000,0.05665594,KFeaturesModel,VanillaGaussianTimes100,Logistic
+14.03000000,0.20000000,0.00000000,0.56760866,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+67.51680000,0.60000000,0.00000000,-0.99999996,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+100.00000000,0.60000000,0.00000000,-0.99999996,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[2 1]_[1 1],Logistic
+14.03000000,0.60000000,0.00000000,0.56783306,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+6.39560000,0.60000000,0.00000000,-0.00102301,KFeaturesModel,VanillaGaussianTimes10,Logistic
+14.03000000,0.40000000,0.00000000,0.04936806,KFeaturesModel,VanillaGaussianTimes100,Logistic
+30.77760000,0.00000000,0.00000000,0.00117458,KFeaturesModel,VanillaGaussianTimes10,Logistic
+14.03000000,0.60000000,0.00000000,0.03195672,KFeaturesModel,VanillaGaussianTimes100,Logistic
+9.47260000,0.40000000,0.00000000,0.00008896,KFeaturesModel,VanillaGaussianTimes10,Logistic
+30.77760000,0.00000000,0.00000000,0.11745730,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+30.77760000,0.20000000,0.00000000,0.12019690,KFeaturesModel,VanillaGaussianTimes1000,Logistic
