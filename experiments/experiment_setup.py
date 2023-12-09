@@ -24,7 +24,7 @@ features_theta = None
 
 
 delete_existing = True
-normalize_matrices = False
+normalize_matrices = True
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -41,6 +41,20 @@ Sigma_delta = np.eye(d)
 Sigma_upsilon = np.eye(d) 
 Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
 vanilla_gaussian_data_model_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type)
+
+
+## theta first half strong
+data_model_type = DataModelType.KFeaturesModel
+data_model_name = "VanillaGaussianThetaFirst"
+data_model_description = "A Data-Model with Identity Gaussians for all the covariances. Except Theta, which is 10*Identity for the first half."
+feature_ratios = np.array([0.5, 0.5])
+features_x = np.array([1,1])
+features_theta = np.array([10,1])
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = np.eye(d)
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+vanilla_gaussian_theta_first = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 
 ########## Increasing the variance for all features ##########
@@ -200,7 +214,7 @@ vanilla_gaussian_attack_second_half_data_model_definition = DataModelDefinition(
 
 data_model_type = DataModelType.KFeaturesModel
 feature_ratios = np.array([0.5,0.5])
-features_x = np.array([10,1])
+features_x = np.array([5,1])
 features_theta = np.array([1,1])
 data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}"
 data_model_description = "2 Features, Theta Identity, Sigma_delta Identity"
@@ -209,6 +223,32 @@ Sigma_delta = np.eye(d)
 Sigma_upsilon = 5*np.eye(d)
 Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
 k_features_attacking_identity_protecting_identity_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+
+# theta first strong
+data_model_type = DataModelType.KFeaturesModel
+feature_ratios = np.array([0.5,0.5])
+features_x = np.array([5,1])
+features_theta = np.array([10,1])
+data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}"
+data_model_description = "2 Features, Theta First Half Strong, Sigma_delta Identity"
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = 5*np.eye(d)
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+k_features_attacking_identity_protecting_identity_theta_first_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+
+# theta second strong
+data_model_type = DataModelType.KFeaturesModel
+feature_ratios = np.array([0.5,0.5])
+features_x = np.array([5,1])
+features_theta = np.array([1,10])
+data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}"
+data_model_description = "2 Features, Theta Second Half Strong, Sigma_delta Identity"
+Sigma_w = np.eye(d)
+Sigma_delta = np.eye(d)
+Sigma_upsilon = 5*np.eye(d)
+Sigma_upsilon = Sigma_upsilon * d / np.trace(Sigma_upsilon)
+k_features_attacking_identity_protecting_identity_theta_second_definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 
 ######### Attacking the first half of the features ##########
 
@@ -610,9 +650,17 @@ find_robust_half_definitions = [vanilla_gaussian_data_model_definition,  k_featu
 data_model_definitions = find_robust_half_definitions
 data_models_description = "FindRobustHalfMedium10"
 
+
+vanilla_gaussian_data_model_definition.name = "2_" + vanilla_gaussian_data_model_definition.name
+k_features_attacking_identity_protecting_identity_definition.name = "2_" + k_features_attacking_identity_protecting_identity_definition.name
 compare_unnormalized_Sigma_x_robustness_definitions = [vanilla_gaussian_data_model_definition, vanilla_gaussian_times_10_data_model_definition, k_features_attacking_identity_protecting_identity_definition]
 data_model_definitions = compare_unnormalized_Sigma_x_robustness_definitions
 data_models_description = "CompareUnnormalizedSigmaXRobustness"
+
+# Testing the core idea by Ilias. Imperceptible (small variance), yet strongly predictive (strong theta zero)
+# ilias_core_usefulness_definitions = [vanilla_gaussian_data_model_definition, k_features_attacking_identity_protecting_identity_definition, vanilla_gaussian_theta_first, k_features_attacking_identity_protecting_identity_theta_first_definition, k_features_attacking_identity_protecting_identity_theta_second_definition]
+# data_model_definitions = ilias_core_usefulness_definitions
+# data_models_description = "IliasCoreUsefulness"
 
 """
 --------------------------------- Sweeps in Protection and Data Model ---------------------------------

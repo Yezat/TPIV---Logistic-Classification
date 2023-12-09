@@ -138,6 +138,9 @@ class AbstractDataModel(ABC):
             self.logger.info("Normalizing the matrices")
             self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x) * self.d            
             self.Sigma_theta = self.Sigma_theta / np.trace(self.Sigma_theta) * self.d
+            # check if the self.theta attribute exists
+            if hasattr(self, 'theta'):
+                self.theta = self.theta / np.sum(self.theta) * self.d
             self.Sigma_w = self.Sigma_w / np.trace(self.Sigma_w) * self.d
             self.Sigma_delta = self.Sigma_delta / np.trace(self.Sigma_delta) * self.d
             self.Sigma_upsilon = self.Sigma_upsilon / np.trace(self.Sigma_upsilon) * self.d
