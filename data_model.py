@@ -138,9 +138,7 @@ class AbstractDataModel(ABC):
             self.logger.info("Normalizing the matrices")
             self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x) * self.d            
             self.Sigma_theta = self.Sigma_theta / np.trace(self.Sigma_theta) * self.d
-            # check if the self.theta attribute exists
-            if hasattr(self, 'theta'):
-                self.theta = self.theta / np.sum(self.theta) * self.d
+
             self.Sigma_w = self.Sigma_w / np.trace(self.Sigma_w) * self.d
             self.Sigma_delta = self.Sigma_delta / np.trace(self.Sigma_delta) * self.d
             self.Sigma_upsilon = self.Sigma_upsilon / np.trace(self.Sigma_upsilon) * self.d
@@ -231,7 +229,6 @@ class AbstractDataModel(ABC):
             # 'Norm Sigma_x': np.linalg.norm(self.Sigma_x),
             # 'Norm Sigma_theta': np.linalg.norm(self.Sigma_theta),
             # 'Norm PhiPhiT': np.linalg.norm(self.PhiPhiT),
-            # 'Norm theta': np.linalg.norm(self.theta),
             # ''
         }
         return info
@@ -326,19 +323,19 @@ class KFeaturesModel(AbstractDataModel):
             # transform the feature ratios to feature sizes
             feature_sizes = np.floor(feature_ratios * d).astype(int)
 
-            self.theta = np.zeros(d)
+            theta = np.zeros(d)
             spec_Omega0 = np.zeros(d)
             for i in range(k):
-                self.theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_theta[i]
+                theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_theta[i]
                 spec_Omega0[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_x[i]
             self.Sigma_x=np.diag(spec_Omega0)
             
             self.feature_sizes = feature_sizes
 
 
-            self.rho = np.mean(spec_Omega0* self.theta**2) 
-            self.PhiPhiT = np.diag( spec_Omega0**2 * self.theta**2)
-            self.Sigma_theta = np.diag(self.theta**2)
+            self.rho = np.mean(spec_Omega0* theta**2) 
+            self.PhiPhiT = np.diag( spec_Omega0**2 * theta**2)
+            self.Sigma_theta = np.diag(theta**2)
 
             self.Sigma_w = Sigma_w
             self.Sigma_delta = Sigma_delta
@@ -357,15 +354,15 @@ class KFeaturesModel(AbstractDataModel):
 
     def generate_data(self, n, tau) -> DataSet:
 
-
+        theta = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_theta, 1, method="cholesky")[0]  
         X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
         
-        y = np.sign(X @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))
+        y = np.sign(X @ theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))
         
         X_test = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, 10000, method="cholesky") 
-        y_test = np.sign(X_test @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
+        y_test = np.sign(X_test @ theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
 
-        return DataSet(X, y, X_test, y_test, self.theta)
+        return DataSet(X, y, X_test, y_test, theta)
     
 
 
@@ -386,11 +383,11 @@ class SourceCapacityDataModel(AbstractDataModel):
             spec_Omega0 = np.array([self.d/(k+1)**alph for k in range(self.d)])
             self.Sigma_x=np.diag(spec_Omega0)
 
-            self.theta = np.sqrt(np.array([1/(k+1)**((1+alph*(2*r-1))) for k in range(self.d)]))
+            theta = np.sqrt(np.array([1/(k+1)**((1+alph*(2*r-1))) for k in range(self.d)]))
 
-            self.rho = np.mean(spec_Omega0 * self.theta**2) 
-            self.PhiPhiT = np.diag(spec_Omega0**2 * self.theta**2)
-            self.Sigma_theta = np.diag(self.theta**2)
+            self.rho = np.mean(spec_Omega0 * theta**2) 
+            self.PhiPhiT = np.diag(spec_Omega0**2 * theta**2)
+            self.Sigma_theta = np.diag(theta**2)
 
 
             self.Sigma_w = Sigma_w
@@ -409,15 +406,15 @@ class SourceCapacityDataModel(AbstractDataModel):
 
 
     def generate_data(self, n, tau) -> DataSet:
-
+        theta = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_theta, 1, method="cholesky")[0]  
         X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
         
-        y = np.sign(X @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))
+        y = np.sign(X @ theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))
         
         X_test = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, 10000, method="cholesky") 
-        y_test = np.sign(X_test @ self.theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
+        y_test = np.sign(X_test @ theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(10000,)))
 
-        return DataSet(X, y, X_test, y_test, self.theta)
+        return DataSet(X, y, X_test, y_test, theta)
     
 
 class MarginGaussianDataModel(AbstractDataModel):

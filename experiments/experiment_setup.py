@@ -662,6 +662,9 @@ data_models_description = "CompareUnnormalizedSigmaXRobustness"
 # data_model_definitions = ilias_core_usefulness_definitions
 # data_models_description = "IliasCoreUsefulness"
 
+data_model_definitions = [vanilla_gaussian_theta_first]
+data_models_description = "VanillaThetaFirst"
+
 """
 --------------------------------- Sweeps in Protection and Data Model ---------------------------------
 """
@@ -680,7 +683,7 @@ memory = "300G"
 # experiment_filename = "HighAlphaSweep/sweep_experiment_9.json"
 experiment_filename = f"AlphaSweepsLam10eM3/{data_models_description}/sweep_experiment.json"
 # experiment_filename = f"ColorMapSweeps/{data_models_description}/sweep_experiment.json"
-# experiment_filename = "sweep_experiment.json"
+experiment_filename = "sweep_experiment.json"
 
 
 # extract data_model_names, data_model_descriptions and data_model_types from the data_model_definitions
@@ -692,14 +695,14 @@ data_model_types = [data_model_definition.data_model_type for data_model_definit
 
 # repetitions
 state_evolution_repetitions: int = 1
-erm_repetitions: int = 5
+erm_repetitions: int = 2
 
 # sweeps
-alphas: np.ndarray = np.logspace(-0.8,2.5,15) #np.linspace(0.1,10,15) #
-epsilons: np.ndarray = np.array([0,0.2,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.logspace(-0.8,0.3,2) #np.linspace(0.1,10,15) #
+epsilons: np.ndarray = np.array([0]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.02,0.2,0.4])
-taus: np.ndarray = np.array([0,0.2,1])
+test_against_epsilons: np.ndarray = np.array([0.0])
+taus: np.ndarray = np.array([0,1])
 
 # round the lambdas, epsilons and alphas for 4 digits
 alphas = np.round(alphas,4)    

@@ -11,3 +11,4 @@ build/
 *.json
 Results/*
 experiments/sweep_experiment.json
+experiments/**
