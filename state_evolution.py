@@ -391,7 +391,7 @@ class RidgeObservables:
         return None
 
     @staticmethod
-    def test_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, int_lims: float):
+    def test_loss(task: Task, overlaps: OverlapSet, data_model: AbstractDataModel, epsilon: float, int_lims: float):
         return None
 
 """

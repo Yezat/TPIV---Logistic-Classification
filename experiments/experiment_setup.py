@@ -658,16 +658,18 @@ data_model_definitions = compare_unnormalized_Sigma_x_robustness_definitions
 data_models_description = "CompareUnnormalizedSigmaXRobustness"
 
 # Testing the core idea by Ilias. Imperceptible (small variance), yet strongly predictive (strong theta zero)
-# ilias_core_usefulness_definitions = [vanilla_gaussian_data_model_definition, k_features_attacking_identity_protecting_identity_definition, vanilla_gaussian_theta_first, k_features_attacking_identity_protecting_identity_theta_first_definition, k_features_attacking_identity_protecting_identity_theta_second_definition]
-# data_model_definitions = ilias_core_usefulness_definitions
-# data_models_description = "IliasCoreUsefulness"
+ilias_core_usefulness_definitions = [vanilla_gaussian_data_model_definition, k_features_attacking_identity_protecting_identity_definition, vanilla_gaussian_theta_first, k_features_attacking_identity_protecting_identity_theta_first_definition, k_features_attacking_identity_protecting_identity_theta_second_definition]
+data_model_definitions = ilias_core_usefulness_definitions
+data_models_description = "IliasCoreUsefulnessSTHighAlpha"
 
-data_model_definitions = [vanilla_gaussian_theta_first]
-data_models_description = "VanillaThetaFirst"
+
 
 """
 --------------------------------- Sweeps in Protection and Data Model ---------------------------------
 """
+
+for definition in data_model_definitions:
+    definition.name += "___" + data_models_description
 
 
 memory = "300G"
@@ -683,7 +685,7 @@ memory = "300G"
 # experiment_filename = "HighAlphaSweep/sweep_experiment_9.json"
 experiment_filename = f"AlphaSweepsLam10eM3/{data_models_description}/sweep_experiment.json"
 # experiment_filename = f"ColorMapSweeps/{data_models_description}/sweep_experiment.json"
-experiment_filename = "sweep_experiment.json"
+# experiment_filename = "sweep_experiment.json"
 
 
 # extract data_model_names, data_model_descriptions and data_model_types from the data_model_definitions
@@ -695,13 +697,13 @@ data_model_types = [data_model_definition.data_model_type for data_model_definit
 
 # repetitions
 state_evolution_repetitions: int = 1
-erm_repetitions: int = 2
+erm_repetitions: int = 0
 
 # sweeps
-alphas: np.ndarray = np.logspace(-0.8,0.3,2) #np.linspace(0.1,10,15) #
-epsilons: np.ndarray = np.array([0]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.logspace(-0.8,5,14) #np.linspace(0.1,10,15) #
+epsilons: np.ndarray = np.array([0,0.2]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.0])
+test_against_epsilons: np.ndarray = np.array([0.0,0.2])
 taus: np.ndarray = np.array([0,1])
 
 # round the lambdas, epsilons and alphas for 4 digits
