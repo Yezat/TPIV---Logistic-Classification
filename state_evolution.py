@@ -87,8 +87,14 @@ c_func = DSO.brentq
 c_func.restype = ctypes.c_double
 c_func.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_double, ctypes.c_double, ctypes.c_double]
 
+COMPUTE_APPROXIMATE_PROXIMAL = False
+
 @nb.njit
 def evaluate_proximal(V: float, y: float, epsilon_term: float, w: float) -> float:
+
+    if COMPUTE_APPROXIMATE_PROXIMAL:
+        return w + y * V * np.exp( -y*w + epsilon_term ) / (1 + np.exp( -y*w + epsilon_term ) )
+
     if y == 0:
         return w
 
@@ -103,7 +109,7 @@ def evaluate_proximal(V: float, y: float, epsilon_term: float, w: float) -> floa
 ------------------------------------------------------------------------------------------------------------------------
 """
 @nb.njit
-def integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
+def _m_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
     e = m * m / (rho * q)
     w_0 = np.sqrt(rho*e) * xi
     V_0 = rho * (1-e)
@@ -117,8 +123,8 @@ def integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, e
 
 def logistic_m_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
 
-    Iplus = quad(lambda xi: integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
-    Iminus = quad(lambda xi: integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
+    Iplus = quad(lambda xi: _m_hat_integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
+    Iminus = quad(lambda xi: _m_hat_integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
     return alpha / overlaps.sigma * (Iplus - Iminus)
 
 @nb.njit
@@ -206,7 +212,7 @@ def _N_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
     z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)    
     arg = y*z_star - epsilon * P/np.sqrt(N)
     m_derivative = sigmoid_numba(-arg)
-    m_derivative *= -0.5*epsilon*P/(N**(3/2))    
+    m_derivative *= -0.5*epsilon*P/(N**(3/2))
     return z_0 * m_derivative * gaussian(xi,0,1)
 
 def logistic_N_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
@@ -411,7 +417,30 @@ def generalization_error(rho,m,q, tau):
 def teacher_error(nu: float, tau: float, rho: float) -> float:
     return np.exp(- (nu**2) / (2*rho)) * (1 + math.erf( nu / (np.sqrt(2) * tau ) ))
 
+def compute_data_model_angle(data_model: AbstractDataModel, overlaps: OverlapSet, tau):
+    L = overlaps.sigma_hat * data_model.spec_Sigma_x + overlaps.P_hat * data_model.spec_Sigma_delta + overlaps.N_hat * np.ones(data_model.d)
+    return np.sum(data_model.spec_PhiPhit / L) / np.sqrt( ( data_model.d * tau**2 + data_model.d * data_model.rho) * np.sum(data_model.spec_PhiPhit * data_model.spec_Sigma_x / L**2) )
 
+def compute_data_model_attackability(data_model: AbstractDataModel, overlaps: OverlapSet):
+    L = overlaps.sigma_hat * data_model.spec_Sigma_x + overlaps.P_hat * data_model.spec_Sigma_delta + overlaps.N_hat * np.ones(data_model.d)
+    return np.sum(data_model.spec_PhiPhit * data_model.spec_Sigma_upsilon / L**2 ) / np.sqrt( np.sum(data_model.spec_PhiPhit / L**2) * np.sum(data_model.spec_PhiPhit * data_model.spec_Sigma_x / L**2) )
+
+def asymptotic_adversarial_generalization_error(data_model: AbstractDataModel, overlaps: OverlapSet, epsilon, tau):
+
+    angle = compute_data_model_angle(data_model, overlaps, tau)
+    attackability = compute_data_model_attackability(data_model, overlaps)
+
+    a = angle/ np.sqrt(1 - angle**2)
+
+    b = epsilon * attackability
+
+    owen = 2 * owens_t(a*b , 1/a)
+
+    erferfc = 0.5 * erf(b/np.sqrt(2)) * erfc(-a*b/np.sqrt(2))
+
+    gen_error = owen + erferfc 
+
+    return gen_error
 
 def adversarial_generalization_error_overlaps_teacher(overlaps: OverlapSet, task: Task, data_model: AbstractDataModel, epsilon: float):
 
@@ -532,7 +561,7 @@ def fixed_point_finder(
 
         new_m, new_q, new_sigma, new_A, new_N, new_P, new_F = var_func(task, overlaps, my_data_model, logger)
 
-        err = overlaps.update_overlaps(new_m, new_q, new_sigma, new_A, new_N, new_P, new_F)
+        err = overlaps.update_overlaps(new_m, new_q, new_sigma, new_A, new_N, new_P, new_F)       
 
         iter_nb += 1
         if iter_nb > overlaps.MAX_ITER_FPE:

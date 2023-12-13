@@ -1,5 +1,5 @@
 from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher, fair_adversarial_error_erm
-from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps, var_func
+from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps, var_func, compute_data_model_angle, compute_data_model_attackability, asymptotic_adversarial_generalization_error
 from helpers import *
 from ERM import predict_erm, error, adversarial_error
 import numpy as np
@@ -289,6 +289,12 @@ class StateEvolutionExperimentInformation:
         self.N_hat : float = overlaps.N_hat        
         # Angle
         self.angle: float = self.m / np.sqrt((self.q)*data_model.rho)
+
+        # data_model angle and attackability
+        self.data_model_angle: float = compute_data_model_angle(data_model, overlaps, 0)
+        self.data_model_attackability: float = compute_data_model_attackability(data_model, overlaps)
+        self.data_model_adversarial_test_errors: np.ndarray = np.array([(eps,asymptotic_adversarial_generalization_error(data_model, overlaps, eps, task.tau)) for eps in task.test_against_epsilons])
+
 
         # subspace overlaps
         self.subspace_overlaps = {}
@@ -649,7 +655,10 @@ class DatabaseHandler:
                     subspace_overlaps_ratio BLOB,
                     data_model_type TEXT,
                     data_model_name TEXT,
-                    data_model_description TEXT
+                    data_model_description TEXT,
+                    data_model_angle REAL,
+                    data_model_attackability REAL,
+                    data_model_adversarial_generalization_errors BLOB
                 )
             ''')
             self.connection.commit()
@@ -779,7 +788,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -824,7 +833,10 @@ class DatabaseHandler:
             json.dumps(experiment_information.subspace_overlaps_ratio, cls=NumpyEncoder),
             experiment_information.data_model_type.name,
             experiment_information.data_model_name,
-            experiment_information.data_model_description
+            experiment_information.data_model_description,
+            experiment_information.data_model_angle,
+            experiment_information.data_model_attackability,
+            json.dumps(experiment_information.data_model_adversarial_test_errors, cls=NumpyEncoder)
         ))
         self.connection.commit()
 
