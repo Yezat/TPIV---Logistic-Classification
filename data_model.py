@@ -19,6 +19,20 @@ class DataModelType(Enum):
     MarginGaussian = 4
     KFeaturesModel = 5
 
+NORMALIZE_RHO = True
+
+"""
+-------------------- DataSet --------------------
+"""
+class DataSet():
+    def __init__(self, X, y, X_test, y_test, theta) -> None:
+        self.X = X
+        self.y = y
+        self.X_test = X_test
+        self.y_test = y_test
+        self.theta = theta
+
+
 class AbstractDataModel(ABC):
     """
     Abstract class for data models
@@ -136,12 +150,41 @@ class AbstractDataModel(ABC):
         self.logger.info(f"normalize_matrices: {self.normalize_matrices}")
         if self.normalize_matrices:
             self.logger.info("Normalizing the matrices")
-            self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x) * self.d            
+            self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x ) * self.d            
             self.Sigma_theta = self.Sigma_theta / np.trace(self.Sigma_theta) * self.d
 
             self.Sigma_w = self.Sigma_w / np.trace(self.Sigma_w) * self.d
             self.Sigma_delta = self.Sigma_delta / np.trace(self.Sigma_delta) * self.d
             self.Sigma_upsilon = self.Sigma_upsilon / np.trace(self.Sigma_upsilon) * self.d
+
+
+
+
+        # normalization = np.trace(self.Sigma_x @ self.Sigma_theta) / self.d
+        
+        # self.Sigma_x /= normalization
+        # self.Sigma_theta /= normalization
+
+
+        # compute spectra to compute PhiPhiT and rho
+        if NORMALIZE_RHO:
+            trace = np.trace(self.Sigma_x @ self.Sigma_theta) / self.d
+            self.Sigma_x /= np.sqrt(trace)
+            self.Sigma_theta /= np.sqrt(trace)
+
+        self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
+        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
+
+        # log new and old spec_Sigma_x, spec_Sigma_theta
+        # self.logger.info(f"New spec_Sigma_x: {self.spec_Sigma_x}")
+        # self.logger.info(f"New spec_Sigma_theta: {self.spec_Sigma_theta}")
+        # self.logger.info(f"Old spec_Sigma_x: {spec_Sigma_x}")
+        # self.logger.info(f"Old spec_Sigma_theta: {spec_Sigma_theta}")
+
+        # Compute PhiPhiT
+        self.PhiPhiT = np.diag( self.spec_Sigma_x**2 * self.spec_Sigma_theta)
+        self.rho = np.mean(self.spec_Sigma_x * self.spec_Sigma_theta) 
+
 
         self.logger.info(f"Norm Sigma_x: {np.trace(self.Sigma_x)}") 
         self.logger.info(f"Norm Sigma_theta: {np.trace(self.Sigma_theta)}")
@@ -162,15 +205,6 @@ class AbstractDataModel(ABC):
         self.logger.info(f"Sigma_delta value counts: {np.unique(self.Sigma_delta, return_counts=True)}")
         self.logger.info(f"Sigma_upsilon value counts: {np.unique(self.Sigma_upsilon, return_counts=True)}")
 
-
-
-        # compute spectra to compute PhiPhiT and rho
-        self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
-        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
-
-        # Compute PhiPhiT
-        self.PhiPhiT = np.diag( self.spec_Sigma_x**2 * self.spec_Sigma_theta)
-        self.rho = np.mean(self.spec_Sigma_x * self.spec_Sigma_theta) 
 
         # log rho
         self.logger.info(f"rho: {self.rho}")
@@ -242,16 +276,6 @@ class AbstractDataModel(ABC):
         """
 
 
-"""
--------------------- DataSet --------------------
-"""
-class DataSet():
-    def __init__(self, X, y, X_test, y_test, theta) -> None:
-        self.X = X
-        self.y = y
-        self.X_test = X_test
-        self.y_test = y_test
-        self.theta = theta
 
 
 """
