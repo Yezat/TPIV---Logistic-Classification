@@ -214,7 +214,7 @@ vanilla_gaussian_attack_second_half_data_model_definition = DataModelDefinition(
 
 data_model_type = DataModelType.KFeaturesModel
 feature_ratios = np.array([0.5,0.5])
-features_x = np.array([5,1])
+features_x = np.array([10,1])
 features_theta = np.array([1,1])
 data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}"
 data_model_description = "2 Features, Theta Identity, Sigma_delta Identity"
@@ -227,7 +227,7 @@ k_features_attacking_identity_protecting_identity_definition = DataModelDefiniti
 # theta first strong
 data_model_type = DataModelType.KFeaturesModel
 feature_ratios = np.array([0.5,0.5])
-features_x = np.array([5,1])
+features_x = np.array([10,1])
 features_theta = np.array([10,1])
 data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}"
 data_model_description = "2 Features, Theta First Half Strong, Sigma_delta Identity"
@@ -240,7 +240,7 @@ k_features_attacking_identity_protecting_identity_theta_first_definition = DataM
 # theta second strong
 data_model_type = DataModelType.KFeaturesModel
 feature_ratios = np.array([0.5,0.5])
-features_x = np.array([5,1])
+features_x = np.array([10,1])
 features_theta = np.array([1,10])
 data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}"
 data_model_description = "2 Features, Theta Second Half Strong, Sigma_delta Identity"
@@ -644,26 +644,87 @@ for first_protect in np.linspace(1,15,10):
 # data_models_description = "Sweep DataModel Protect Second vs Attack First"
 
 
-find_robust_half_definitions = [vanilla_gaussian_data_model_definition,  k_features_attacking_identity_protecting_identity_definition]
-#, k_features_attacking_first_half_protecting_identity_definition, k_features_attacking_second_half_protecting_identity_definition
-# vanilla_gaussian_attack_first_half_data_model_definition, vanilla_gaussian_attack_second_half_data_model_definition,
-data_model_definitions = find_robust_half_definitions
-data_models_description = "FindRobustHalfMedium10"
+# find_robust_half_definitions = [vanilla_gaussian_data_model_definition,  k_features_attacking_identity_protecting_identity_definition]
+# #, k_features_attacking_first_half_protecting_identity_definition, k_features_attacking_second_half_protecting_identity_definition
+# # vanilla_gaussian_attack_first_half_data_model_definition, vanilla_gaussian_attack_second_half_data_model_definition,
+# data_model_definitions = find_robust_half_definitions
+# data_models_description = "FindRobustHalfMedium10"
 
 
-vanilla_gaussian_data_model_definition.name = "2_" + vanilla_gaussian_data_model_definition.name
-k_features_attacking_identity_protecting_identity_definition.name = "2_" + k_features_attacking_identity_protecting_identity_definition.name
-compare_unnormalized_Sigma_x_robustness_definitions = [vanilla_gaussian_data_model_definition, vanilla_gaussian_times_10_data_model_definition, k_features_attacking_identity_protecting_identity_definition]
-data_model_definitions = compare_unnormalized_Sigma_x_robustness_definitions
-data_models_description = "CompareUnnormalizedSigmaXRobustness"
+# vanilla_gaussian_data_model_definition.name = "2_" + vanilla_gaussian_data_model_definition.name
+# k_features_attacking_identity_protecting_identity_definition.name = "2_" + k_features_attacking_identity_protecting_identity_definition.name
+# compare_unnormalized_Sigma_x_robustness_definitions = [vanilla_gaussian_data_model_definition, vanilla_gaussian_times_10_data_model_definition, k_features_attacking_identity_protecting_identity_definition]
+# data_model_definitions = compare_unnormalized_Sigma_x_robustness_definitions
+# data_models_description = "CompareUnnormalizedSigmaXRobustness"
 
-# Testing the core idea by Ilias. Imperceptible (small variance), yet strongly predictive (strong theta zero)
-ilias_core_usefulness_definitions = [vanilla_gaussian_data_model_definition, k_features_attacking_identity_protecting_identity_definition, vanilla_gaussian_theta_first, k_features_attacking_identity_protecting_identity_theta_first_definition, k_features_attacking_identity_protecting_identity_theta_second_definition]
-data_model_definitions = ilias_core_usefulness_definitions
-data_models_description = "IliasCoreUsefulnessSTHighAlpha"
+# # Testing the core idea by Ilias. Imperceptible (small variance), yet strongly predictive (strong theta zero)
+# ilias_core_usefulness_definitions = [vanilla_gaussian_data_model_definition, k_features_attacking_identity_protecting_identity_definition, vanilla_gaussian_theta_first, k_features_attacking_identity_protecting_identity_theta_first_definition, k_features_attacking_identity_protecting_identity_theta_second_definition]
+# data_model_definitions = ilias_core_usefulness_definitions
+# data_models_description = "IliasCoreUsefulnessEqualThetaSigmaX"
 
-data_model_definitions = [k_features_attacking_identity_protecting_identity_theta_first_definition, k_features_attacking_identity_protecting_identity_theta_second_definition, vanilla_gaussian_data_model_definition]
-data_models_description = "Test"
+
+#### Sweep in Theta Ratio
+
+data_model_definitions = []
+data_models_description = "Sweep Theta Ratio Large"
+for theta_ratio in np.logspace(0,2,10):
+    if theta_ratio == 1:
+        ra = 1
+    else:
+        ra = 2
+
+    for i in range(ra):
+
+        if i == 0:
+            theta_first = theta_ratio
+            theta_second = 1
+        else:
+            theta_first = 1
+            theta_second = theta_ratio
+
+        # round both to 4 digits
+        theta_first = np.round(theta_first,4)
+        theta_second = np.round(theta_second,4)
+
+        data_model_type = DataModelType.KFeaturesModel
+        feature_ratios = np.array([0.5,0.5])
+        features_x = np.array([5,1])
+        features_theta = np.array([theta_first,theta_second])
+        data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+        data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+        Sigma_w = np.eye(d)
+        Sigma_delta = np.eye(d)
+        Sigma_upsilon = np.eye(d)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        data_model_definitions.append(definition)
+
+        data_model_type = DataModelType.KFeaturesModel
+        feature_ratios = np.array([0.5,0.5])
+        features_x = np.array([10,1])
+        features_theta = np.array([theta_first,theta_second])
+        data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+        data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+        Sigma_w = np.eye(d)
+        Sigma_delta = np.eye(d)
+        Sigma_upsilon = np.eye(d)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        data_model_definitions.append(definition)
+
+        data_model_type = DataModelType.KFeaturesModel
+        feature_ratios = np.array([0.5,0.5])
+        features_x = np.array([1,1])
+        features_theta = np.array([theta_first,theta_second])
+        data_model_name = f"VanillaGaussian_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+        data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+        Sigma_w = np.eye(d)
+        Sigma_delta = np.eye(d)
+        Sigma_upsilon = np.eye(d)
+        definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w, Sigma_delta, Sigma_upsilon, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+        data_model_definitions.append(definition)
+
+
+
+
 
 """
 --------------------------------- Sweeps in Protection and Data Model ---------------------------------
@@ -684,9 +745,10 @@ memory = "300G"
 ------------------------------------------------------------------------------------------------------------------------
 """
 # experiment_filename = "HighAlphaSweep/sweep_experiment_9.json"
-experiment_filename = f"AlphaSweepsLam10eM3/{data_models_description}/sweep_experiment.json"
+# experiment_filename = f"AlphaSweepsLam10eM3/{data_models_description}/sweep_experiment.json"
+experiment_filename = f"ThetaSweeps/{data_models_description}/sweep_experiment.json"
 # experiment_filename = f"ColorMapSweeps/{data_models_description}/sweep_experiment.json"
-experiment_filename = "sweep_experiment.json"
+# experiment_filename = "sweep_experiment.json"
 
 
 # extract data_model_names, data_model_descriptions and data_model_types from the data_model_definitions
@@ -698,13 +760,13 @@ data_model_types = [data_model_definition.data_model_type for data_model_definit
 
 # repetitions
 state_evolution_repetitions: int = 1
-erm_repetitions: int = 0
+erm_repetitions: int = 5
 
 # sweeps
-alphas: np.ndarray = np.logspace(2,8,6) #np.linspace(0.1,10,15) #
-epsilons: np.ndarray = np.array([0.1,0.5]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.array([500]) #np.logspace(2,2.5,2) #np.linspace(0.1,10,15) #
+epsilons: np.ndarray = np.array([0.0,0.2,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.2])
+test_against_epsilons: np.ndarray = np.array([0.0,0.2,0.4])
 taus: np.ndarray = np.array([0.05, 1])
 
 # round the lambdas, epsilons and alphas for 4 digits
