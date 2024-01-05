@@ -40,6 +40,7 @@ def stable_cosh(x):
 
 @nb.vectorize("float64(float64)")
 def stable_cosh_numba(x: float) -> float:
+    # technically evaluates 1/(2 * cosh(x))
     if x <= 0:
         return np.exp(x) / (1 + np.exp(2*x))
     else:

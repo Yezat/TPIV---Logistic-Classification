@@ -34,9 +34,9 @@ class OverlapSet():
         self.P_hat = 0
 
         self.BLEND_FPE = 0.75
-        self.TOL_FPE = 1e-4
+        self.TOL_FPE = 1e-5
         self.MIN_ITER_FPE = 10
-        self.MAX_ITER_FPE = 5000
+        self.MAX_ITER_FPE = 50000
         self.INT_LIMS = 10.0
 
     def log_overlaps(self, logger):
@@ -94,6 +94,9 @@ def evaluate_proximal(V: float, y: float, epsilon_term: float, w: float) -> floa
 
     if COMPUTE_APPROXIMATE_PROXIMAL:
         return w + y * V * np.exp( -y*w + epsilon_term ) / (1 + np.exp( -y*w + epsilon_term ) )
+
+    # if epsilon_term > 0:
+    #     return w + y * V * np.exp( -y*w + epsilon_term ) / (1 + np.exp( -y*w + epsilon_term ) )
 
     if y == 0:
         return w
@@ -158,7 +161,7 @@ def alternative_derivative_f_out(xi: float, y: float, m: float, q: float, sigma:
 
     second_derivative = numba_second_derivative_loss(y,proximal,epsilon*P/np.sqrt(N))
 
-    return second_derivative / ( 1 + sigma * second_derivative)
+    return second_derivative / ( 1 + sigma * second_derivative) # can be seen from aubin (45)
 
 @nb.njit
 def _sigma_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
@@ -191,6 +194,10 @@ def _P_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
     arg = y*z_star - epsilon * P/np.sqrt(N)
     m_derivative = sigmoid_numba(-arg)
 
+    # m_derivative = np.exp( -arg) / (1 + np.exp( -arg) )
+    # if epsilon == 0:
+    #     m_derivative = sigmoid_numba(-arg)
+
     m_derivative *= epsilon / np.sqrt(N)
 
     return z_0 * m_derivative * gaussian(xi,0,1)
@@ -212,6 +219,9 @@ def _N_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
     z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)    
     arg = y*z_star - epsilon * P/np.sqrt(N)
     m_derivative = sigmoid_numba(-arg)
+    # m_derivative = np.exp( -arg) / (1 + np.exp( -arg) )
+    # if epsilon == 0:
+    #     m_derivative = sigmoid_numba(-arg)
     m_derivative *= -0.5*epsilon*P/(N**(3/2))
     return z_0 * m_derivative * gaussian(xi,0,1)
 
@@ -552,7 +562,7 @@ def fixed_point_finder(
     iter_nb = 0
     
     while err > overlaps.TOL_FPE or iter_nb < overlaps.MIN_ITER_FPE:
-        if iter_nb % 10 == 0 and log:
+        if iter_nb % 5000 == 0 and log:
             logger.info(f"iter_nb: {iter_nb}, err: {err}")
             overlaps.log_overlaps(logger)
 

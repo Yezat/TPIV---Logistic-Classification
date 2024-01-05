@@ -146,6 +146,15 @@ class AbstractDataModel(ABC):
 
         self.logger.info(f"d: {self.d}")
 
+
+        self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
+        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
+
+        # compute and log the ratio of the first eigenvalue to the last eigenvalue
+        self.logger.info(f"Pre-Ratio of first to last eigenvalue of Sigma_x: {self.spec_Sigma_x[0] / self.spec_Sigma_x[-1]}")
+        self.logger.info(f"Pre-Ratio of first to last eigenvalue of Sigma_theta: {self.spec_Sigma_theta[0] / self.spec_Sigma_theta[-1]}")
+
+
         # Normalize all the matrices by dividing by the norm of the matrix
         self.logger.info(f"normalize_matrices: {self.normalize_matrices}")
         if self.normalize_matrices:
@@ -153,6 +162,7 @@ class AbstractDataModel(ABC):
             self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x ) * self.d            
             self.Sigma_theta = self.Sigma_theta / np.trace(self.Sigma_theta) * self.d
 
+        
             self.Sigma_w = self.Sigma_w / np.trace(self.Sigma_w) * self.d
             self.Sigma_delta = self.Sigma_delta / np.trace(self.Sigma_delta) * self.d
             self.Sigma_upsilon = self.Sigma_upsilon / np.trace(self.Sigma_upsilon) * self.d
@@ -174,6 +184,10 @@ class AbstractDataModel(ABC):
 
         self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
         self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
+
+        # compute and log the ratio of the first eigenvalue to the last eigenvalue
+        self.logger.info(f"Ratio of first to last eigenvalue of Sigma_x: {self.spec_Sigma_x[0] / self.spec_Sigma_x[-1]}")
+        self.logger.info(f"Ratio of first to last eigenvalue of Sigma_theta: {self.spec_Sigma_theta[0] / self.spec_Sigma_theta[-1]}")
 
         # log new and old spec_Sigma_x, spec_Sigma_theta
         # self.logger.info(f"New spec_Sigma_x: {self.spec_Sigma_x}")

@@ -286,6 +286,7 @@ class StateEvolutionExperimentInformation:
         self.q_hat : float = overlaps.q_hat
         self.m_hat : float = overlaps.m_hat
         self.A_hat : float = overlaps.A_hat
+        self.P_hat: float = overlaps.P_hat
         self.N_hat : float = overlaps.N_hat        
         # Angle
         self.angle: float = self.m / np.sqrt((self.q)*data_model.rho)
@@ -357,6 +358,8 @@ class StateEvolutionExperimentInformation:
         subspace_strengths_X = [data_model.Sigma_x[0,0], data_model.Sigma_x[-1,-1]]
         subspace_strengths_delta = [data_model.Sigma_delta[0,0], data_model.Sigma_delta[-1,-1]]
         subspace_strengths_upsilon = [data_model.Sigma_upsilon[0,0], data_model.Sigma_upsilon[-1,-1]]
+        subspace_strengths_theta = [data_model.Sigma_theta[0,0], data_model.Sigma_theta[-1,-1]]
+        subspace_strengths_PhiPhiT = [data_model.spec_PhiPhit[0], data_model.spec_PhiPhit[-1]]
         
         # compute the ratio of each subspace overlap to its strength
         subspace_strength_ratios_Sigma = []
@@ -387,7 +390,11 @@ class StateEvolutionExperimentInformation:
         self.subspace_overlaps_ratio["N"] = subspace_strength_ratios_N[0]/subspace_strength_ratios_N[1]
         self.subspace_overlaps_ratio["P"] = subspace_strength_ratios_P[0]/subspace_strength_ratios_P[1]
         self.subspace_overlaps_ratio["F"] = subspace_strength_ratios_F[0]/subspace_strength_ratios_F[1]
-        
+
+        # store the subspace strengths ratio
+        self.sigmax_subspace_ratio = subspace_strengths_X[0]/subspace_strengths_X[1]
+        self.sigmatheta_subspace_ratio = subspace_strengths_theta[0]/subspace_strengths_theta[1]
+        self.phiphit_subspace_ratio = subspace_strengths_PhiPhiT[0]/subspace_strengths_PhiPhiT[1]
 
 
 
@@ -648,7 +655,7 @@ class DatabaseHandler:
                     N REAL,
                     P REAL,
                     F REAL,
-                    A_hat REAL,
+                    P_hat REAL,
                     N_hat REAL,
                     test_losses REAL,
                     subspace_overlaps BLOB,
@@ -658,7 +665,10 @@ class DatabaseHandler:
                     data_model_description TEXT,
                     data_model_angle REAL,
                     data_model_attackability REAL,
-                    data_model_adversarial_generalization_errors BLOB
+                    data_model_adversarial_generalization_errors BLOB,
+                    sigmax_subspace_ratio REAL,
+                    sigmatheta_subspace_ratio REAL,
+                    phiphit_subspace_ratio REAL
                 )
             ''')
             self.connection.commit()
@@ -788,7 +798,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -826,7 +836,7 @@ class DatabaseHandler:
             experiment_information.N,
             experiment_information.P,
             experiment_information.F,
-            experiment_information.A_hat,
+            experiment_information.P_hat,
             experiment_information.N_hat,
             json.dumps(experiment_information.test_losses, cls=NumpyEncoder),
             json.dumps(experiment_information.subspace_overlaps, cls=NumpyEncoder),
@@ -836,7 +846,10 @@ class DatabaseHandler:
             experiment_information.data_model_description,
             experiment_information.data_model_angle,
             experiment_information.data_model_attackability,
-            json.dumps(experiment_information.data_model_adversarial_test_errors, cls=NumpyEncoder)
+            json.dumps(experiment_information.data_model_adversarial_test_errors, cls=NumpyEncoder),
+            experiment_information.sigmax_subspace_ratio,
+            experiment_information.sigmatheta_subspace_ratio,
+            experiment_information.phiphit_subspace_ratio
         ))
         self.connection.commit()
 

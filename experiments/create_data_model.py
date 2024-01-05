@@ -79,15 +79,15 @@ def load_experiment(filename, logger):
             experiment = ExperimentInformation.fromdict(experiment_dict) # Fromdict calls cls and thus creates a new experiment_id
             logger.info("Loaded experiment from file %s", filename)
             # log the dataModelType, name and description
-            logger.info(f"DataModelTypes:")
-            for data_model_type in experiment.data_model_types:
-                logger.info(f"\t{data_model_type.name}")
-            logger.info(f"DataModelNames:")
-            for name in experiment.data_model_names:
-                logger.info(f"\t{name}")
-            logger.info(f"DataModelDescriptions:")
-            for description in experiment.data_model_descriptions:
-                logger.info(f"\t{description}")
+            # logger.info(f"DataModelTypes:")
+            # for data_model_type in experiment.data_model_types:
+            #     logger.info(f"\t{data_model_type.name}")
+            # logger.info(f"DataModelNames:")
+            # for name in experiment.data_model_names:
+            #     logger.info(f"\t{name}")
+            # logger.info(f"DataModelDescriptions:")
+            # for description in experiment.data_model_descriptions:
+            #     logger.info(f"\t{description}")
 
             return experiment
     except FileNotFoundError:

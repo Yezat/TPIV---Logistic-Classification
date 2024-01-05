@@ -662,12 +662,19 @@ for first_protect in np.linspace(1,15,10):
 # data_model_definitions = ilias_core_usefulness_definitions
 # data_models_description = "IliasCoreUsefulnessEqualThetaSigmaX"
 
+# ilias_core_usefulness_definitions = [vanilla_gaussian_data_model_definition, k_features_attacking_identity_protecting_identity_theta_first_definition, k_features_attacking_identity_protecting_identity_theta_second_definition]
+# data_model_definitions = ilias_core_usefulness_definitions
+# data_models_description = "Test"
+
 
 #### Sweep in Theta Ratio
 
 data_model_definitions = []
-data_models_description = "Sweep Theta Ratio Large"
-for theta_ratio in np.logspace(0,2,10):
+# data_models_description = "NoNormalisation"
+data_models_description = "TraceNormalisationInverseComparison"
+# data_models_description = "RhoNormalisationInverseComparison"
+
+for theta_ratio in np.logspace(0,3,20):
     if theta_ratio == 1:
         ra = 1
     else:
@@ -676,8 +683,8 @@ for theta_ratio in np.logspace(0,2,10):
     for i in range(ra):
 
         if i == 0:
-            theta_first = theta_ratio
-            theta_second = 1
+            theta_first = 1
+            theta_second = 1/theta_ratio
         else:
             theta_first = 1
             theta_second = theta_ratio
@@ -688,7 +695,7 @@ for theta_ratio in np.logspace(0,2,10):
 
         data_model_type = DataModelType.KFeaturesModel
         feature_ratios = np.array([0.5,0.5])
-        features_x = np.array([5,1])
+        features_x = np.array([10,1])
         features_theta = np.array([theta_first,theta_second])
         data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
         data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
@@ -700,7 +707,7 @@ for theta_ratio in np.logspace(0,2,10):
 
         data_model_type = DataModelType.KFeaturesModel
         feature_ratios = np.array([0.5,0.5])
-        features_x = np.array([10,1])
+        features_x = np.array([0.1,1])
         features_theta = np.array([theta_first,theta_second])
         data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
         data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
@@ -726,6 +733,7 @@ for theta_ratio in np.logspace(0,2,10):
 
 
 
+
 """
 --------------------------------- Sweeps in Protection and Data Model ---------------------------------
 """
@@ -734,7 +742,7 @@ for definition in data_model_definitions:
     definition.name += "___" + data_models_description
 
 
-memory = "300G"
+memory = "200G"
 
 # data_models_description = "Vanilla vs KFeatures Identity vs Identity"
 # data_models_description = data_model_definitions[0].name
@@ -760,13 +768,13 @@ data_model_types = [data_model_definition.data_model_type for data_model_definit
 
 # repetitions
 state_evolution_repetitions: int = 1
-erm_repetitions: int = 5
+erm_repetitions: int = 0
 
 # sweeps
-alphas: np.ndarray = np.array([500]) #np.logspace(2,2.5,2) #np.linspace(0.1,10,15) #
-epsilons: np.ndarray = np.array([0.0,0.2,0.4]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.array([100000]) # np.logspace(-0.8,1.5,6) #np.linspace(0.1,10,15)  #
+epsilons: np.ndarray = np.array([0.0,0.2,0.4,0.6,0.8]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.0,0.2,0.4])
+test_against_epsilons: np.ndarray = np.array([0.2,0.4,0.6])
 taus: np.ndarray = np.array([0.05, 1])
 
 # round the lambdas, epsilons and alphas for 4 digits
@@ -831,7 +839,7 @@ if os.path.dirname(experiment_filename) != "":
 #SBATCH --chdir=/home/ktanner/TPIV---Logistic-Classification/experiments
 #SBATCH --job-name=TPIV-Adversarial
 #SBATCH --nodes=1
-#SBATCH --ntasks=20
+#SBATCH --ntasks=40
 #SBATCH --cpus-per-task=1
 #SBATCH --mem={memory}
 #SBATCH --output='{os.path.dirname(experiment_filename)}/out.txt'
