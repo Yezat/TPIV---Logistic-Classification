@@ -1,5 +1,5 @@
 from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher, fair_adversarial_error_erm
-from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps, var_func, compute_data_model_angle, compute_data_model_attackability, asymptotic_adversarial_generalization_error
+from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps, var_func, compute_data_model_angle, compute_data_model_attackability, asymptotic_adversarial_generalization_error, first_term_fair_error, second_term_fair_error, third_term_fair_error
 from helpers import *
 from ERM import predict_erm, error, adversarial_error
 import numpy as np
@@ -263,7 +263,11 @@ class StateEvolutionExperimentInformation:
         self.adversarial_generalization_errors: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ] )
         self.adversarial_generalization_errors_teacher: np.ndarray = np.array([(eps,adversarial_generalization_error_overlaps_teacher(overlaps, task, data_model, eps) ) for eps in task.test_against_epsilons ])
         
-        self.fair_adversarial_errors: float = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
+        self.fair_adversarial_errors: np.ndarray = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
+
+        self.first_term_fair_errors: np.ndarray = np.array([(eps,first_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
+        self.second_term_fair_errors: np.ndarray = np.array([(eps,second_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
+        self.third_term_fair_errors: np.ndarray = np.array([(eps,third_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
 
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
@@ -672,7 +676,10 @@ class DatabaseHandler:
                     data_model_adversarial_generalization_errors BLOB,
                     sigmax_subspace_ratio REAL,
                     sigmatheta_subspace_ratio REAL,
-                    phiphit_subspace_ratio REAL
+                    phiphit_subspace_ratio REAL,
+                    first_term_fair_errors REAL,
+                    second_term_fair_errors REAL,
+                    third_term_fair_errors REAL
                 )
             ''')
             self.connection.commit()
@@ -802,7 +809,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -853,7 +860,10 @@ class DatabaseHandler:
             json.dumps(experiment_information.data_model_adversarial_test_errors, cls=NumpyEncoder),
             experiment_information.sigmax_subspace_ratio,
             experiment_information.sigmatheta_subspace_ratio,
-            experiment_information.phiphit_subspace_ratio
+            experiment_information.phiphit_subspace_ratio,
+            experiment_information.first_term_fair_errors,
+            experiment_information.second_term_fair_errors,
+            experiment_information.third_term_fair_errors
         ))
         self.connection.commit()
 

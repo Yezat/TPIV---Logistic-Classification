@@ -478,10 +478,7 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
 
     return gen_error
 
-
-
-def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger=None):
-    
+def first_term_fair_error(overlaps, data_model, gamma, epsilon):
     V = (data_model.rho )*overlaps.q - overlaps.m**2
     gamma_max = gamma+epsilon*overlaps.F/np.sqrt(overlaps.N)
 
@@ -495,7 +492,11 @@ def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger
     first_term = quad(lambda nu: erfc_term(nu),gamma,gamma_max,limit=500)[0]
     first_term += quad(lambda nu: erf_term(nu),-gamma_max,-gamma,limit=500)[0]
     first_term /= (2*np.sqrt(2*np.pi * (data_model.rho )))
+    return first_term
 
+def second_term_fair_error(overlaps, data_model, gamma, epsilon):
+    V = (data_model.rho )*overlaps.q - overlaps.m**2
+    gamma_max = gamma+epsilon*overlaps.F/np.sqrt(overlaps.N)
 
     # second term
     def second_integral(nu):
@@ -505,13 +506,28 @@ def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger
     second_term = result2[0]
     second_term /= np.sqrt(2*np.pi * (data_model.rho ))
 
-    
+    return second_term
+
+def third_term_fair_error(overlaps, data_model, gamma, epsilon):
+    V = (data_model.rho )*overlaps.q - overlaps.m**2
+    gamma_max = gamma+epsilon*overlaps.F/np.sqrt(overlaps.N)
+
     # third term
     def third_integral(nu):
         return np.exp(-(nu)**2/(2*(data_model.rho )) ) * erfc( overlaps.m*nu / np.sqrt(2*(data_model.rho ) * V))
     result3 = quad(lambda nu: third_integral(nu),0,gamma,limit=500)
     third_term = result3[0]
     third_term /= np.sqrt(2*np.pi * (data_model.rho ))
+
+    return third_term
+
+def fair_adversarial_error_overlaps(overlaps, data_model, gamma, epsilon, logger=None):
+    
+    first_term = first_term_fair_error(overlaps, data_model, gamma, epsilon)
+
+    second_term = second_term_fair_error(overlaps, data_model, gamma, epsilon)
+
+    third_term = third_term_fair_error(overlaps, data_model, gamma, epsilon)
     
     return first_term + second_term + third_term
 
