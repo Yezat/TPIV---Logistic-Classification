@@ -335,7 +335,7 @@ class VanillaGaussianDataModel(AbstractDataModel):
     
 
 class KFeaturesModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, normalize_matrices = True, source_pickle_path="../",Sigma_w = None,Sigma_delta = None, Sigma_upsilon = None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
+    def __init__(self, d,logger, delete_existing = False, normalize_matrices = True, source_pickle_path="../",Sigma_w_content = None,Sigma_delta_content = None, Sigma_upsilon_content = None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
         """
             k = len(feature_ratios)
             feature_ratios = np.array([2,d-2]) # must sum to d and be of length k
@@ -375,9 +375,19 @@ class KFeaturesModel(AbstractDataModel):
             self.PhiPhiT = np.diag( spec_Omega0**2 * theta**2)
             self.Sigma_theta = np.diag(theta**2)
 
-            self.Sigma_w = Sigma_w
-            self.Sigma_delta = Sigma_delta
-            self.Sigma_upsilon = Sigma_upsilon
+            sigma_w = np.zeros(d)
+            sigma_delta = np.zeros(d)
+            sigma_upsilon = np.zeros(d)
+            for i in range(k):
+                sigma_w[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = Sigma_w_content[i]
+                sigma_delta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = Sigma_delta_content[i]
+                sigma_upsilon[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = Sigma_upsilon_content[i]
+            self.Sigma_w = np.diag(sigma_w)
+            self.Sigma_delta = np.diag(sigma_delta)
+            self.Sigma_upsilon = np.diag(sigma_upsilon)
+            
+
+
             if self.Sigma_w is None:
                 self.Sigma_w = np.eye(self.d)
             if self.Sigma_delta is None:

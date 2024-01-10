@@ -25,12 +25,12 @@ class ExperimentType(Enum):
     SweepAtOptimalLambdaAdversarialTestError = 5
 
 class DataModelDefinition:
-    def __init__(self,d : int, delete_existing: bool, normalize_matrices: bool, Sigma_w: np.ndarray, Sigma_delta: np.ndarray, Sigma_upsilon: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None) -> None:
+    def __init__(self,d : int, delete_existing: bool, normalize_matrices: bool, Sigma_w_content: np.ndarray, Sigma_delta_content: np.ndarray, Sigma_upsilon_content: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None) -> None:
         self.delete_existing: bool = delete_existing
         self.normalize_matrices: bool = normalize_matrices
-        self.Sigma_w: np.ndarray = Sigma_w
-        self.Sigma_delta: np.ndarray = Sigma_delta
-        self.Sigma_upsilon: np.ndarray = Sigma_upsilon
+        self.Sigma_w_content: np.ndarray = Sigma_w_content
+        self.Sigma_delta_content: np.ndarray = Sigma_delta_content
+        self.Sigma_upsilon_content: np.ndarray = Sigma_upsilon_content
         self.name: str = name
         self.d = d
         self.description: str = description
@@ -51,9 +51,12 @@ class DataModelDefinition:
         result = cls(**data_model_definition_dict)
 
         # make sure Sigma_w, Sigma_delta and Sigma_upsilon are numpy arrays
-        result.Sigma_w = np.array(result.Sigma_w)
-        result.Sigma_delta = np.array(result.Sigma_delta)
-        result.Sigma_upsilon = np.array(result.Sigma_upsilon)
+        if result.Sigma_w_content is not None:
+            result.Sigma_w_content = np.array(result.Sigma_w_content)
+        if result.Sigma_delta_content is not None:
+            result.Sigma_delta_content = np.array(result.Sigma_delta_content)
+        if result.Sigma_upsilon_content is not None:
+            result.Sigma_upsilon_content = np.array(result.Sigma_upsilon_content)
 
         # same for feature_ratios, features_x and features_theta
         if result.feature_ratios is not None:
@@ -62,6 +65,7 @@ class DataModelDefinition:
             result.features_x = np.array(result.features_x)
         if result.features_theta is not None:
             result.features_theta = np.array(result.features_theta)
+        
 
         return result
     

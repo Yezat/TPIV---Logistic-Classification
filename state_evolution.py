@@ -34,7 +34,7 @@ class OverlapSet():
         self.P_hat = 0
 
         self.BLEND_FPE = 0.75
-        self.TOL_FPE = 1e-5
+        self.TOL_FPE = 1e-4
         self.MIN_ITER_FPE = 10
         self.MAX_ITER_FPE = 50000
         self.INT_LIMS = 10.0
