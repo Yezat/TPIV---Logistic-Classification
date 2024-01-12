@@ -19,7 +19,7 @@ class DataModelType(Enum):
     MarginGaussian = 4
     KFeaturesModel = 5
 
-NORMALIZE_RHO = True
+NORMALIZE_RHO = False
 
 """
 -------------------- DataSet --------------------
@@ -371,13 +371,16 @@ class KFeaturesModel(AbstractDataModel):
             self.feature_sizes = feature_sizes
 
 
-            self.rho = np.mean(spec_Omega0* theta**2) 
-            self.PhiPhiT = np.diag( spec_Omega0**2 * theta**2)
-            self.Sigma_theta = np.diag(theta**2)
+            self.rho = np.mean(spec_Omega0* theta) 
+            self.PhiPhiT = np.diag( spec_Omega0**2 * theta)
+            self.Sigma_theta = np.diag(theta)
 
             sigma_w = np.zeros(d)
             sigma_delta = np.zeros(d)
             sigma_upsilon = np.zeros(d)
+
+            self.logger.info(f"d: {d}")
+
             for i in range(k):
                 sigma_w[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = Sigma_w_content[i]
                 sigma_delta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = Sigma_delta_content[i]

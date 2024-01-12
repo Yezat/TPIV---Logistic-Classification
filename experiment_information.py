@@ -265,9 +265,9 @@ class StateEvolutionExperimentInformation:
         
         self.fair_adversarial_errors: np.ndarray = np.array([(eps,fair_adversarial_error_overlaps(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
 
-        self.first_term_fair_errors: np.ndarray = np.array([(eps,first_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
-        self.second_term_fair_errors: np.ndarray = np.array([(eps,second_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
-        self.third_term_fair_errors: np.ndarray = np.array([(eps,third_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps, logger) ) for eps in task.test_against_epsilons])
+        self.first_term_fair_errors: np.ndarray = np.array([(eps,first_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps) ) for eps in task.test_against_epsilons])
+        self.second_term_fair_errors: np.ndarray = np.array([(eps,second_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps) ) for eps in task.test_against_epsilons])
+        self.third_term_fair_errors: np.ndarray = np.array([(eps,third_term_fair_error(overlaps, data_model,task.gamma_fair_error,eps) ) for eps in task.test_against_epsilons])
 
         # Training Error
         self.training_error: float = observables.training_error(task, overlaps, data_model, self.int_lims)
@@ -304,6 +304,15 @@ class StateEvolutionExperimentInformation:
         self.data_model_attackability: float = compute_data_model_attackability(data_model, overlaps)
         self.data_model_adversarial_test_errors: np.ndarray = np.array([(eps,asymptotic_adversarial_generalization_error(data_model, overlaps, eps, task.tau)) for eps in task.test_against_epsilons])
 
+        # Let's compute the two eigenvalues of Sigma_x, Sigma_theta and Sigma_x * Sigma_theta
+        self.sigmax_eigenvalues = np.array([np.linalg.eigvals(data_model.Sigma_x)[0],np.linalg.eigvals(data_model.Sigma_x)[-1]])
+        self.sigmatheta_eigenvalues = np.array([np.linalg.eigvals(data_model.Sigma_theta)[0],np.linalg.eigvals(data_model.Sigma_theta)[-1]])
+        self.xtheta_eigenvalues = np.array([np.linalg.eigvals(data_model.Sigma_x@data_model.Sigma_theta)[0],np.linalg.eigvals(data_model.Sigma_x@data_model.Sigma_theta)[-1]])
+
+
+        self.mu_usefulness = np.sqrt(2 / np.pi) * data_model.rho / np.sqrt( data_model.rho + task.tau**2 )
+        self.gamma_robustness_es: np.ndarray = np.array([(eps, self.mu_usefulness - (eps/np.sqrt(task.d))*np.trace(data_model.Sigma_theta @ data_model.Sigma_upsilon)/np.trace(data_model.Sigma_theta) ) for eps in task.test_against_epsilons])
+        self.mu_margin = np.sqrt(2 / np.pi) * overlaps.m / np.sqrt( data_model.rho + task.tau**2 )
 
         # subspace overlaps
         self.subspace_overlaps = {}
@@ -632,9 +641,9 @@ class DatabaseHandler:
                     problem_type TEXT,
                     experiment_id TEXT,
                     generalization_error REAL,
-                    adversarial_generalization_errors REAL,
-                    adversarial_generalization_errors_teacher REAL,
-                    fair_adversarial_errors REAL,
+                    adversarial_generalization_errors BLOB,
+                    adversarial_generalization_errors_teacher BLOB,
+                    fair_adversarial_errors BLOB,
                     training_loss REAL,
                     training_error REAL,
                     date TEXT,
@@ -677,9 +686,15 @@ class DatabaseHandler:
                     sigmax_subspace_ratio REAL,
                     sigmatheta_subspace_ratio REAL,
                     phiphit_subspace_ratio REAL,
-                    first_term_fair_errors REAL,
-                    second_term_fair_errors REAL,
-                    third_term_fair_errors REAL
+                    first_term_fair_errors BLOB,
+                    second_term_fair_errors BLOB,
+                    third_term_fair_errors BLOB,
+                    sigmax_eigenvalues BLOB,
+                    sigmatheta_eigenvalues BLOB,
+                    xtheta_eigenvalues BLOB,
+                    mu_usefulness REAL,
+                    gamma_robustness_es BLOB,
+                    mu_margin REAL
                 )
             ''')
             self.connection.commit()
@@ -809,7 +824,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -861,9 +876,15 @@ class DatabaseHandler:
             experiment_information.sigmax_subspace_ratio,
             experiment_information.sigmatheta_subspace_ratio,
             experiment_information.phiphit_subspace_ratio,
-            experiment_information.first_term_fair_errors,
-            experiment_information.second_term_fair_errors,
-            experiment_information.third_term_fair_errors
+            json.dumps(experiment_information.first_term_fair_errors, cls=NumpyEncoder),
+            json.dumps(experiment_information.second_term_fair_errors, cls=NumpyEncoder),
+            json.dumps(experiment_information.third_term_fair_errors, cls=NumpyEncoder),
+            json.dumps(experiment_information.sigmax_eigenvalues, cls=NumpyEncoder),
+            json.dumps(experiment_information.sigmatheta_eigenvalues, cls=NumpyEncoder),
+            json.dumps(experiment_information.xtheta_eigenvalues, cls=NumpyEncoder),
+            experiment_information.mu_usefulness,
+            json.dumps(experiment_information.gamma_robustness_es, cls=NumpyEncoder),
+            experiment_information.mu_margin
         ))
         self.connection.commit()
 
