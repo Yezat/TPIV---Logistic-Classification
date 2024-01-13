@@ -16,10 +16,21 @@ import numba as nb
 ------------------------------------------------------------------------------------------------------------------------
 """
 
-def run_optimizer(task : Task, data_model: AbstractDataModel, data:DataSet, logger):
+def run_optimizer(task : Task, data_model: AbstractDataModel, data:DataSet, logger, df_sigma):
     
+    def extract_sigma_state_evolution(dataframe, alpha, epsilon, tau, lam):
+        # extract the row for the given alpha, epsilon, tau and lam
+        row = dataframe.loc[alpha,epsilon,tau,lam]
+        # extract the mean of sigma_state_evolution
+        return float(row["mean"][0])
 
-    w_gd = sklearn_optimize(np.random.normal(0,1,(task.d,)),data.X,data.y,task.lam,task.epsilon,task.problem_type, data_model.Sigma_w, data_model.Sigma_delta, logger)
+    epsilon = task.epsilon
+
+    if task.problem_type == ProblemType.EquivalentLogistic:
+        V = extract_sigma_state_evolution(df_sigma,task.alpha,epsilon,task.tau,task.lam)
+        epsilon /= V
+
+    w_gd = sklearn_optimize(np.random.normal(0,1,(task.d,)),data.X,data.y,task.lam,epsilon,task.problem_type, data_model.Sigma_w, data_model.Sigma_delta, logger)
 
     return w_gd
 

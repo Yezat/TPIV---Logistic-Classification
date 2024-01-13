@@ -20,7 +20,7 @@ import logging
 
 
 
-def run_erm(logger, task, data_model):
+def run_erm(logger, task, data_model, df_sigma):
     """
     Generate Data, run ERM and save the results to the database
     """
@@ -29,7 +29,7 @@ def run_erm(logger, task, data_model):
 
     data = data_model.generate_data(int(task.alpha * task.d), task.tau)
 
-    weights_erm, problem_instance = run_optimizer(task, data_model, data, logger)
+    weights_erm, problem_instance = run_optimizer(task, data_model, data, logger, df_sigma)
     
     erm_information = ERMExperimentInformation(task, data_model, data, weights_erm, problem_instance, logger)
 
@@ -132,7 +132,7 @@ def get_optimal_epsilon(logger, task, data_model):
 
 
 # Define a function to process a task
-def process_task(task, logger, data_model):
+def process_task(task, logger, data_model, df_sigma):
     
     try:
         
@@ -145,7 +145,7 @@ def process_task(task, logger, data_model):
         elif task.method == "optimal_epsilon":
             task.result = get_optimal_epsilon(logger, task, data_model)
         else:
-            task.result = run_erm(logger,task, data_model)
+            task.result = run_erm(logger,task, data_model, df_sigma)
     except Exception as e:
         # log the exception
         logger.exception(e)
@@ -155,7 +155,7 @@ def process_task(task, logger, data_model):
     return task
 
 # Define the worker function
-def worker(logger, experiment):
+def worker(logger, experiment, df_sigma):
     # get the rank
     rank = MPI.COMM_WORLD.Get_rank()   
 
@@ -172,7 +172,7 @@ def worker(logger, experiment):
             data_model = experiment._load_data_model(logger, task.data_model_name, task.data_model_type, source_pickle_path = "../")
 
             # Process the task
-            result = process_task(task, logger, data_model)
+            result = process_task(task, logger, data_model, df_sigma)
             # Send the result to the master
             MPI.COMM_WORLD.send(result, dest=0, tag=task.id)
         except Exception as e:
@@ -413,7 +413,7 @@ if __name__ == "__main__":
 
     experiment = load_experiment(filename, logger)
 
-    
+    df_sigma = pd.read_pickle("sigma_state_evolution.pkl")
 
     if rank == 0:
         # run the master
@@ -422,7 +422,7 @@ if __name__ == "__main__":
     else:
 
         # run the worker
-        worker(logger, experiment)
+        worker(logger, experiment, df_sigma)
 
     MPI.Finalize()
     

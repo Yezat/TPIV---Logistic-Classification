@@ -179,6 +179,23 @@ def logistic_sigma_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsi
 
     return  0.5 * alpha * (Iplus + Iminus)
 
+
+# from jaxopt import FixedPointIteration
+
+# def T(x, theta):  # contractive map
+#   return 0.5 * x + theta
+
+# fpi = FixedPointIteration(fixed_point_fun=T, implicit_diff=True)
+# x_init = jnp.array(0.)
+# theta = jnp.array(0.5)
+
+# def fixed_point(x, theta):
+#   return fpi.run(x, theta).params
+
+# print(jax.grad(fixed_point, argnums=1)(x_init, theta))  # only gradient
+# print(jax.value_and_grad(fixed_point, argnums=1)(x_init, theta))  # both value and gradient
+
+
 @nb.njit
 def _P_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
     e = m * m / (rho * q)
