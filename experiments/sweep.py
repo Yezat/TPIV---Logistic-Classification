@@ -413,7 +413,7 @@ if __name__ == "__main__":
 
     experiment = load_experiment(filename, logger)
 
-    df_sigma = pd.read_pickle("sigma_state_evolution.pkl")
+    df_sigma = pd.read_pickle("../sigma_state_evolution.pkl")
 
     if rank == 0:
         # run the master

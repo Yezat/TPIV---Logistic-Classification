@@ -208,8 +208,10 @@ def _P_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
 
     z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)
     
-    arg = y*z_star - epsilon * P/np.sqrt(N)
-    m_derivative = sigmoid_numba(-arg)
+    # arg = y*z_star - epsilon * P/np.sqrt(N)
+    # m_derivative = sigmoid_numba(-arg)
+
+    m_derivative = (w - z_star)/sigma
 
     # m_derivative = np.exp( -arg) / (1 + np.exp( -arg) )
     # if epsilon == 0:
@@ -234,11 +236,19 @@ def _N_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
     w = np.sqrt(q) * xi
 
     z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)    
-    arg = y*z_star - epsilon * P/np.sqrt(N)
-    m_derivative = sigmoid_numba(-arg)
+
+
+    # arg = y*z_star - epsilon * P/np.sqrt(N)
+    # m_derivative = sigmoid_numba(-arg)
+
+    m_derivative = (w - z_star)/sigma
+
+
     # m_derivative = np.exp( -arg) / (1 + np.exp( -arg) )
     # if epsilon == 0:
     #     m_derivative = sigmoid_numba(-arg)
+
+
     m_derivative *= -0.5*epsilon*P/(N**(3/2))
     return z_0 * m_derivative * gaussian(xi,0,1)
 
