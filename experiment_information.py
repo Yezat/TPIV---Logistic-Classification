@@ -1,4 +1,4 @@
-from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher, fair_adversarial_error_erm
+from ERM import compute_experimental_teacher_calibration, adversarial_error_teacher, fair_adversarial_error_erm, compute_boundary_loss
 from state_evolution import generalization_error, overlap_calibration, adversarial_generalization_error_overlaps, OverlapSet, adversarial_generalization_error_overlaps_teacher, LogisticObservables, RidgeObservables, fair_adversarial_error_overlaps, var_func, compute_data_model_angle, compute_data_model_attackability, asymptotic_adversarial_generalization_error, first_term_fair_error, second_term_fair_error, third_term_fair_error
 from helpers import *
 from ERM import predict_erm, error, adversarial_error
@@ -219,6 +219,8 @@ class StateEvolutionExperimentInformation:
             observables = RidgeObservables()
         elif task.problem_type == ProblemType.Logistic:
             observables = LogisticObservables()
+        elif task.problem_type == ProblemType.EquivalentLogistic:
+            observables = LogisticObservables()
         else:
             raise Exception(f"Problem type {task.problem_type.name} not implemented")
 
@@ -275,6 +277,8 @@ class StateEvolutionExperimentInformation:
         # Loss
         self.training_loss: float = observables.training_loss(task, overlaps, data_model, self.int_lims)
         self.test_losses: np.ndarray = np.array([(eps,observables.test_loss(task, overlaps, data_model, eps, self.int_lims) ) for eps in task.test_against_epsilons ])
+
+        
         
         
         # Overlaps
@@ -313,6 +317,10 @@ class StateEvolutionExperimentInformation:
         self.mu_usefulness = np.sqrt(2 / np.pi) * data_model.rho / np.sqrt( data_model.rho + task.tau**2 )
         self.gamma_robustness_es: np.ndarray = np.array([(eps, self.mu_usefulness - (eps/np.sqrt(task.d))*np.trace(data_model.Sigma_theta @ data_model.Sigma_upsilon)/np.trace(data_model.Sigma_theta) ) for eps in task.test_against_epsilons])
         self.mu_margin = np.sqrt(2 / np.pi) * overlaps.m / np.sqrt( data_model.rho + task.tau**2 )
+
+        # Boundary Loss
+        self.boundary_loss_train: float = task.lam * task.epsilon * self.mu_margin * overlaps.P / np.sqrt(overlaps.N)
+        self.boundary_loss_test_es: np.ndarray = np.array([(eps, task.lam * eps * self.mu_margin * overlaps.A / np.sqrt(overlaps.N)) for eps in task.test_against_epsilons])
 
         # subspace overlaps
         self.subspace_overlaps = {}
@@ -497,6 +505,13 @@ class ERMExperimentInformation:
         yhat_gd_train = predict_erm(data.X,weights)
         self.training_error: float = error(data.y,yhat_gd_train)       
         
+        # Training boundary error
+        # TODO
+
+        # boundary loss
+        self.boundary_loss_train: float = compute_boundary_loss(data.y, data.X, task.epsilon, data_model.Sigma_delta, weights, task.lam)
+        self.boundary_loss_test_es: np.ndarray = np.array( [(eps,compute_boundary_loss(data.y_test, data.X_test, eps, data_model.Sigma_upsilon, weights, task.lam)) for eps in task.test_against_epsilons ])
+
 
         # Loss
         self.training_loss: float = problem_instance.training_loss(weights,data.X,data.y,task.epsilon,Sigma_delta=data_model.Sigma_delta)       
@@ -694,7 +709,9 @@ class DatabaseHandler:
                     xtheta_eigenvalues BLOB,
                     mu_usefulness REAL,
                     gamma_robustness_es BLOB,
-                    mu_margin REAL
+                    mu_margin REAL,
+                    boundary_loss_train REAL,
+                    boundary_loss_test_es BLOB
                 )
             ''')
             self.connection.commit()
@@ -770,7 +787,9 @@ class DatabaseHandler:
                     subspace_overlaps_ratio BLOB,
                     data_model_type TEXT,
                     data_model_name TEXT,
-                    data_model_description TEXT
+                    data_model_description TEXT,
+                    boundary_loss_train REAL,
+                    boundary_loss_test_es BLOB
                 )
             ''')
             self.connection.commit()
@@ -824,7 +843,7 @@ class DatabaseHandler:
 
     def insert_state_evolution(self, experiment_information: StateEvolutionExperimentInformation):
         self.cursor.execute(f'''
-        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
+        INSERT INTO {STATE_EVOLUTION_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             experiment_information.id,
             experiment_information.code_version,
             experiment_information.duration,
@@ -884,7 +903,9 @@ class DatabaseHandler:
             json.dumps(experiment_information.xtheta_eigenvalues, cls=NumpyEncoder),
             experiment_information.mu_usefulness,
             json.dumps(experiment_information.gamma_robustness_es, cls=NumpyEncoder),
-            experiment_information.mu_margin
+            experiment_information.mu_margin,
+            experiment_information.boundary_loss_train,
+            json.dumps(experiment_information.boundary_loss_test_es, cls=NumpyEncoder)
         ))
         self.connection.commit()
 
@@ -908,7 +929,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -945,7 +966,9 @@ class DatabaseHandler:
             json.dumps(experiment_information.subspace_overlaps_ratio, cls=NumpyEncoder),
             experiment_information.data_model_type.name,
             experiment_information.data_model_name,
-            experiment_information.data_model_description
+            experiment_information.data_model_description,
+            experiment_information.boundary_loss_train,
+            json.dumps(experiment_information.boundary_loss_test_es, cls=NumpyEncoder)
         ))
         self.connection.commit()
 

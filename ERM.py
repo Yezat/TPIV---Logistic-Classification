@@ -54,7 +54,7 @@ def preprocessing(coef, X, y, lam, epsilon, problem_type: ProblemType):
 
     if problem_type == ProblemType.Ridge:
         target = y
-    elif problem_type == ProblemType.Logistic:    
+    elif problem_type == ProblemType.Logistic or problem_type == ProblemType.EquivalentLogistic:    
         mask = y == 1
         y_bin = np.ones(y.shape, dtype=X.dtype)
         y_bin[~mask] = 0.0
@@ -81,6 +81,10 @@ def sklearn_optimize(coef,X,y,lam,epsilon, problem_type: ProblemType, covariance
         loss_gd = problem_instance.loss_gradient
     elif problem_type == ProblemType.Logistic:
         problem_instance = LogisticProblem()
+        loss_gd = problem_instance.loss_gradient
+    elif problem_type == ProblemType.EquivalentLogistic:
+        problem_instance = EquivalentLogisticProblem()
+        epsilon *= lam
         loss_gd = problem_instance.loss_gradient
     else:
         raise Exception(f"Problem type {problem_type} not implemented")
@@ -202,7 +206,8 @@ class LogisticProblem:
         if epsilon == 0:
             assert np.linalg.norm(adv_grad_summand) == 0    
 
-        
+
+
         grad = np.empty_like(coef, dtype=weights.dtype)
         grad[:n_features] = X.T @ gradient_per_sample / np.sqrt(n_features) +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
 
@@ -303,6 +308,87 @@ class LogisticProblem:
 
 """
 ------------------------------------------------------------------------------------------------------------------------
+    Logistic Losses and Gradients
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+class EquivalentLogisticProblem:
+
+    @staticmethod
+    def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta):
+        n_features = X.shape[1]
+        weights = coef
+        raw_prediction = X @ weights / np.sqrt(n_features)    
+
+        l2_reg_strength /= 2
+
+        wSw = weights.dot(sigma_delta@weights)
+        nww = np.sqrt(weights@weights)
+
+        optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+
+        loss = EquivalentLogisticProblem.compute_loss(raw_prediction,optimal_attack,y)
+        loss = loss.sum()
+        loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
+
+
+        gradient_per_sample = EquivalentLogisticProblem.compute_gradient(raw_prediction,optimal_attack,y)   
+
+        derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+
+        adv_grad_summand = np.outer(raw_prediction, derivative_optimal_attack).sum(axis=0)
+
+
+        # if epsilon is zero, assert that the norm of adv_grad_summand is zero
+        if epsilon == 0:
+            assert np.linalg.norm(adv_grad_summand) == 0    
+                
+
+        
+        grad = np.empty_like(coef, dtype=weights.dtype)
+        grad[:n_features] = X.T @ gradient_per_sample / np.sqrt(n_features) +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
+
+        return loss, grad
+
+    """
+    ------------------------------------------------------------------------------------------------------------------------
+        Loss
+    ------------------------------------------------------------------------------------------------------------------------
+    """
+
+    @staticmethod
+    def compute_loss(z,e,y):
+        return log1pexp(z) + z * ( e - y )
+
+    @staticmethod
+    def training_loss_with_regularization(w,X,y,lam,epsilon,covariance_prior = None):
+        z = X@w
+        if covariance_prior is None:
+            covariance_prior = np.eye(X.shape[1])
+        return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() + 0.5 * lam * w@covariance_prior@w )/X.shape[0]
+
+    @staticmethod
+    def training_loss(w,X,y,epsilon, Sigma_delta):
+        z = X@w/np.sqrt(X.shape[1])
+        attack = epsilon/np.sqrt(X.shape[1]) * ( w.dot(Sigma_delta@w) / np.sqrt(w@w)  )
+        return (adversarial_loss(y,z,attack).sum())/X.shape[0]
+
+
+    """
+    ------------------------------------------------------------------------------------------------------------------------
+        Gradient
+    ------------------------------------------------------------------------------------------------------------------------
+    """
+
+    @staticmethod
+    def compute_gradient(z,e,y):
+        gradient_per_sample = sigmoid(z) + (e-y)
+        return gradient_per_sample
+
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
     Errors
 ------------------------------------------------------------------------------------------------------------------------
 """
@@ -315,6 +401,36 @@ def adversarial_error(y, Xtest, w_gd, epsilon, Sigma_upsilon):
     nww = np.sqrt(w_gd@w_gd)
 
     return error(y, np.sign( Xtest@w_gd/np.sqrt(d) - y*epsilon/np.sqrt(d) * wSw/nww  ))
+
+def compute_boundary_loss(y, Xtest, epsilon, sigma_delta, w_gd, l2_reg_strength):
+    d = Xtest.shape[1]
+    wSw = w_gd.dot(sigma_delta@w_gd)
+    nww = np.sqrt(w_gd@w_gd)
+
+    optimal_attack = epsilon/np.sqrt(d) *  wSw / nww
+
+    raw_prediction = Xtest @ w_gd / np.sqrt(d)
+
+    # log shape of raw_prediction
+    # logger.info(f"raw_prediction.shape = {raw_prediction.shape}")
+
+    # compute y * raw_prediction elementwise and sum over all samples
+    y_raw_prediction = y * raw_prediction
+    y_raw_prediction_sum = y_raw_prediction.sum()
+
+    # log y_raw_prediction_sum shape
+    # logger.info(f"y_raw_prediction_sum.shape = {y_raw_prediction_sum.shape}")
+
+
+    boundary_loss = y_raw_prediction_sum*optimal_attack*l2_reg_strength
+
+    # # log boundary_loss shape
+    # logger.info(f"boundary_loss.shape = {boundary_loss.shape}")
+
+    # assert boundary_loss to be a scalar
+    assert np.isscalar(boundary_loss)
+
+    return boundary_loss
 
 def adversarial_error_teacher(y, Xtest, w_gd, teacher_weights, epsilon, data_model):
     if teacher_weights is None:

@@ -145,6 +145,7 @@ def gaussian(x : float, mean : float = 0, var : float = 1) -> float:
 class ProblemType(Enum):
     Logistic = 0
     Ridge = 1
+    EquivalentLogistic = 2
 
 class Task:
     def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilons: np.ndarray, lam, tau,d,ps, dp, data_model_type: DataModelType, data_model_name: str, gamma_fair_error: float):

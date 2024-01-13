@@ -276,7 +276,7 @@ def var_hat_func(task, overlaps, data_model, logger=None):
         overlaps.sigma_hat = ridge_sigma_hat_func(task,overlaps,data_model,logger)
         overlaps.P_hat = ridge_P_hat_func(task,overlaps,data_model,logger)
         overlaps.N_hat = ridge_N_hat_func(task,overlaps,data_model,logger)
-    elif task.problem_type == ProblemType.Logistic:
+    elif task.problem_type == ProblemType.Logistic or task.problem_type == ProblemType.EquivalentLogistic:
         overlaps.m_hat = logistic_m_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)/np.sqrt(data_model.gamma)
         overlaps.q_hat = logistic_q_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)
         overlaps.sigma_hat = logistic_sigma_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS,logger=logger)
