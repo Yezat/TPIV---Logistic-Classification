@@ -180,21 +180,6 @@ def logistic_sigma_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsi
     return  0.5 * alpha * (Iplus + Iminus)
 
 
-# from jaxopt import FixedPointIteration
-
-# def T(x, theta):  # contractive map
-#   return 0.5 * x + theta
-
-# fpi = FixedPointIteration(fixed_point_fun=T, implicit_diff=True)
-# x_init = jnp.array(0.)
-# theta = jnp.array(0.5)
-
-# def fixed_point(x, theta):
-#   return fpi.run(x, theta).params
-
-# print(jax.grad(fixed_point, argnums=1)(x_init, theta))  # only gradient
-# print(jax.value_and_grad(fixed_point, argnums=1)(x_init, theta))  # both value and gradient
-
 
 @nb.njit
 def _P_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: float, epsilon: float, P: float, N: float, sigma: float) -> float:
@@ -207,17 +192,11 @@ def _P_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
     w = np.sqrt(q) * xi
 
     z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)
-    
-    # arg = y*z_star - epsilon * P/np.sqrt(N)
-    # m_derivative = sigmoid_numba(-arg)
 
-    m_derivative = (w - z_star)/sigma
+    m_derivative = -(z_star - w)/sigma
 
-    # m_derivative = np.exp( -arg) / (1 + np.exp( -arg) )
-    # if epsilon == 0:
-    #     m_derivative = sigmoid_numba(-arg)
 
-    m_derivative *= epsilon / np.sqrt(N)
+    m_derivative *= -y*epsilon / np.sqrt(N)
 
     return z_0 * m_derivative * gaussian(xi,0,1)
     
@@ -238,18 +217,10 @@ def _N_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
     z_star = evaluate_proximal(sigma,y,epsilon*P/np.sqrt(N),w)    
 
 
-    # arg = y*z_star - epsilon * P/np.sqrt(N)
-    # m_derivative = sigmoid_numba(-arg)
-
-    m_derivative = (w - z_star)/sigma
+    m_derivative = -(z_star - w)/sigma
 
 
-    # m_derivative = np.exp( -arg) / (1 + np.exp( -arg) )
-    # if epsilon == 0:
-    #     m_derivative = sigmoid_numba(-arg)
-
-
-    m_derivative *= -0.5*epsilon*P/(N**(3/2))
+    m_derivative *= y*0.5*epsilon*P/(N**(3/2))
     return z_0 * m_derivative * gaussian(xi,0,1)
 
 def logistic_N_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
