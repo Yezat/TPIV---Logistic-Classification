@@ -12,3 +12,4 @@ build/
 Results/*
 experiments/sweep_experiment.json
 experiments/**
+Report/

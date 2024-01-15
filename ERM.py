@@ -65,11 +65,13 @@ def preprocessing(coef, X, y, lam, epsilon, problem_type: ProblemType):
 
     if problem_type == ProblemType.Ridge:
         target = y
-    elif problem_type == ProblemType.Logistic or problem_type == ProblemType.EquivalentLogistic:    
+    elif problem_type == ProblemType.Logistic:    
         mask = y == 1
         y_bin = np.ones(y.shape, dtype=X.dtype)
         y_bin[~mask] = 0.0
         target = y_bin
+    elif problem_type == ProblemType.EquivalentLogistic:
+        target = y
     else:
         raise Exception(f"Preprocessing not implemented for problem type {problem_type}")
     return w0, X, target, lam, epsilon
@@ -345,9 +347,9 @@ class EquivalentLogisticProblem:
 
         gradient_per_sample = EquivalentLogisticProblem.compute_gradient(raw_prediction,optimal_attack,y)   
 
-        derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
 
-        adv_grad_summand = np.outer(raw_prediction, derivative_optimal_attack).sum(axis=0)
+        adv_grad_summand = epsilon*np.sum(X * y / np.sqrt(n_features),axis=1)
+        assert adv_grad_summand.shape == (n_features,), f"adv_grad_summand.shape = {adv_grad_summand.shape}"
 
 
         # if epsilon is zero, assert that the norm of adv_grad_summand is zero
@@ -369,7 +371,7 @@ class EquivalentLogisticProblem:
 
     @staticmethod
     def compute_loss(z,e,y):
-        return log1pexp(z) + z * ( e - y )
+        return log1pexp(-y*z) + e*y*z
 
     @staticmethod
     def training_loss_with_regularization(w,X,y,lam,epsilon,covariance_prior = None):
@@ -393,7 +395,7 @@ class EquivalentLogisticProblem:
 
     @staticmethod
     def compute_gradient(z,e,y):
-        gradient_per_sample = sigmoid(z) + (e-y)
+        gradient_per_sample = sigmoid(-y*z) 
         return gradient_per_sample
 
 
