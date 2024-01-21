@@ -70,7 +70,7 @@ def preprocessing(coef, X, y, lam, epsilon, problem_type: ProblemType):
         y_bin = np.ones(y.shape, dtype=X.dtype)
         y_bin[~mask] = 0.0
         target = y_bin
-    elif problem_type == ProblemType.EquivalentLogistic:
+    elif problem_type == ProblemType.EquivalentLogistic or ProblemType.PerturbedBoundaryLogistic:
         target = y
     else:
         raise Exception(f"Preprocessing not implemented for problem type {problem_type}")
@@ -99,6 +99,9 @@ def sklearn_optimize(coef,X,y,lam,epsilon, problem_type: ProblemType, covariance
         problem_instance = EquivalentLogisticProblem()
         epsilon *= lam
         loss_gd = problem_instance.loss_gradient
+    elif problem_type == ProblemType.PerturbedBoundaryLogistic:
+        problem_instance = PerturbedBoundaryLogisticProblem()
+        loss_gd = problem_instance.loss_gradient
     else:
         raise Exception(f"Problem type {problem_type} not implemented")
 
@@ -110,7 +113,7 @@ def sklearn_optimize(coef,X,y,lam,epsilon, problem_type: ProblemType, covariance
                     w0,
                     method=method,
                     jac=True,
-                    args=(X, target, lam, epsilon,covariance_prior, sigma_delta),
+                    args=(X, target, lam, epsilon,covariance_prior, sigma_delta, logger),
                     options={"maxiter": 1000, "disp": False},
                 )
         
@@ -127,7 +130,7 @@ def sklearn_optimize(coef,X,y,lam,epsilon, problem_type: ProblemType, covariance
 class RidgeProblem:
 
     @staticmethod
-    def loss_gradient(coef, X, y, l2_reg_strength, epsilon, covariance_prior, sigma_delta):
+    def loss_gradient(coef, X, y, l2_reg_strength, epsilon, covariance_prior, sigma_delta, logger):
         
         loss = RidgeProblem.compute_loss(coef,X,y,l2_reg_strength,epsilon,covariance_prior,sigma_delta)
 
@@ -191,7 +194,7 @@ class RidgeProblem:
 class LogisticProblem:
 
     @staticmethod
-    def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta):
+    def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta, logger):
         n_features = X.shape[1]
         weights = coef
         raw_prediction = X @ weights / np.sqrt(n_features)    
@@ -217,7 +220,7 @@ class LogisticProblem:
 
         # if epsilon is zero, assert that the norm of adv_grad_summand is zero
         if epsilon == 0:
-            assert np.linalg.norm(adv_grad_summand) == 0    
+            assert np.linalg.norm(adv_grad_summand) == 0, f"derivative_optimal_attack {np.linalg.norm(derivative_optimal_attack)}, epsilon_gradient_per_sample {np.linalg.norm(epsilon_gradient_per_sample)}"
 
 
 
@@ -328,7 +331,7 @@ class LogisticProblem:
 class EquivalentLogisticProblem:
 
     @staticmethod
-    def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta):
+    def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta, logger):
         n_features = X.shape[1]
         weights = coef
         raw_prediction = X @ weights / np.sqrt(n_features)    
@@ -398,6 +401,111 @@ class EquivalentLogisticProblem:
         gradient_per_sample = sigmoid(-y*z) 
         return gradient_per_sample
 
+"""
+------------------------------------------------------------------------------------------------------------------------
+    Perturbed Boundary Logistic Problem
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+class PerturbedBoundaryLogisticProblem():
+
+    @staticmethod
+    def loss_gradient(coef, X, y,l2_reg_strength, epsilon, covariance_prior, sigma_delta, logger):
+        n_features = X.shape[1]
+        weights = coef
+        raw_prediction = X @ weights / np.sqrt(n_features)    
+
+        l2_reg_strength /= 2
+
+        wSw = weights.dot(sigma_delta@weights)
+        nww = np.sqrt(weights@weights)
+
+        optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+
+        shifted_margins = y*raw_prediction - optimal_attack
+
+        # mask the shifted margins where they are positive
+        mask_positive = shifted_margins > 0
+
+        # compute corresponding subsets
+        shifted_margins_positive = shifted_margins[mask_positive]
+        shifted_margins_negative = shifted_margins[~mask_positive]
+
+
+        loss = PerturbedBoundaryLogisticProblem.compute_loss(shifted_margins_positive, shifted_margins_negative)
+        loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
+
+
+        positive_gradient_per_sample, negative_gradient_per_sample = PerturbedBoundaryLogisticProblem.compute_gradient(shifted_margins_positive, shifted_margins_negative)   
+
+        derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+
+        positive_adv_grad_summand = np.outer(positive_gradient_per_sample, derivative_optimal_attack).sum(axis=0)
+        negative_adv_grad_summand = np.outer(negative_gradient_per_sample, derivative_optimal_attack).sum(axis=0)
+
+
+        # if epsilon is zero, assert that the norm of adv_grad_summand is zero
+        if epsilon == 0:
+            assert np.linalg.norm(positive_adv_grad_summand) == 0, f"derivative_optimal_attack {np.linalg.norm(derivative_optimal_attack)}, gradient_per_sample {np.linalg.norm(positive_gradient_per_sample)}"
+            assert np.linalg.norm(negative_adv_grad_summand) == 0, f"derivative_optimal_attack {np.linalg.norm(derivative_optimal_attack)}, gradient_per_sample {np.linalg.norm(negative_gradient_per_sample)}"
+
+
+        positive_data = X[mask_positive]
+        negative_data = X[~mask_positive]
+
+        positive_labels = y[mask_positive]
+        negative_labels = y[~mask_positive]
+
+        positive_label_data_product = positive_labels[:,np.newaxis] * positive_data / np.sqrt(n_features)
+        positive_contribution= positive_label_data_product.T @ positive_gradient_per_sample
+        # log the shape
+        # logger.info(f"positive_contribution.shape = {positive_contribution.shape}")
+
+        negative_label_data_product = negative_labels[:,np.newaxis] * negative_data / np.sqrt(n_features)
+        negative_contribution= negative_label_data_product.T @ negative_gradient_per_sample
+        # log the shape
+        # logger.info(f"negative_contribution.shape = {negative_contribution.shape}")
+
+        grad = np.empty_like(coef, dtype=weights.dtype)
+        grad[:n_features] = positive_contribution + negative_contribution +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + positive_adv_grad_summand + negative_adv_grad_summand
+
+        return loss, grad
+
+    """
+    ------------------------------------------------------------------------------------------------------------------------
+        Loss
+    ------------------------------------------------------------------------------------------------------------------------
+    """
+
+    @staticmethod
+    def compute_loss(shifted_margins_positive, shifted_margins_negative):
+        return np.sum(log1pexp(-shifted_margins_positive)) + np.sum( np.log(2) -0.5*shifted_margins_negative + (1/8)*shifted_margins_negative**2)
+
+    @staticmethod
+    def training_loss_with_regularization(w,X,y,lam,epsilon,covariance_prior = None):
+        z = X@w
+        if covariance_prior is None:
+            covariance_prior = np.eye(X.shape[1])
+        return (adversarial_loss(y,z,epsilon/np.sqrt(X.shape[1]),w@w).sum() + 0.5 * lam * w@covariance_prior@w )/X.shape[0]
+
+    @staticmethod
+    def training_loss(w,X,y,epsilon, Sigma_delta):
+        z = X@w/np.sqrt(X.shape[1])
+        attack = epsilon/np.sqrt(X.shape[1]) * ( w.dot(Sigma_delta@w) / np.sqrt(w@w)  )
+        return (adversarial_loss(y,z,attack).sum())/X.shape[0]
+
+
+    """
+    ------------------------------------------------------------------------------------------------------------------------
+        Gradient
+    ------------------------------------------------------------------------------------------------------------------------
+    """
+
+    @staticmethod
+    def compute_gradient(shifted_margins_positive, shifted_margins_negative):
+        positive_part = -sigmoid(-shifted_margins_positive)
+        negative_part = -0.5 + shifted_margins_negative/4
+        return positive_part, negative_part
 
 
 """

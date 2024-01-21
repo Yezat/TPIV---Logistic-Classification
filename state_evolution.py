@@ -274,7 +274,7 @@ def var_hat_func(task, overlaps, data_model, logger=None):
         overlaps.sigma_hat = ridge_sigma_hat_func(task,overlaps,data_model,logger)
         overlaps.P_hat = ridge_P_hat_func(task,overlaps,data_model,logger)
         overlaps.N_hat = ridge_N_hat_func(task,overlaps,data_model,logger)
-    elif task.problem_type == ProblemType.Logistic or task.problem_type == ProblemType.EquivalentLogistic:
+    elif task.problem_type == ProblemType.Logistic or task.problem_type == ProblemType.EquivalentLogistic or task.problem_type == ProblemType.PerturbedBoundaryLogistic:
         overlaps.m_hat = logistic_m_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)/np.sqrt(data_model.gamma)
         overlaps.q_hat = logistic_q_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)
         overlaps.sigma_hat = logistic_sigma_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS,logger=logger)
@@ -473,6 +473,12 @@ def adversarial_generalization_error_overlaps(overlaps: OverlapSet, task: Task, 
     erferfc = 0.5 * erf(b/np.sqrt(2)) * erfc(-a*b/np.sqrt(2))
 
     gen_error = owen + erferfc 
+
+
+    angle = generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
+
+    def integrand(xi):
+        return (1/np.sqrt(np.pi*2)) * np.exp(-(xi**2)/(2*data_model.rho)) * (1 + erf(xi/(np.sqrt(2)*task.tau))) * gaussian(xi,0,1)
 
     return gen_error
 

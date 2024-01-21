@@ -202,7 +202,7 @@ data_model_definitions = []
 
 # data_models_description = f"RhoNormalisationDelta{delta_scale}_10"
 
-data_models_description = f"EquivalentLogistic"
+data_models_description = f"PerturbedLogistic"
 
 data_model_type = DataModelType.KFeaturesModel
 feature_ratios = np.array([0.5,0.5])
@@ -252,10 +252,10 @@ state_evolution_repetitions: int = 1
 erm_repetitions: int = 2
 
 # sweeps
-alphas: np.ndarray = np.array([1,2]) # np.logspace(-0.8,1.5,6) #np.linspace(0.1,10,15)  #
-epsilons: np.ndarray = np.array([0.1,0.2]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.array([1,2,3]) # np.logspace(-0.8,1.5,6) #np.linspace(0.1,10,15)  #
+epsilons: np.ndarray = np.array([0.0, 0.2]) # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.1,0.2])
+test_against_epsilons: np.ndarray = np.array([0.2])
 taus: np.ndarray = np.array([0.05])
 
 # round the lambdas, epsilons and alphas for 4 digits
@@ -276,7 +276,7 @@ dp: float = 0.01
 experiment_type: ExperimentType = ExperimentType.Sweep
 # experiment_type: ExperimentType = ExperimentType.SweepAtOptimalLambdaAdversarialTestError
 experiment_name: str = f"{data_models_description}"
-problem_types: list[ProblemType] = [ProblemType.EquivalentLogistic]
+problem_types: list[ProblemType] = [ProblemType.PerturbedBoundaryLogistic]
 
 # Fair error
 gamma_fair_error: float = 0.01

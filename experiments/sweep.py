@@ -255,7 +255,7 @@ def master(num_processes, logger, experiment):
                             if ExperimentType.OptimalLambda == experiment.experiment_type:
                                 
                                 
-                                optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name, problem)
+                                optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,data_model_type, data_model_name, problem)
 
                                 initial_lambda = 1
 
@@ -265,7 +265,7 @@ def master(num_processes, logger, experiment):
 
                             elif ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
                                 
-                                optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,experiment.data_model_type, experiment.data_model_name, problem)
+                                optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,data_model_type,data_model_name, problem)
 
                                 initial_lambda = 1
 
@@ -278,7 +278,7 @@ def master(num_processes, logger, experiment):
                                 lambdas = experiment.lambdas
                                 if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
 
-                                    optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,experiment.data_model_type, experiment.data_model_name, problem)
+                                    optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,data_model_type, experiment, problem)
 
                                     if not optimal_result.get_key() in optimal_lambdas.keys():
                                         logger.info(f"The key is '{optimal_result.get_key()}'")
@@ -289,7 +289,7 @@ def master(num_processes, logger, experiment):
 
                                 elif ExperimentType.SweepAtOptimalLambdaAdversarialTestError == experiment.experiment_type:
                                 
-                                    optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,experiment.data_model_type, experiment.data_model_name, problem)
+                                    optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,data_model_type,data_model_name, problem)
 
                                     if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
                                         logger.info(f"The key is '{optimal_result.get_key()}'")

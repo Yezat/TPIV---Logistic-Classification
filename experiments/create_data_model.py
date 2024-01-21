@@ -1,4 +1,4 @@
-# usage: mpiexec -n 5 python sweep.py sweep_experiment.json
+# usage: mpiexec -n 5 python create_data_model.py sweep_experiment.json
 
 from mpi4py import MPI
 from tqdm import tqdm

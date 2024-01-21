@@ -990,3 +990,14 @@ alpha,epsilon,tau,lambda,data_model_type,data_model_name,problem_type
 9.47260000,0.40000000,0.00000000,0.00008896,KFeaturesModel,VanillaGaussianTimes10,Logistic
 30.77760000,0.00000000,0.00000000,0.11745730,KFeaturesModel,VanillaGaussianTimes1000,Logistic
 30.77760000,0.20000000,0.00000000,0.12019690,KFeaturesModel,VanillaGaussianTimes1000,Logistic
+10.00000000,0.00000000,0.05000000,0.00209872,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___OptimalRegularisation,Logistic
+10.00000000,0.05000000,0.05000000,0.00163162,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___OptimalRegularisation,Logistic
+10.00000000,0.01000000,0.05000000,0.00205933,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___OptimalRegularisation,Logistic
+10.00000000,0.02000000,0.05000000,0.00199462,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___OptimalRegularisation,Logistic
+10.00000000,0.07000000,0.05000000,0.00124886,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___OptimalRegularisation,Logistic
+1.00000000,0.00000000,0.05000000,0.03250313,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___PerturbedLogistic,PerturbedBoundaryLogistic
+2.00000000,0.00000000,0.05000000,0.01723438,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___PerturbedLogistic,PerturbedBoundaryLogistic
+1.00000000,0.20000000,0.05000000,0.03284802,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___PerturbedLogistic,PerturbedBoundaryLogistic
+2.00000000,0.20000000,0.05000000,0.01627426,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___PerturbedLogistic,PerturbedBoundaryLogistic
+3.00000000,0.00000000,0.05000000,0.01027310,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___PerturbedLogistic,PerturbedBoundaryLogistic
+3.00000000,0.20000000,0.05000000,0.00813489,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___PerturbedLogistic,PerturbedBoundaryLogistic

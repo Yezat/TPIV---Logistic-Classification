@@ -221,6 +221,8 @@ class StateEvolutionExperimentInformation:
             observables = LogisticObservables()
         elif task.problem_type == ProblemType.EquivalentLogistic:
             observables = LogisticObservables()
+        elif task.problem_type == ProblemType.PerturbedBoundaryLogistic:
+            observables = LogisticObservables()
         else:
             raise Exception(f"Problem type {task.problem_type.name} not implemented")
 

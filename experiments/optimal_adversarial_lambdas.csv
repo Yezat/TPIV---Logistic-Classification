@@ -679,3 +679,4 @@ alpha,epsilon,test_epsilon,tau,lambda,data_model_type,data_model_name,problem_ty
 6.39560000,0.60000000,0.20000000,0.00000000,-0.09785208,VanillaGaussian,VanillaGaussian,Logistic
 100.00000000,0.40000000,0.20000000,0.00000000,-0.24901164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingFirstHalf_[0.5 0.5]_[10  1]_[1 1],Logistic
 100.00000000,0.40000000,0.20000000,0.00000000,-0.24901164,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_[0.5 0.5]_[10  1]_[1 1],Logistic
+10.00000000,0.02000000,0.20000000,0.05000000,-0.02804490,KFeaturesModel,KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_[0.5 0.5]_[1 1]_[1 1]_SD_1_1_SU_1_1___OptimalRegularisation,Logistic
