@@ -25,10 +25,11 @@ class ExperimentType(Enum):
     SweepAtOptimalLambdaAdversarialTestError = 5
 
 class DataModelDefinition:
-    def __init__(self,d : int, delete_existing: bool, normalize_matrices: bool, Sigma_w_content: np.ndarray, Sigma_delta_content: np.ndarray, Sigma_upsilon_content: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None) -> None:
+    def __init__(self,d : int, delete_existing: bool, normalize_matrices: bool, Sigma_w_content: np.ndarray, Sigma_delta_content: np.ndarray, Sigma_upsilon_content: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None, attack_equal_defense: bool = False, sigma_delta_process_type: SigmaDeltaProcessType= SigmaDeltaProcessType.UseContent) -> None:
         self.delete_existing: bool = delete_existing
         self.normalize_matrices: bool = normalize_matrices
         self.Sigma_w_content: np.ndarray = Sigma_w_content
+        self.attack_equal_defense: bool = attack_equal_defense
         self.Sigma_delta_content: np.ndarray = Sigma_delta_content
         self.Sigma_upsilon_content: np.ndarray = Sigma_upsilon_content
         self.name: str = name
@@ -38,6 +39,7 @@ class DataModelDefinition:
         self.feature_ratios: np.ndarray = feature_ratios
         self.features_x: np.ndarray = features_x
         self.features_theta: np.ndarray = features_theta
+        self.sigma_delta_process_type: SigmaDeltaProcessType = sigma_delta_process_type
 
     @classmethod
     def from_name(cls, name: str, data_model_type: DataModelType, base_path = "../"):
@@ -223,6 +225,8 @@ class StateEvolutionExperimentInformation:
             observables = LogisticObservables()
         elif task.problem_type == ProblemType.PerturbedBoundaryLogistic:
             observables = LogisticObservables()
+        elif task.problem_type ==  task.problem_type == ProblemType.PerturbedBoundaryCoefficientLogistic:
+            observables = LogisticObservables()
         else:
             raise Exception(f"Problem type {task.problem_type.name} not implemented")
 
@@ -282,7 +286,6 @@ class StateEvolutionExperimentInformation:
 
         
         
-        
         # Overlaps
         self.sigma: float = overlaps.sigma
         self.q: float = overlaps.q
@@ -331,6 +334,10 @@ class StateEvolutionExperimentInformation:
             feature_sizes = data_model.feature_sizes
         else:
             feature_sizes = [int(0)]
+
+        # as it is now interesting to see in power-laws...
+        feature_sizes = [int(0)]
+
         d = task.d
 
         Sigmas = []
@@ -353,7 +360,7 @@ class StateEvolutionExperimentInformation:
             m, q, sigma, A, N, P, F = var_func(task, overlaps, data_model, logger, slice_from, slice_to)
 
             # log the computed overlaps
-            logger.info(f"Subspace {i}: m={m}, q={q}, sigma={sigma}, A={A}, N={N}, P={P}, F={F}")
+            # logger.info(f"Subspace {i}: m={m}, q={q}, sigma={sigma}, A={A}, N={N}, P={P}, F={F}")
             
             Sigmas.append(sigma)
             ms.append(m)
@@ -385,7 +392,7 @@ class StateEvolutionExperimentInformation:
         subspace_strengths_X = [data_model.Sigma_x[0,0], data_model.Sigma_x[-1,-1]]
         subspace_strengths_delta = [data_model.Sigma_delta[0,0], data_model.Sigma_delta[-1,-1]]
         subspace_strengths_upsilon = [data_model.Sigma_upsilon[0,0], data_model.Sigma_upsilon[-1,-1]]
-        subspace_strengths_theta = [data_model.Sigma_theta[0,0], data_model.Sigma_theta[-1,-1]]
+        subspace_strengths_theta = [data_model.theta[0], data_model.theta[-1]]
         subspace_strengths_PhiPhiT = [data_model.spec_PhiPhit[0], data_model.spec_PhiPhit[-1]]
         
         # compute the ratio of each subspace overlap to its strength
@@ -510,6 +517,8 @@ class ERMExperimentInformation:
         # Training boundary error
         # TODO
 
+        self.V_i_w = data_model.V_i @ weights
+
         # boundary loss
         self.boundary_loss_train: float = compute_boundary_loss(data.y, data.X, task.epsilon, data_model.Sigma_delta, weights, task.lam)
         self.boundary_loss_test_es: np.ndarray = np.array( [(eps,compute_boundary_loss(data.y_test, data.X_test, eps, data_model.Sigma_upsilon, weights, task.lam)) for eps in task.test_against_epsilons ])
@@ -526,6 +535,9 @@ class ERMExperimentInformation:
             feature_sizes = data_model.feature_sizes
         else:
             feature_sizes = [int(0)]
+
+        # for power-laws, to make the output small
+        feature_sizes = [int(0)]
         d = task.d
 
         rhos = []
@@ -791,7 +803,8 @@ class DatabaseHandler:
                     data_model_name TEXT,
                     data_model_description TEXT,
                     boundary_loss_train REAL,
-                    boundary_loss_test_es BLOB
+                    boundary_loss_test_es BLOB,
+                    V_i_w Real
                 )
             ''')
             self.connection.commit()
@@ -931,7 +944,7 @@ class DatabaseHandler:
     def insert_erm(self, experiment_information: ERMExperimentInformation):
         # self.logger.info(str(experiment_information))
         self.cursor.execute(f'''
-        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO {ERM_TABLE} VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             experiment_information.id,
             experiment_information.duration,
@@ -970,7 +983,8 @@ class DatabaseHandler:
             experiment_information.data_model_name,
             experiment_information.data_model_description,
             experiment_information.boundary_loss_train,
-            json.dumps(experiment_information.boundary_loss_test_es, cls=NumpyEncoder)
+            json.dumps(experiment_information.boundary_loss_test_es, cls=NumpyEncoder),
+            experiment_information.V_i_w
         ))
         self.connection.commit()
 
@@ -1087,5 +1101,15 @@ class NumpyDecoder(json.JSONDecoder):
 
             # Replace the string value with the enumeration type
             obj['problem_type'] = problem_type
+
+        if 'sigma_delta_process_type' in obj:
+            # Get the value of 'sigma_delta_process_type'
+            sigma_delta_process_type_str = obj['sigma_delta_process_type']
+
+            # Map the string value to the enumeration type
+            sigma_delta_process_type = SigmaDeltaProcessType[sigma_delta_process_type_str]
+
+            # Replace the string value with the enumeration type
+            obj['sigma_delta_process_type'] = sigma_delta_process_type
 
         return obj

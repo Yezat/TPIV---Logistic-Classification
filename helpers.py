@@ -147,6 +147,7 @@ class ProblemType(Enum):
     Ridge = 1
     EquivalentLogistic = 2
     PerturbedBoundaryLogistic = 3
+    PerturbedBoundaryCoefficientLogistic = 4
 
 class Task:
     def __init__(self, id, experiment_id, method, problem_type: ProblemType, alpha, epsilon, test_against_epsilons: np.ndarray, lam, tau,d,ps, dp, data_model_type: DataModelType, data_model_name: str, gamma_fair_error: float):

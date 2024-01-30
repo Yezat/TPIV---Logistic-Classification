@@ -88,7 +88,7 @@ def get_optimal_lambda(logger,task, data_model):
     logger.info(f"Starting optimal lambda {task}")
     start = time.time()
 
-    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-1,1e3],options={'xatol': 1e-8,'maxiter':100})
+    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-0.000001,1e3],options={'xatol': 1e-8,'maxiter':200})
     # res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="brent", bracket=(-1e5,0,1e5),options={'xtol': 1e-8,'maxiter':100})
     logger.info(f"Minimized success: {res.success}; Message: {res.message}")
     if not res.success:
@@ -278,12 +278,13 @@ def master(num_processes, logger, experiment):
                                 lambdas = experiment.lambdas
                                 if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
 
-                                    optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,data_model_type, experiment, problem)
+                                    optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,data_model_type, data_model_name, problem)
 
                                     if not optimal_result.get_key() in optimal_lambdas.keys():
                                         logger.info(f"The key is '{optimal_result.get_key()}'")
-                                        logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. Using 0.001 as optimal lambda")
-                                        lambdas = [0.001]
+                                        logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. ")
+                                        # lambdas = [0.001]
+                                        lambdas = None
                                     else:
                                         lambdas = [optimal_lambdas[optimal_result.get_key()]]
 
@@ -293,22 +294,22 @@ def master(num_processes, logger, experiment):
 
                                     if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
                                         logger.info(f"The key is '{optimal_result.get_key()}'")
-                                        logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. Using 0.001 as lambda")
-                                        lambdas = [0.001]
+                                        logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda.")
+                                        lambdas = None
                                     else:
                                         lambdas = [optimal_adversarial_lambdas[optimal_result.get_key()]]
 
 
-                            
-                                for lam in lambdas:                    
+                                if lambdas is not None:
+                                    for lam in lambdas:                    
 
-                                    for _ in range(experiment.state_evolution_repetitions):
-                                        tasks.append(Task(idx,experiment_id,"state_evolution",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,None, data_model_type, data_model_name,experiment.gamma_fair_error))
-                                        idx += 1
+                                        for _ in range(experiment.state_evolution_repetitions):
+                                            tasks.append(Task(idx,experiment_id,"state_evolution",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,None, data_model_type, data_model_name,experiment.gamma_fair_error))
+                                            idx += 1
 
-                                    for _ in range(experiment.erm_repetitions):
-                                        tasks.append(Task(idx,experiment_id,"sklearn",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,experiment.dp, data_model_type, data_model_name,experiment.gamma_fair_error))
-                                        idx += 1
+                                        for _ in range(experiment.erm_repetitions):
+                                            tasks.append(Task(idx,experiment_id,"sklearn",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,experiment.dp, data_model_type, data_model_name,experiment.gamma_fair_error))
+                                            idx += 1
 
     # Initialize the progress bar
     pbar = tqdm(total=len(tasks))
@@ -413,7 +414,20 @@ if __name__ == "__main__":
 
     experiment = load_experiment(filename, logger)
 
-    df_sigma = pd.read_pickle("../sigma_state_evolution.pkl")
+    # load the sigma state evolution dataframe if it exists
+    if os.path.exists("../sigma_state_evolution.pkl"):
+        df_sigma = pd.read_pickle("../sigma_state_evolution.pkl")
+    else:
+        df_sigma = None
+
+    if os.path.exists("./empirical_values.csv"):
+        try:
+            df_sigma = pd.read_csv("./empirical_values.csv")
+        except:
+            logger.error("Could not load empirical_values.csv")
+            df_sigma = None
+    else:
+        df_sigma = None
 
     if rank == 0:
         # run the master

@@ -36,7 +36,7 @@ class OverlapSet():
         self.BLEND_FPE = 0.75
         self.TOL_FPE = 1e-4
         self.MIN_ITER_FPE = 10
-        self.MAX_ITER_FPE = 50000
+        self.MAX_ITER_FPE = 10000
         self.INT_LIMS = 10.0
 
     def log_overlaps(self, logger):
@@ -92,6 +92,7 @@ COMPUTE_APPROXIMATE_PROXIMAL = False
 @nb.njit
 def evaluate_proximal(V: float, y: float, epsilon_term: float, w: float) -> float:
 
+
     if COMPUTE_APPROXIMATE_PROXIMAL:
         return w + y * V * np.exp( -y*w + epsilon_term ) / (1 + np.exp( -y*w + epsilon_term ) )
 
@@ -144,7 +145,7 @@ def _q_hat_integrand(xi: float, y: float, m: float, q: float, rho: float, tau: f
 
     return z_0 * (partial_proximal/ (sigma ** 2) ) * gaussian(xi,0,1)
 
-def logistic_q_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0):
+def logistic_q_hat_func(overlaps: OverlapSet, rho: float, alpha: float, epsilon: float, tau:float, int_lims: float = 20.0, logger = None):
 
     Iplus = quad(lambda xi: _q_hat_integrand(xi,1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
     Iminus = quad(lambda xi: _q_hat_integrand(xi,-1, overlaps.m, overlaps.q, rho, tau, epsilon, overlaps.P, overlaps.N, overlaps.sigma),-int_lims,int_lims,limit=500)[0]
@@ -274,9 +275,9 @@ def var_hat_func(task, overlaps, data_model, logger=None):
         overlaps.sigma_hat = ridge_sigma_hat_func(task,overlaps,data_model,logger)
         overlaps.P_hat = ridge_P_hat_func(task,overlaps,data_model,logger)
         overlaps.N_hat = ridge_N_hat_func(task,overlaps,data_model,logger)
-    elif task.problem_type == ProblemType.Logistic or task.problem_type == ProblemType.EquivalentLogistic or task.problem_type == ProblemType.PerturbedBoundaryLogistic:
+    elif task.problem_type == ProblemType.Logistic or task.problem_type == ProblemType.EquivalentLogistic or task.problem_type == ProblemType.PerturbedBoundaryLogistic or task.problem_type == ProblemType.PerturbedBoundaryCoefficientLogistic:
         overlaps.m_hat = logistic_m_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)/np.sqrt(data_model.gamma)
-        overlaps.q_hat = logistic_q_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)
+        overlaps.q_hat = logistic_q_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS, logger)
         overlaps.sigma_hat = logistic_sigma_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS,logger=logger)
         overlaps.P_hat = logistic_P_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)
         overlaps.N_hat = logistic_N_hat_func(overlaps,data_model.rho,task.alpha,task.epsilon,task.tau,overlaps.INT_LIMS)

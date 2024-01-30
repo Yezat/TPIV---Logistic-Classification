@@ -19,7 +19,14 @@ class DataModelType(Enum):
     MarginGaussian = 4
     KFeaturesModel = 5
 
-NORMALIZE_RHO = False
+
+class SigmaDeltaProcessType(Enum):
+    UseContent = 0
+    ComputeTeacherOrthogonal = 1
+    ComputeTeacherDirection = 2
+
+
+
 
 """
 -------------------- DataSet --------------------
@@ -46,8 +53,8 @@ class AbstractDataModel(ABC):
         the type of the data model
     Sigma_x: ndarray
         The data covariance
-    Sigma_theta: ndarray
-        The teacher weight prior (p,p)
+    theta: ndarray
+        The teacher weight prior (d,)
     Sigma_w: ndarray
         The student weight prior (d,d)
     Sigma_delta: ndarray
@@ -148,73 +155,46 @@ class AbstractDataModel(ABC):
 
 
         self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
-        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
 
         # compute and log the ratio of the first eigenvalue to the last eigenvalue
         self.logger.info(f"Pre-Ratio of first to last eigenvalue of Sigma_x: {self.spec_Sigma_x[0] / self.spec_Sigma_x[-1]}")
-        self.logger.info(f"Pre-Ratio of first to last eigenvalue of Sigma_theta: {self.spec_Sigma_theta[0] / self.spec_Sigma_theta[-1]}")
 
 
         # Normalize all the matrices by dividing by the norm of the matrix
         self.logger.info(f"normalize_matrices: {self.normalize_matrices}")
         if self.normalize_matrices:
             self.logger.info("Normalizing the matrices")
-            self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x ) * self.d            
-            self.Sigma_theta = self.Sigma_theta / np.trace(self.Sigma_theta) * self.d
-
-        
+            self.Sigma_x = self.Sigma_x / np.trace(self.Sigma_x ) * self.d        
             self.Sigma_w = self.Sigma_w / np.trace(self.Sigma_w) * self.d
             self.Sigma_delta = self.Sigma_delta / np.trace(self.Sigma_delta) * self.d
             self.Sigma_upsilon = self.Sigma_upsilon / np.trace(self.Sigma_upsilon) * self.d
 
 
 
-
-        # normalization = np.trace(self.Sigma_x @ self.Sigma_theta) / self.d
-        
-        # self.Sigma_x /= normalization
-        # self.Sigma_theta /= normalization
-
-
-        # compute spectra to compute PhiPhiT and rho
-        if NORMALIZE_RHO:
-            trace = np.trace(self.Sigma_x @ self.Sigma_theta) / self.d
-            self.Sigma_x /= np.sqrt(trace)
-            self.Sigma_theta /= np.sqrt(trace)
-
         self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
-        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
 
         # compute and log the ratio of the first eigenvalue to the last eigenvalue
         self.logger.info(f"Ratio of first to last eigenvalue of Sigma_x: {self.spec_Sigma_x[0] / self.spec_Sigma_x[-1]}")
-        self.logger.info(f"Ratio of first to last eigenvalue of Sigma_theta: {self.spec_Sigma_theta[0] / self.spec_Sigma_theta[-1]}")
+        
 
-        # log new and old spec_Sigma_x, spec_Sigma_theta
-        # self.logger.info(f"New spec_Sigma_x: {self.spec_Sigma_x}")
-        # self.logger.info(f"New spec_Sigma_theta: {self.spec_Sigma_theta}")
-        # self.logger.info(f"Old spec_Sigma_x: {spec_Sigma_x}")
-        # self.logger.info(f"Old spec_Sigma_theta: {spec_Sigma_theta}")
-
+    
         # Compute PhiPhiT
-        self.PhiPhiT = np.diag( self.spec_Sigma_x**2 * self.spec_Sigma_theta)
-        self.rho = np.mean(self.spec_Sigma_x * self.spec_Sigma_theta) 
+        self.PhiPhiT = self.Sigma_x @ self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d) @ self.Sigma_x.T
+        self.rho = self.theta.dot(self.Sigma_x @ self.theta) / self.d
 
 
         self.logger.info(f"Norm Sigma_x: {np.trace(self.Sigma_x)}") 
-        self.logger.info(f"Norm Sigma_theta: {np.trace(self.Sigma_theta)}")
         self.logger.info(f"Norm Sigma_w: {np.trace(self.Sigma_w)}")
         self.logger.info(f"Norm Sigma_delta: {np.trace(self.Sigma_delta)}")
         self.logger.info(f"Norm Sigma_upsilon: {np.trace(self.Sigma_upsilon)}")
         # log entries of Sigma_x
         self.logger.info(f"Sigma_x: {self.Sigma_x}")
-        self.logger.info(f"Sigma_theta: {self.Sigma_theta}")
         self.logger.info(f"Sigma_w: {self.Sigma_w}")
         self.logger.info(f"Sigma_delta: {self.Sigma_delta}")
         self.logger.info(f"Sigma_upsilon: {self.Sigma_upsilon}")
 
         # value count the entries of Sigma_x
         self.logger.info(f"Sigma_x value counts: {np.unique(self.Sigma_x, return_counts=True)}")
-        self.logger.info(f"Sigma_theta value counts: {np.unique(self.Sigma_theta, return_counts=True)}")
         self.logger.info(f"Sigma_w value counts: {np.unique(self.Sigma_w, return_counts=True)}")
         self.logger.info(f"Sigma_delta value counts: {np.unique(self.Sigma_delta, return_counts=True)}")
         self.logger.info(f"Sigma_upsilon value counts: {np.unique(self.Sigma_upsilon, return_counts=True)}")
@@ -224,17 +204,22 @@ class AbstractDataModel(ABC):
         self.logger.info(f"rho: {self.rho}")
 
         # Compute FTerm
-        self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
+        self.FTerm = self.Sigma_x @ self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d) @ self.Sigma_upsilon.T + self.Sigma_upsilon @ self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d) @ self.Sigma_x.T
 
+
+        outer_theta = self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d)
+        self.logger.info(f"Norm outer_theta: {np.trace(outer_theta)}")
+        # log evs of outer_theta
+        self.logger.info(f"outer_theta eigenvalues: {np.linalg.eigvalsh(outer_theta)[0]}")
 
         # compute the spectra
-        self.spec_PhiPhit = np.linalg.eigvals(self.PhiPhiT)
+        self.spec_PhiPhit = np.linalg.eigvalsh(self.PhiPhiT)
         
         self.spec_Sigma_delta = np.linalg.eigvals(self.Sigma_delta)
         self.spec_Sigma_w = np.linalg.eigvals(self.Sigma_w)
         
         self.spec_Sigma_upsilon = np.linalg.eigvals(self.Sigma_upsilon)
-        self.spec_FTerm = np.linalg.eigvals(self.FTerm)
+        self.spec_FTerm = np.linalg.eigvalsh(self.FTerm)
 
 
 
@@ -267,15 +252,12 @@ class AbstractDataModel(ABC):
             'Max EV Sigma_delta': np.max(self.spec_Sigma_delta),
             'Min EV Sigma_x': np.min(self.spec_Sigma_x),
             'Max EV Sigma_x': np.max(self.spec_Sigma_x),
-            'Min EV Sigma_theta': np.min(self.spec_Sigma_theta),
-            'Max EV Sigma_theta': np.max(self.spec_Sigma_theta),
             'Min EV PhiPhiT': np.min(self.spec_PhiPhit),
             'Max EV PhiPhiT': np.max(self.spec_PhiPhit),
             'Spec Sigma_Upsilon': np.linalg.norm(self.spec_Sigma_upsilon),
             # 'Norm Sigma_w': np.linalg.norm(self.Sigma_w),
             # 'Norm Sigma_delta': np.linalg.norm(self.Sigma_delta),
             # 'Norm Sigma_x': np.linalg.norm(self.Sigma_x),
-            # 'Norm Sigma_theta': np.linalg.norm(self.Sigma_theta),
             # 'Norm PhiPhiT': np.linalg.norm(self.PhiPhiT),
             # ''
         }
@@ -335,13 +317,15 @@ class VanillaGaussianDataModel(AbstractDataModel):
     
 
 class KFeaturesModel(AbstractDataModel):
-    def __init__(self, d,logger, delete_existing = False, normalize_matrices = True, source_pickle_path="../",Sigma_w_content = None,Sigma_delta_content = None, Sigma_upsilon_content = None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None)->None:
+    def __init__(self, d,logger, delete_existing = False, normalize_matrices = True, attack_equal_defense = False, source_pickle_path="../",Sigma_w_content = None,Sigma_delta_content = None, Sigma_upsilon_content = None, name="", description = "", feature_ratios = None, features_x =None, features_theta = None, process_sigma_type: SigmaDeltaProcessType = SigmaDeltaProcessType.UseContent)->None:
         """
             k = len(feature_ratios)
             feature_ratios = np.array([2,d-2]) # must sum to d and be of length k
             features_x = np.array([100,1]) # must be of length k and contains each features size for the data covariance X
             features_theta = np.array([1,1]) # must be of length k and contains each features size for the teacher prior
         """
+
+        self.d = d
     
         if feature_ratios is None:
             feature_ratios = np.array([1/d,1-1/d])
@@ -361,25 +345,37 @@ class KFeaturesModel(AbstractDataModel):
             # transform the feature ratios to feature sizes
             feature_sizes = np.floor(feature_ratios * d).astype(int)
 
-            theta = np.zeros(d)
+            self.theta = np.zeros(d)
             spec_Omega0 = np.zeros(d)
             for i in range(k):
-                theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_theta[i]
+                self.theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_theta[i]
                 spec_Omega0[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_x[i]
             self.Sigma_x=np.diag(spec_Omega0)
-            
+
             self.feature_sizes = feature_sizes
 
+            self.Sigma_theta = np.diag(self.theta)
+            self.theta = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_theta, method="cholesky") 
+            # log theta
+            self.logger.info(f"theta: {self.theta}")
 
-            self.rho = np.mean(spec_Omega0* theta) 
-            self.PhiPhiT = np.diag( spec_Omega0**2 * theta)
-            self.Sigma_theta = np.diag(theta)
+            self.rho = self.theta.dot(self.Sigma_x @ self.theta) / d
+            # reshape theta
+            self.PhiPhiT = self.Sigma_x @ self.theta.reshape(d,1) @ self.theta.reshape(1,d) @ self.Sigma_x.T
 
             sigma_w = np.zeros(d)
             sigma_delta = np.zeros(d)
             sigma_upsilon = np.zeros(d)
 
             self.logger.info(f"d: {d}")
+            self.logger.info(f"feature_sizes: {feature_sizes}")
+            self.logger.info(f"feature_ratios: {feature_ratios}")
+            self.logger.info(f"features_x: {features_x}")
+            self.logger.info(f"features_theta: {features_theta}")
+            self.logger.info(f"Sigma_w_content: {Sigma_w_content}")
+            self.logger.info(f"Sigma_delta_content: {Sigma_delta_content}")
+            self.logger.info(f"Sigma_upsilon_content: {Sigma_upsilon_content}")
+            
 
             for i in range(k):
                 sigma_w[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = Sigma_w_content[i]
@@ -389,6 +385,48 @@ class KFeaturesModel(AbstractDataModel):
             self.Sigma_delta = np.diag(sigma_delta)
             self.Sigma_upsilon = np.diag(sigma_upsilon)
             
+            self.V_i = np.ones(d)
+
+            if process_sigma_type == SigmaDeltaProcessType.ComputeTeacherOrthogonal or process_sigma_type == SigmaDeltaProcessType.ComputeTeacherDirection:
+
+                if process_sigma_type == SigmaDeltaProcessType.ComputeTeacherOrthogonal:
+                    vprime = np.random.normal(0,1,d)
+
+                    # chose v = vprime - <vprime,theta> theta / ||theta||^2
+
+                    v = vprime - np.dot(vprime,self.theta) * self.theta / np.linalg.norm(self.theta)**2
+
+                    # normalize v
+                    v = v / np.linalg.norm(v)
+
+                    Sigma_delta_content = v
+
+                    # log in this case v dot theta
+                    self.logger.info(f"v dot theta: {np.dot(v,self.theta)}")
+
+                elif process_sigma_type == SigmaDeltaProcessType.ComputeTeacherDirection:
+                    v = self.theta
+                    v = v/np.linalg.norm(v)                    
+                    Sigma_delta_content = v
+
+                    # log in this case v dot theta
+                    self.logger.info(f"v dot theta: {np.dot(v,self.theta)}")
+                    
+
+                # Only for the Optimal Defense Experiment
+                self.Sigma_delta = np.outer(Sigma_delta_content, Sigma_delta_content)
+                
+                # sample a random covariance matrix
+                random_matrix = np.random.normal(0,0.0001,(d,d))
+                self.Sigma_delta = random_matrix.T @ random_matrix + self.Sigma_delta * 10000
+                
+                self.V_i = Sigma_delta_content
+
+            if attack_equal_defense:
+                self.Sigma_upsilon = self.Sigma_delta
+
+            # log the eigenvalues of Sigma_delta
+            self.logger.info(f"Sigma_delta eigenvalues: {np.linalg.eigvals(self.Sigma_delta)}")
 
 
             if self.Sigma_w is None:
@@ -398,14 +436,14 @@ class KFeaturesModel(AbstractDataModel):
             if self.Sigma_upsilon is None:
                 self.Sigma_upsilon = np.eye(self.d)
 
-            self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
+            self.FTerm = self.Sigma_x @ self.theta.reshape(d,1) @ self.theta.reshape(1,d) @ self.Sigma_upsilon.T + self.Sigma_upsilon @ self.theta.reshape(d,1) @ self.theta.reshape(1,d) @ self.Sigma_x.T
 
             self._finish_initialization()
 
 
     def generate_data(self, n, tau) -> DataSet:
 
-        theta = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_theta, 1, method="cholesky")[0]  
+        theta = self.theta
         X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
         
         y = np.sign(X @ theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))
