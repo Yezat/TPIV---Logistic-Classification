@@ -155,6 +155,7 @@ class AbstractDataModel(ABC):
 
 
         self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
+        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
 
         # compute and log the ratio of the first eigenvalue to the last eigenvalue
         self.logger.info(f"Pre-Ratio of first to last eigenvalue of Sigma_x: {self.spec_Sigma_x[0] / self.spec_Sigma_x[-1]}")
@@ -168,10 +169,12 @@ class AbstractDataModel(ABC):
             self.Sigma_w = self.Sigma_w / np.trace(self.Sigma_w) * self.d
             self.Sigma_delta = self.Sigma_delta / np.trace(self.Sigma_delta) * self.d
             self.Sigma_upsilon = self.Sigma_upsilon / np.trace(self.Sigma_upsilon) * self.d
+            self.Sigma_theta = self.Sigma_theta / np.trace(self.Sigma_theta) * self.d
 
 
 
         self.spec_Sigma_x = np.linalg.eigvals(self.Sigma_x)
+        self.spec_Sigma_theta = np.linalg.eigvals(self.Sigma_theta)
 
         # compute and log the ratio of the first eigenvalue to the last eigenvalue
         self.logger.info(f"Ratio of first to last eigenvalue of Sigma_x: {self.spec_Sigma_x[0] / self.spec_Sigma_x[-1]}")
@@ -179,8 +182,8 @@ class AbstractDataModel(ABC):
 
     
         # Compute PhiPhiT
-        self.PhiPhiT = self.Sigma_x @ self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d) @ self.Sigma_x.T
-        self.rho = self.theta.dot(self.Sigma_x @ self.theta) / self.d
+        self.PhiPhiT = np.diag( self.spec_Sigma_x**2 * self.spec_Sigma_theta)
+        self.rho = np.mean(self.spec_Sigma_x * self.spec_Sigma_theta) 
 
 
         self.logger.info(f"Norm Sigma_x: {np.trace(self.Sigma_x)}") 
@@ -204,22 +207,22 @@ class AbstractDataModel(ABC):
         self.logger.info(f"rho: {self.rho}")
 
         # Compute FTerm
-        self.FTerm = self.Sigma_x @ self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d) @ self.Sigma_upsilon.T + self.Sigma_upsilon @ self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d) @ self.Sigma_x.T
+        self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
 
 
-        outer_theta = self.theta.reshape(self.d,1) @ self.theta.reshape(1,self.d)
-        self.logger.info(f"Norm outer_theta: {np.trace(outer_theta)}")
-        # log evs of outer_theta
-        self.logger.info(f"outer_theta eigenvalues: {np.linalg.eigvalsh(outer_theta)[0]}")
 
         # compute the spectra
-        self.spec_PhiPhit = np.linalg.eigvalsh(self.PhiPhiT)
+        self.spec_PhiPhit = np.linalg.eigvals(self.PhiPhiT)
         
         self.spec_Sigma_delta = np.linalg.eigvals(self.Sigma_delta)
+
+        # log the spec_Sigma_delta
+        self.logger.info(f"Sigma_delta eigenvalues: {self.spec_Sigma_delta}")
+
         self.spec_Sigma_w = np.linalg.eigvals(self.Sigma_w)
         
         self.spec_Sigma_upsilon = np.linalg.eigvals(self.Sigma_upsilon)
-        self.spec_FTerm = np.linalg.eigvalsh(self.FTerm)
+        self.spec_FTerm = np.linalg.eigvals(self.FTerm)
 
 
 
@@ -345,23 +348,18 @@ class KFeaturesModel(AbstractDataModel):
             # transform the feature ratios to feature sizes
             feature_sizes = np.floor(feature_ratios * d).astype(int)
 
-            self.theta = np.zeros(d)
+            theta = np.zeros(d)
             spec_Omega0 = np.zeros(d)
             for i in range(k):
-                self.theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_theta[i]
+                theta[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_theta[i]
                 spec_Omega0[sum(feature_sizes[:i]):sum(feature_sizes[:i+1])] = features_x[i]
             self.Sigma_x=np.diag(spec_Omega0)
 
             self.feature_sizes = feature_sizes
 
-            self.Sigma_theta = np.diag(self.theta)
-            self.theta = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_theta, method="cholesky") 
-            # log theta
-            self.logger.info(f"theta: {self.theta}")
-
-            self.rho = self.theta.dot(self.Sigma_x @ self.theta) / d
-            # reshape theta
-            self.PhiPhiT = self.Sigma_x @ self.theta.reshape(d,1) @ self.theta.reshape(1,d) @ self.Sigma_x.T
+            self.rho = np.mean(spec_Omega0* theta) 
+            self.PhiPhiT = np.diag( spec_Omega0**2 * theta)
+            self.Sigma_theta = np.diag(theta)
 
             sigma_w = np.zeros(d)
             sigma_delta = np.zeros(d)
@@ -394,7 +392,7 @@ class KFeaturesModel(AbstractDataModel):
 
                     # chose v = vprime - <vprime,theta> theta / ||theta||^2
 
-                    v = vprime - np.dot(vprime,self.theta) * self.theta / np.linalg.norm(self.theta)**2
+                    v = vprime - np.dot(vprime,theta) * theta / np.linalg.norm(theta)**2
 
                     # normalize v
                     v = v / np.linalg.norm(v)
@@ -402,15 +400,15 @@ class KFeaturesModel(AbstractDataModel):
                     Sigma_delta_content = v
 
                     # log in this case v dot theta
-                    self.logger.info(f"v dot theta: {np.dot(v,self.theta)}")
+                    self.logger.info(f"v dot theta: {np.dot(v,theta)}")
 
                 elif process_sigma_type == SigmaDeltaProcessType.ComputeTeacherDirection:
-                    v = self.theta
+                    v = theta
                     v = v/np.linalg.norm(v)                    
                     Sigma_delta_content = v
 
                     # log in this case v dot theta
-                    self.logger.info(f"v dot theta: {np.dot(v,self.theta)}")
+                    self.logger.info(f"v dot theta: {np.dot(v,theta)}")
                     
 
                 # Only for the Optimal Defense Experiment
@@ -436,14 +434,15 @@ class KFeaturesModel(AbstractDataModel):
             if self.Sigma_upsilon is None:
                 self.Sigma_upsilon = np.eye(self.d)
 
-            self.FTerm = self.Sigma_x @ self.theta.reshape(d,1) @ self.theta.reshape(1,d) @ self.Sigma_upsilon.T + self.Sigma_upsilon @ self.theta.reshape(d,1) @ self.theta.reshape(1,d) @ self.Sigma_x.T
+            # Compute FTerm
+            self.FTerm = self.Sigma_x.T * self.Sigma_theta * self.Sigma_upsilon + self.Sigma_upsilon.T * self.Sigma_theta * self.Sigma_x
 
             self._finish_initialization()
 
 
     def generate_data(self, n, tau) -> DataSet:
 
-        theta = self.theta
+        theta = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_theta, 1, method="cholesky")[0]
         X = np.random.default_rng().multivariate_normal(np.zeros(self.d), self.Sigma_x, n, method="cholesky")  
         
         y = np.sign(X @ theta / np.sqrt(self.d) + tau * np.random.normal(0,1,(n,)))

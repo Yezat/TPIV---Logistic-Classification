@@ -284,52 +284,52 @@ Sigma_upsilon_content = np.array([1,1])
 """
 
 
-# data_model_definitions = []
+data_model_definitions = []
 
 
 
-# data_models_description = f"FeatureComparisonsTest"
+data_models_description = f"FeatureComparisonsTest"
 
-# data_model_type = DataModelType.KFeaturesModel
-# feature_ratios = np.array([0.5,0.5])
-# features_x = np.array([0.5,0.5])
-# features_theta = np.array([2,2])
-# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
-# data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-# Sigma_delta_content = np.array([1,1])
-# definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-# data_model_definitions.append(definition)
+data_model_type = DataModelType.KFeaturesModel
+feature_ratios = np.array([0.5,0.5])
+features_x = np.array([0.5,0.5])
+features_theta = np.array([2,2])
+data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+Sigma_delta_content = np.array([1,1])
+definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+data_model_definitions.append(definition)
 
-# data_model_type = DataModelType.KFeaturesModel
-# feature_ratios = np.array([0.5,0.5])
-# features_x = np.array([2,2])
-# features_theta = np.array([2,2])
-# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
-# data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-# Sigma_delta_content = np.array([1,1])
-# definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-# data_model_definitions.append(definition)
+data_model_type = DataModelType.KFeaturesModel
+feature_ratios = np.array([0.5,0.5])
+features_x = np.array([2,2])
+features_theta = np.array([2,2])
+data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+Sigma_delta_content = np.array([1,1])
+definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+data_model_definitions.append(definition)
 
 
-# data_model_type = DataModelType.KFeaturesModel
-# feature_ratios = np.array([0.5,0.5])
-# features_x = np.array([0.5,0.5])
-# features_theta = np.array([8,8])
-# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
-# data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-# Sigma_delta_content = np.array([1,2])
-# definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-# data_model_definitions.append(definition)
+data_model_type = DataModelType.KFeaturesModel
+feature_ratios = np.array([0.5,0.5])
+features_x = np.array([0.5,0.5])
+features_theta = np.array([8,8])
+data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+Sigma_delta_content = np.array([1,2])
+definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+data_model_definitions.append(definition)
 
-# data_model_type = DataModelType.KFeaturesModel
-# feature_ratios = np.array([0.5,0.5])
-# features_x = np.array([2,2])
-# features_theta = np.array([1/2,1/2])
-# data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
-# data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-# Sigma_delta_content = np.array([1,1])
-# definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-# data_model_definitions.append(definition)
+data_model_type = DataModelType.KFeaturesModel
+feature_ratios = np.array([0.5,0.5])
+features_x = np.array([2,2])
+features_theta = np.array([1/2,1/2])
+data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+Sigma_delta_content = np.array([1,1])
+definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+data_model_definitions.append(definition)
 
 
 """
@@ -633,45 +633,57 @@ Sigma_upsilon_content = np.array([1,1])
 """
 
 
-data_model_definitions = []
+# data_model_definitions = []
 
-data_models_description = f"OptimalDefense"
+# data_models_description = f"OptimalDefense"
 
-d = 1000
-
-Sigma_w_content = np.ones(d)
-Sigma_upsilon_content = np.ones(d)
-ratio = 1/d
-feature_ratios = ratio * np.ones(d)
-features_x = np.ones(d)
-features_theta = np.ones(d)
-Sigma_delta_content = np.ones(d)
+# d = 1000
 
 
-data_model_type = DataModelType.KFeaturesModel
+# feature_ratios = np.array([0.01,0.99])
+# Sigma_w_content = np.array([1,1])
 
-data_model_name = f"KFeaturesModel_OptimalDefense"
-data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta, attack_equal_defense=False, sigma_delta_process_type=SigmaDeltaProcessType.ComputeTeacherOrthogonal)
-data_model_definitions.append(definition)
-
-data_model_name = f"KFeaturesModel_OptimalDefense_AttackEqual"
-data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta, attack_equal_defense=True,sigma_delta_process_type=SigmaDeltaProcessType.ComputeTeacherOrthogonal)
-data_model_definitions.append(definition)
+# features_x = np.array([1,1])
+# features_theta = np.array([1000,1])
 
 
-data_model_type = DataModelType.KFeaturesModel
 
-data_model_name = f"KFeaturesModel_OptimalDefense_TeacherAttack"
-data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta, attack_equal_defense=False,sigma_delta_process_type=SigmaDeltaProcessType.ComputeTeacherDirection)
-data_model_definitions.append(definition)
+# data_model_type = DataModelType.KFeaturesModel
 
-data_model_name = f"KFeaturesModel_OptimalDefense_AttackEqual_TeacherAttack"
-data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta, attack_equal_defense=True,sigma_delta_process_type=SigmaDeltaProcessType.ComputeTeacherDirection)
-data_model_definitions.append(definition)
+# Sigma_upsilon_content = np.array([1000,1])
+
+# # Sigma_delta_content = np.array([1,1])
+# # data_model_name = f"KFeaturesModel_UniformDefense_TeacherAttacked"
+# # data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+# # definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+# # data_model_definitions.append(definition)
+
+
+# Sigma_delta_content = np.array([1000,1])
+# data_model_name = f"KFeaturesModel_TeacherDefense_TeacherAttacked"
+# data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+# definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+# data_model_definitions.append(definition)
+
+
+# Sigma_upsilon_content = np.array([1,1000])
+
+# # Sigma_delta_content = np.array([1,1])
+# # data_model_name = f"KFeaturesModel_UniformDefense_OrthogonalAttacked"
+# # data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+# # definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+# # data_model_definitions.append(definition)
+
+
+
+
+# Sigma_delta_content = np.array([1,1000])
+# data_model_name = f"KFeaturesModel_OrthogonalDefense_OrthogonalAttacked"
+# data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+# definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta, attack_equal_defense=True,sigma_delta_process_type=SigmaDeltaProcessType.ComputeTeacherDirection)
+# data_model_definitions.append(definition)
+
+
 
 
 
@@ -692,9 +704,29 @@ data_model_definitions.append(definition)
 # # features_theta = np.random.normal(0,1,2)
 # data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
 # data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+# Sigma_delta_content = np.array([5,1])
+# definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+# data_model_definitions.append(definition)
+
+"""
+--------------------------------- Overlap Scalings  above ---------------------------------
+--------------------------------- High Alpha below ---------------------------------
+"""
+
+
+# data_models_description = f"HighAlpha"
+# data_model_definitions = []
+
+# data_model_type = DataModelType.KFeaturesModel
+# feature_ratios = np.array([0.5,0.5])
+# features_x = np.array([1,1])
+# features_theta = np.array([1,1])
+# data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+# data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
 # Sigma_delta_content = np.array([1,1])
 # definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
 # data_model_definitions.append(definition)
+
 
 
 """
@@ -732,13 +764,13 @@ data_model_types = [data_model_definition.data_model_type for data_model_definit
 
 # repetitions
 state_evolution_repetitions: int = 1
-erm_repetitions: int = 5
+erm_repetitions: int = 0
 
 # sweeps
-alphas: np.ndarray = np.array([20]) # np.logspace(-0.8,2,30)  # #np.linspace(0.1,10,15)  #
-epsilons: np.ndarray = np.logspace(-3,0.5,10) # np.array([0.0, 0.1, 0.2, 0.3]) # # # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
+alphas: np.ndarray = np.logspace(1,6,10)  # #np.linspace(0.1,10,15)  #
+epsilons: np.ndarray =  np.array([0.0,0.1,0.2,0.3]) # np.logspace(-3,0,10) # # # # np.linspace(0,0.6,2) # np.array([0.0,0.2]) # np.array([0,0.1,0.3,0.4,0.5]) 
 lambdas: np.ndarray = np.array([1e-3]) #np.logspace(-4,2,15) # np.logspace(-1,2,1) #np.concatenate([-np.logspace(-4,-1,10),np.logspace(-6,-3,2)])  #np.array([-0.0001])
-test_against_epsilons: np.ndarray = np.array([0.006])
+test_against_epsilons: np.ndarray = np.array([0.2])
 taus: np.ndarray = np.array([0.05])
 # taus: np.ndarray = np.linspace(0.05,1.5,30)
 

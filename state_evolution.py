@@ -36,7 +36,7 @@ class OverlapSet():
         self.BLEND_FPE = 0.75
         self.TOL_FPE = 1e-4
         self.MIN_ITER_FPE = 10
-        self.MAX_ITER_FPE = 10000
+        self.MAX_ITER_FPE = 5000
         self.INT_LIMS = 10.0
 
     def log_overlaps(self, logger):

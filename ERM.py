@@ -98,7 +98,7 @@ def run_optimizer(task : Task, data_model: AbstractDataModel, data:DataSet, logg
 
 
 
-    w_gd = sklearn_optimize(np.random.normal(0,1,(task.d,)),data.X,data.y,task.lam,task.epsilon,task.problem_type, data_model.Sigma_w, data_model.Sigma_delta, logger, values)
+    w_gd = sklearn_optimize(np.random.normal(0,1,(task.d,)),data.X,data.y,task.lam,task.epsilon,task.problem_type, covariance_prior=data_model.Sigma_w,sigma_delta= data_model.Sigma_delta, logger=logger,values= values)
 
     return w_gd
 

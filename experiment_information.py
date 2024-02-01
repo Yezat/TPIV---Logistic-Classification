@@ -392,7 +392,7 @@ class StateEvolutionExperimentInformation:
         subspace_strengths_X = [data_model.Sigma_x[0,0], data_model.Sigma_x[-1,-1]]
         subspace_strengths_delta = [data_model.Sigma_delta[0,0], data_model.Sigma_delta[-1,-1]]
         subspace_strengths_upsilon = [data_model.Sigma_upsilon[0,0], data_model.Sigma_upsilon[-1,-1]]
-        subspace_strengths_theta = [data_model.theta[0], data_model.theta[-1]]
+        subspace_strengths_theta = [data_model.Sigma_theta[0,0], data_model.Sigma_theta[-1,-1]]
         subspace_strengths_PhiPhiT = [data_model.spec_PhiPhit[0], data_model.spec_PhiPhit[-1]]
         
         # compute the ratio of each subspace overlap to its strength
