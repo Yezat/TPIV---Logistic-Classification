@@ -1,20 +1,5 @@
 # A High Dimensional Model for Adversarial Training: Geometry and Trade-Offs
 
-<div width=auto>
-    <img src="Figures/feature_combinations_alpha_sweep.pdf" width=100%>
-</div>
-
-<object data="Figures/feature_combinations_alpha_sweep.pdf" type="application/pdf" width="700px" height="700px">
-    <embed src="Figures/feature_combinations_alpha_sweep.pdf">
-        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="Figures/feature_combinations_alpha_sweep.pdf">Download PDF</a>.</p>
-    </embed>
-</object>
-
-<div style="text-align: center; margin: auto">
-    <p><i>
-    We construct combinations of non-robust/non-useful features and observe the (adversarial) generalisation error together with the boundary error and the class preserving error as a function of the sample complexity. There is good agreement between the theory (lines) and finite size simulations (points).
-    </i><p>
-</div>
 
 To reproduce the figures from the paper, please use `define_experiment.ipynb` in the experiments folder.
 
