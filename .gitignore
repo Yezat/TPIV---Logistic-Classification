@@ -11,5 +11,5 @@ build/
 *.json
 Results/*
 experiments/sweep_experiment.json
-experiments/**
+# experiments/
 sigma_state_evolution.pkl
