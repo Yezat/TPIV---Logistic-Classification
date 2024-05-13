@@ -282,6 +282,44 @@ class OptimalEpsilonResult():
 
     def get_target(self):
         return self.optimal_epsilon
+    
+class OptimalAdversarialEpsilonResult():
+    def __init__(self, alpha, optimal_epsilon, attack_epsilon, tau, lam, data_model_type, data_model_name) -> None:
+        self.alpha = alpha
+        self.optimal_epsilon = optimal_epsilon
+        self.attack_epsilon = attack_epsilon
+        self.tau = tau
+        self.lam = lam
+        self.data_model_type = data_model_type
+        self.data_model_name = data_model_name
+    
+    def to_csv_line(self):
+        # round all the results to 8 digits
+        return f"{self.alpha:.8f},{self.optimal_epsilon:.8f},{self.attack_epsilon:.8f},{self.tau:.8f},{self.lam:.8f},{self.data_model_type.name},{self.data_model_name}"
+    
+    def from_csv_line(self, line):
+        # remove the line break
+        line = line[:-1]
+        alpha,epsilon,test_epsilon,tau,lam,data_model_type,data_model_name = line.split(",")
+        return OptimalAdversarialEpsilonResult(float(alpha),float(epsilon),float(test_epsilon),float(tau),float(lam),DataModelType[data_model_type],data_model_name)
+    
+    def get_csv_header(self):
+        return "alpha,epsilon,attack_epsilon,tau,lambda,data_model_type,data_model_name"
+    
+    def get_csv_filename(self):
+        return "optimal_adversarial_epsilons.csv"
+    
+    def get_key(self):
+        # the key of a result is the tuple (alpha,epsilon,tau, data_model_type, data_model_name) returned as a string
+        # round all the results to 8 digits
+        return f"{self.alpha:.8f},{self.attack_epsilon:.8f},{self.lam:.8f},{self.tau:.8f},{self.data_model_type.name},{self.data_model_name}"
+    
+    def get_target(self):
+        return self.optimal_epsilon
+    
+
+
+# This screams for mixins, no?
 
 """
 ------------------------------------------------------------------------------------------------------------------------

@@ -15,7 +15,7 @@ from state_evolution import overlap_calibration, fixed_point_finder
 from ERM import compute_experimental_teacher_calibration, run_optimizer
 from data_model import *
 from helpers import Task
-from scipy.optimize import minimize_scalar
+from scipy.optimize import minimize_scalar, dual_annealing, basinhopping, brute
 import logging
 
 
@@ -114,6 +114,51 @@ def minimize_epsilon(logger, task, data_model):
     logger.info(f"Absolute integrated calibration for epsilon {task.epsilon} is {total_calibration}")
     return total_calibration
 
+def optimize_adversarial_error_epsilon(logger, task, data_model, evaluation_epsilon_index):
+    state_evolution_info = run_state_evolution(logger, task, data_model)
+
+    adversarial_error_pair = state_evolution_info.adversarial_generalization_errors[evaluation_epsilon_index]
+
+    attack_epsilon = adversarial_error_pair[0]
+    adversarial_error = adversarial_error_pair[1]
+
+    logger.info(f"Adversarial Error for epsilon {task.epsilon} for attack {attack_epsilon} is {adversarial_error}")
+    return adversarial_error
+
+def get_optimal_epsilons_adversarial_error(logger, task, data_model):
+    logger.info(f"Starting optimal epsilon in terms of Adversarial Error {task}")
+    results = []
+    for i,test_against_epsilon in enumerate(task.test_against_epsilons):
+        
+        def minimize(e):
+            if e < 0:
+                return np.inf
+            task.epsilon = e
+            return optimize_adversarial_error_epsilon(logger, task, data_model, i)
+
+        # res = minimize_scalar(lambda e: minimize(e), method="bounded", bounds=[0,1.0], options={'xatol': 1e-6,'maxiter':200})
+        # res = dual_annealing(lambda e: minimize(e[0]), bounds=[(0.0,1.0)])
+        # basinhopping might work as well
+        # res = basinhopping(lambda e: minimize(e[0]), test_against_epsilon)
+        
+
+        # logger.info(f"Minimized success: {res.success}; Message: {res.message}")
+
+        # if not res.success:
+        #     raise Exception("Optimization of epsilon failed " + str(res.message))
+        # res = res.x
+
+        res = brute(lambda e: minimize(e[0]),ranges=[(0.0,1.0)],Ns=1000)
+        # assign res.x as optimal value
+        logger.info(f"result: {res}")
+        res = res[0]
+
+
+        result = OptimalAdversarialEpsilonResult(task.alpha, res, task.test_against_epsilons[i], task.tau, task.lam, data_model.model_type, data_model.name)
+        results.append(result)
+
+    return results
+
 def get_optimal_epsilon(logger, task, data_model):
     
     ps = np.linspace(0.01,0.99,1000)
@@ -123,7 +168,7 @@ def get_optimal_epsilon(logger, task, data_model):
         task.epsilon = e
         return minimize_epsilon(logger,task,data_model)
 
-    res = minimize_scalar(lambda e : minimize(e),method="bounded", bounds=[0,10.0],options={'xatol': 1e-4,'maxiter':200})
+    res = minimize_scalar(lambda e : minimize(e),method="bounded", bounds=[0.0,10.0],options={'xatol': 1e-4,'maxiter':200})
     logger.info(f"Minimized success: {res.success}; Message: {res.message}")
     if not res.success:
         raise Exception("Optimization of epsilon failed " + str(res.message))
@@ -144,6 +189,8 @@ def process_task(task, logger, data_model, df_sigma):
             task.result = get_optimal_lambda(logger,task, data_model)
         elif task.method == "optimal_epsilon":
             task.result = get_optimal_epsilon(logger, task, data_model)
+        elif task.method == "optimal_adversarial_epsilon":
+            task.result = get_optimal_epsilons_adversarial_error(logger, task, data_model)
         else:
             task.result = run_erm(logger,task, data_model, df_sigma)
     except Exception as e:
@@ -235,6 +282,8 @@ def master(num_processes, logger, experiment):
     dummy_optimal_result = OptimalAdversarialLambdaResult(0,0,0,0,0,None,None,None)
     optimal_adversarial_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
 
+    # This main loop must be simplifieable somehow. It is too deeply nested...
+
     # iterate all the parameters and create process objects for each parameter
     idx = 1
     for data_model_type, data_model_name in zip(experiment.data_model_types, experiment.data_model_names):
@@ -247,6 +296,16 @@ def master(num_processes, logger, experiment):
                         for lam in experiment.lambdas:
                             tasks.append(Task(idx,experiment_id,"optimal_epsilon",problem,alpha,0,0,lam,tau,experiment.d,None,None, data_model_type, data_model_name,experiment.gamma_fair_error))
                             idx += 1
+
+                elif ExperimentType.OptimalAdversarialErrorEpsilon == experiment.experiment_type:
+                    # if that is the case, for each tau and lambda, compute the optimal epsilon
+                    for tau in experiment.taus:
+                        for lam in experiment.lambdas:
+                            tasks.append(Task(idx,experiment_id,"optimal_adversarial_epsilon",problem,alpha,0,experiment.test_against_epsilons,lam,tau,experiment.d,None,None, data_model_type, data_model_name,experiment.gamma_fair_error))
+                            idx += 1
+                elif ExperimentType.SweepAtOptimalLambdaAdversarialTestError == experiment.experiment_type:
+                    raise Exception("SweepAtOptimalLambdaAdversarialTestError is not implemented yet")
+                    # you would have to load the optimal epsilons from the csv file and then run the state evolution...
                 else:
                     for epsilon in experiment.epsilons:
                         for tau in experiment.taus:
@@ -351,6 +410,9 @@ def master(num_processes, logger, experiment):
                 append_object_to_csv(result)
             elif task.method == "optimal_epsilon":
                 append_object_to_csv(result)
+            elif task.method == "optimal_adversarial_epsilon":
+                for res in result:
+                    append_object_to_csv(res)
             else:
                 with DatabaseHandler(logger) as db:
                     db.insert_erm(result)

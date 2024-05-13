@@ -23,6 +23,8 @@ class ExperimentType(Enum):
     OptimalEpsilon = 3
     OptimalLambdaAdversarialTestError = 4
     SweepAtOptimalLambdaAdversarialTestError = 5
+    OptimalAdversarialErrorEpsilon = 6
+    SweepAtOptimalAdversarialErrorEpsilon = 7
 
 class DataModelDefinition:
     def __init__(self,d : int, delete_existing: bool, normalize_matrices: bool, Sigma_w_content: np.ndarray, Sigma_delta_content: np.ndarray, Sigma_upsilon_content: np.ndarray, name: str, description: str, data_model_type: DataModelType, feature_ratios: np.ndarray = None, features_x: np.ndarray = None, features_theta: np.ndarray = None, attack_equal_defense: bool = False, sigma_delta_process_type: SigmaDeltaProcessType= SigmaDeltaProcessType.UseContent) -> None:
