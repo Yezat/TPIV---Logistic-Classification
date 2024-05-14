@@ -32,7 +32,7 @@ def set_experiment_up(experiment_name, sweep_definition):
         Start Here, and define your data_model_definitions
     ------------------------------------------------------------------------------------------------------------------------
     """
-    d = 2000
+    d = 1000
 
     delta_ratio = 4
     inverse_delta_ratio = 1/delta_ratio
@@ -669,7 +669,7 @@ def set_experiment_up(experiment_name, sweep_definition):
         definition.name += "___" + data_models_description
 
 
-    memory = "200G"
+    memory = "250G"
 
     # data_models_description = "Vanilla vs KFeatures Identity vs Identity"
     # data_models_description = data_model_definitions[0].name
@@ -756,10 +756,10 @@ def set_experiment_up(experiment_name, sweep_definition):
 
     # Now let's create a batch file to run the experiment
     content = f"""#!/bin/bash
-#SBATCH --chdir=/home/ktanner/TPIV---Logistic-Classification/experiments
+#SBATCH --chdir=/home/vilucchi/projects/TPIV---Logistic-Classification/experiments
 #SBATCH --job-name=TPIV-Adversarial
 #SBATCH --nodes=1
-#SBATCH --ntasks=40
+#SBATCH --ntasks=20
 #SBATCH --cpus-per-task=1
 #SBATCH --mem={memory}
 #SBATCH --output='./out.txt'
@@ -768,7 +768,7 @@ def set_experiment_up(experiment_name, sweep_definition):
 
 module purge
 module load gcc openmpi python/3.10.4
-source /home/ktanner/venvs/adv/bin/activate
+source /home/vilucchi/venvs/adv-venv/bin/activate
 
 srun --mpi pmi2 python3 ./create_data_model.py '{experiment_filename}'
 srun --mpi=pmi2 python3 ./sweep.py '{experiment_filename}'
@@ -797,12 +797,12 @@ if __name__ == "__main__":
     sweep_definition = {
         "normalize_matrices": False,
         "state_evolution_repetitions": 1,
-        "erm_repetitions": 1,
-        "alphas": np.array([0.01]),
-        "epsilons": np.array([0.01]),
-        "lambdas": np.array([0.01]),
-        "taus": np.array([0.01]),
-        "test_against_epsilons": np.array([0.01]),
+        "erm_repetitions": 20,
+        "alphas": np.logspace(np.log10(1.5e-1), 2, 30), # np.array([0.01]),
+        "epsilons": np.array([0.0, 0.1, 0.2, 0.3]),
+        "lambdas": np.array([0.001]),
+        "taus": np.array([0.05]),
+        "test_against_epsilons": np.array([0.2]),
         "experiment_type": ExperimentType.Sweep,
         "problem_types": [ProblemType.Logistic],
     }

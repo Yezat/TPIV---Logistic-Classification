@@ -7,7 +7,7 @@ from _version import __version__
 from typing import Tuple
 import datetime
 import uuid
-from data import *
+# from data import *
 import json
 import sqlite3
 import pandas as pd

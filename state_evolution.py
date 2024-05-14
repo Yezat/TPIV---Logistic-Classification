@@ -33,11 +33,11 @@ class OverlapSet():
         self.F_hat = 0
         self.P_hat = 0
 
-        self.BLEND_FPE = 0.75
-        self.TOL_FPE = 1e-4
+        self.BLEND_FPE = 0.85
+        self.TOL_FPE = 1e-5
         self.MIN_ITER_FPE = 10
         self.MAX_ITER_FPE = 10000
-        self.INT_LIMS = 10.0
+        self.INT_LIMS = 7.5
 
     def log_overlaps(self, logger):
         logger.info(f"m: {self.m}, q: {self.q}, sigma: {self.sigma}, P: {self.P}, N: {self.N}, A: {self.A}, F: {self.F}")
