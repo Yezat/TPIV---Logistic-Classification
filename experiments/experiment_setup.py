@@ -265,8 +265,8 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             data_model_definitions = []
 
-            small_x = 0.5
-            big_x = 10
+            small_x = 0.1
+            big_x = 5
             small_theta = 0.1
             big_theta = 5
 
@@ -274,10 +274,8 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             data_model_type = DataModelType.KFeaturesModel
             feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([small_x,small_x])
-            features_theta = np.array([small_theta,small_theta])
-            # features_x = np.array([0.5,0.5])
-            # features_theta = np.array([2,2])
+            features_x = np.array([0.5,0.5])
+            features_theta = np.array([2,2])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.array([1,1])
@@ -286,10 +284,8 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             data_model_type = DataModelType.KFeaturesModel
             feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([big_x,big_x])
-            features_theta = np.array([small_theta, small_theta])
-            # features_x = np.array([2,2])
-            # features_theta = np.array([2,2])
+            features_x = np.array([2,2])
+            features_theta = np.array([2,2])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.array([1,1])
@@ -299,10 +295,8 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             data_model_type = DataModelType.KFeaturesModel
             feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([small_x, small_x])
-            features_theta = np.array([big_theta,big_theta])
-            # features_x = np.array([0.5,0.5])
-            # features_theta = np.array([8,8])
+            features_x = np.array([0.5,0.5])
+            features_theta = np.array([8,8])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.array([1,1])
@@ -311,10 +305,8 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             data_model_type = DataModelType.KFeaturesModel
             feature_ratios = np.array([0.5,0.5])
-            # features_x = np.array([2,2])
-            # features_theta = np.array([1/2,1/2])
-            features_x = np.array([big_x,big_x])
-            features_theta = np.array([big_theta,big_theta])
+            features_x = np.array([2,2])
+            features_theta = np.array([0.5,0.5])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.array([1,1])
