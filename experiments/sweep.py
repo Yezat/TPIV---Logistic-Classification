@@ -6,6 +6,7 @@ import time
 import os
 import inspect
 import sys
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
@@ -19,7 +20,6 @@ from scipy.optimize import minimize_scalar, dual_annealing, basinhopping, brute
 import logging
 
 
-
 def run_erm(logger, task, data_model, df_sigma):
     """
     Generate Data, run ERM and save the results to the database
@@ -29,18 +29,23 @@ def run_erm(logger, task, data_model, df_sigma):
 
     data = data_model.generate_data(int(task.alpha * task.d), task.tau)
 
-    weights_erm, problem_instance = run_optimizer(task, data_model, data, logger, df_sigma)
-    
-    erm_information = ERMExperimentInformation(task, data_model, data, weights_erm, problem_instance, logger)
+    weights_erm, problem_instance = run_optimizer(
+        task, data_model, data, logger, df_sigma
+    )
+
+    erm_information = ERMExperimentInformation(
+        task, data_model, data, weights_erm, problem_instance, logger
+    )
 
     end = time.time()
     erm_information.duration = end - start
-    
+
     logger.info(f"Finished ERM {task}")
 
     return erm_information
 
-def run_state_evolution(logger,task, data_model):
+
+def run_state_evolution(logger, task, data_model):
     """
     Starts the state evolution and saves the results to the database
     """
@@ -50,18 +55,19 @@ def run_state_evolution(logger,task, data_model):
 
     overlaps = fixed_point_finder(logger, data_model, task)
 
-    st_exp_info = StateEvolutionExperimentInformation(task,overlaps, data_model,logger)
-
+    st_exp_info = StateEvolutionExperimentInformation(
+        task, overlaps, data_model, logger
+    )
 
     end = time.time()
-    experiment_duration = end-start
+    experiment_duration = end - start
     st_exp_info.duration = experiment_duration
 
-    
-    logger.info(f"Finished State Evolution {task}")   
+    logger.info(f"Finished State Evolution {task}")
     overlaps.log_overlaps(logger)
 
     return st_exp_info
+
 
 def minimizer_lambda(logger, task, data_model, lam):
     """
@@ -71,65 +77,107 @@ def minimizer_lambda(logger, task, data_model, lam):
     overlaps = fixed_point_finder(logger, data_model, task, log=False)
 
     if task.method == "optimal_lambda":
-        gen_error =  generalization_error(data_model.rho,overlaps.m,overlaps.q,task.tau)
+        gen_error = generalization_error(
+            data_model.rho, overlaps.m, overlaps.q, task.tau
+        )
     elif task.method == "optimal_adversarial_lambda":
         test_against_epsilon = task.test_against_epsilons[0]
         if len(task.test_against_epsilons) > 1:
-            logger.error(f"Optimizing over Adversarial Test Error can only be done with one test against epsilon, for this round we picked the first one which is {test_against_epsilon}")
-        gen_error = adversarial_generalization_error_overlaps(overlaps,task,data_model,test_against_epsilon)
+            logger.error(
+                f"Optimizing over Adversarial Test Error can only be done with one test against epsilon, for this round we picked the first one which is {test_against_epsilon}"
+            )
+        gen_error = adversarial_generalization_error_overlaps(
+            overlaps, task, data_model, test_against_epsilon
+        )
 
     logger.info(f"Generalization error for lambda {task.lam} is {gen_error}")
     return gen_error
 
-def get_optimal_lambda(logger,task, data_model):
+
+def get_optimal_lambda(logger, task, data_model):
     """
     Computes the optimal lambda given a task and a data_model, returns the lambda
     """
     logger.info(f"Starting optimal lambda {task}")
     start = time.time()
 
-    res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="bounded", bounds=[-0.000001,1e3],options={'xatol': 1e-8,'maxiter':200})
+    res = minimize_scalar(
+        lambda l: minimizer_lambda(logger, task, data_model, l),
+        method="bounded",
+        bounds=[-0.000001, 1e3],
+        options={"xatol": 1e-8, "maxiter": 200},
+    )
     # res = minimize_scalar(lambda l : minimizer_lambda(logger, task, data_model, l),method="brent", bracket=(-1e5,0,1e5),options={'xtol': 1e-8,'maxiter':100})
     logger.info(f"Minimized success: {res.success}; Message: {res.message}")
     if not res.success:
         raise Exception("Optimization of lambda failed: " + str(res.message))
 
     end = time.time()
-    experiment_duration = end-start
+    experiment_duration = end - start
 
-    logger.info(f"Finished optimal lambda {task} in {experiment_duration} seconds - optimal lambda is {res.x}")
+    logger.info(
+        f"Finished optimal lambda {task} in {experiment_duration} seconds - optimal lambda is {res.x}"
+    )
     if task.method == "optimal_lambda":
-        result = OptimalLambdaResult(task.alpha, task.epsilon, task.tau, res.x,data_model.model_type, data_model.name,task.problem_type)
+        result = OptimalLambdaResult(
+            task.alpha,
+            task.epsilon,
+            task.tau,
+            res.x,
+            data_model.model_type,
+            data_model.name,
+            task.problem_type,
+        )
     elif task.method == "optimal_adversarial_lambda":
-        result = OptimalAdversarialLambdaResult(task.alpha, task.epsilon, task.test_against_epsilons[0], task.tau, res.x,data_model.model_type, data_model.name,task.problem_type)
+        result = OptimalAdversarialLambdaResult(
+            task.alpha,
+            task.epsilon,
+            task.test_against_epsilons[0],
+            task.tau,
+            res.x,
+            data_model.model_type,
+            data_model.name,
+            task.problem_type,
+        )
     return result
 
 
 def minimize_epsilon(logger, task, data_model):
-
     state_evolution_info = run_state_evolution(logger, task, data_model)
 
-    total_calibration = np.abs(np.array(state_evolution_info.calibrations.calibrations)).sum()
+    total_calibration = np.abs(
+        np.array(state_evolution_info.calibrations.calibrations)
+    ).sum()
 
-    logger.info(f"Absolute integrated calibration for epsilon {task.epsilon} is {total_calibration}")
+    logger.info(
+        f"Absolute integrated calibration for epsilon {task.epsilon} is {total_calibration}"
+    )
     return total_calibration
 
-def optimize_adversarial_error_epsilon(logger, task, data_model, evaluation_epsilon_index):
+
+def optimize_adversarial_error_epsilon(
+    logger, task, data_model, evaluation_epsilon_index
+):
     state_evolution_info = run_state_evolution(logger, task, data_model)
 
-    adversarial_error_pair = state_evolution_info.adversarial_generalization_errors[evaluation_epsilon_index]
+    adversarial_error_pair = state_evolution_info.adversarial_generalization_errors[
+        evaluation_epsilon_index
+    ]
 
     attack_epsilon = adversarial_error_pair[0]
     adversarial_error = adversarial_error_pair[1]
 
-    logger.info(f"Adversarial Error for epsilon {task.epsilon} for attack {attack_epsilon} is {adversarial_error}")
+    logger.info(
+        f"Adversarial Error for epsilon {task.epsilon} for attack {attack_epsilon} is {adversarial_error}"
+    )
     return adversarial_error
+
 
 def get_optimal_epsilons_adversarial_error(logger, task, data_model):
     logger.info(f"Starting optimal epsilon in terms of Adversarial Error {task}")
     results = []
-    for i,test_against_epsilon in enumerate(task.test_against_epsilons):
-        
+    for i, test_against_epsilon in enumerate(task.test_against_epsilons):
+
         def minimize(e):
             if e < 0:
                 return np.inf
@@ -140,7 +188,6 @@ def get_optimal_epsilons_adversarial_error(logger, task, data_model):
         # res = dual_annealing(lambda e: minimize(e[0]), bounds=[(0.0,1.0)])
         # basinhopping might work as well
         # res = basinhopping(lambda e: minimize(e[0]), test_against_epsilon)
-        
 
         # logger.info(f"Minimized success: {res.success}; Message: {res.message}")
 
@@ -148,51 +195,68 @@ def get_optimal_epsilons_adversarial_error(logger, task, data_model):
         #     raise Exception("Optimization of epsilon failed " + str(res.message))
         # res = res.x
 
-        res = brute(lambda e: minimize(e[0]),ranges=[(0.0,1.0)],Ns=1000)
+        res = brute(lambda e: minimize(e[0]), ranges=[(0.0, 1.0)], Ns=1000)
         # assign res.x as optimal value
         logger.info(f"result: {res}")
         res = res[0]
 
-
-        result = OptimalAdversarialEpsilonResult(task.alpha, res, task.test_against_epsilons[i], task.tau, task.lam, data_model.model_type, data_model.name)
+        result = OptimalAdversarialEpsilonResult(
+            task.alpha,
+            res,
+            task.test_against_epsilons[i],
+            task.tau,
+            task.lam,
+            data_model.model_type,
+            data_model.name,
+        )
         results.append(result)
 
     return results
 
+
 def get_optimal_epsilon(logger, task, data_model):
-    
-    ps = np.linspace(0.01,0.99,1000)
+    ps = np.linspace(0.01, 0.99, 1000)
     task.ps = ps
 
     def minimize(e):
         task.epsilon = e
-        return minimize_epsilon(logger,task,data_model)
+        return minimize_epsilon(logger, task, data_model)
 
-    res = minimize_scalar(lambda e : minimize(e),method="bounded", bounds=[0.0,10.0],options={'xatol': 1e-4,'maxiter':200})
+    res = minimize_scalar(
+        lambda e: minimize(e),
+        method="bounded",
+        bounds=[0.0, 10.0],
+        options={"xatol": 1e-4, "maxiter": 200},
+    )
     logger.info(f"Minimized success: {res.success}; Message: {res.message}")
     if not res.success:
         raise Exception("Optimization of epsilon failed " + str(res.message))
-    result = OptimalEpsilonResult(task.alpha, res.x, task.tau, task.lam, data_model.model_type, data_model.name)
+    result = OptimalEpsilonResult(
+        task.alpha, res.x, task.tau, task.lam, data_model.model_type, data_model.name
+    )
     return result
 
 
 # Define a function to process a task
 def process_task(task, logger, data_model, df_sigma):
-    
     try:
-        
         logger.info(f"Starting task {task.id}")
 
         if task.method == "state_evolution":
-            task.result = run_state_evolution(logger,task, data_model)
-        elif task.method == "optimal_lambda" or task.method == "optimal_adversarial_lambda":
-            task.result = get_optimal_lambda(logger,task, data_model)
+            task.result = run_state_evolution(logger, task, data_model)
+        elif (
+            task.method == "optimal_lambda"
+            or task.method == "optimal_adversarial_lambda"
+        ):
+            task.result = get_optimal_lambda(logger, task, data_model)
         elif task.method == "optimal_epsilon":
             task.result = get_optimal_epsilon(logger, task, data_model)
         elif task.method == "optimal_adversarial_epsilon":
-            task.result = get_optimal_epsilons_adversarial_error(logger, task, data_model)
+            task.result = get_optimal_epsilons_adversarial_error(
+                logger, task, data_model
+            )
         else:
-            task.result = run_erm(logger,task, data_model, df_sigma)
+            task.result = run_erm(logger, task, data_model, df_sigma)
     except Exception as e:
         # log the exception
         logger.exception(e)
@@ -201,10 +265,11 @@ def process_task(task, logger, data_model, df_sigma):
 
     return task
 
+
 # Define the worker function
 def worker(logger, experiment, df_sigma):
     # get the rank
-    rank = MPI.COMM_WORLD.Get_rank()   
+    rank = MPI.COMM_WORLD.Get_rank()
 
     while True:
         try:
@@ -216,7 +281,12 @@ def worker(logger, experiment, df_sigma):
                 break
 
             # get the data model
-            data_model = experiment._load_data_model(logger, task.data_model_name, task.data_model_type, source_pickle_path = "../")
+            data_model = experiment._load_data_model(
+                logger,
+                task.data_model_name,
+                task.data_model_type,
+                source_pickle_path="../",
+            )
 
             # Process the task
             result = process_task(task, logger, data_model, df_sigma)
@@ -225,10 +295,9 @@ def worker(logger, experiment, df_sigma):
         except Exception as e:
             # log the exception
             logger.exception(e)
-            MPI.COMM_WORLD.send(e,dest=0,tag=0)
+            MPI.COMM_WORLD.send(e, dest=0, tag=0)
             return
     logger.info(f"Worker exiting - my rank is {rank}")
-
 
 
 def load_experiment(filename, logger):
@@ -240,7 +309,9 @@ def load_experiment(filename, logger):
     try:
         with open(filename) as f:
             experiment_dict = json.load(f, cls=NumpyDecoder)
-            experiment = ExperimentInformation.fromdict(experiment_dict) # Fromdict calls cls and thus creates a new experiment_id
+            experiment = ExperimentInformation.fromdict(
+                experiment_dict
+            )  # Fromdict calls cls and thus creates a new experiment_id
             logger.info("Loaded experiment from file %s", filename)
             # log the dataModelType, name and description
             logger.info(f"DataModelTypes:")
@@ -255,17 +326,17 @@ def load_experiment(filename, logger):
 
             return experiment
     except FileNotFoundError:
-        logger.error("Could not find file %s. Using the standard elements instead", filename)
+        logger.error(
+            "Could not find file %s. Using the standard elements instead", filename
+        )
 
-    
 
 # Define the master function
 def master(num_processes, logger, experiment):
-
     with DatabaseHandler(logger) as db:
         db.insert_experiment(experiment)
 
-    experiment_id = experiment.experiment_id 
+    experiment_id = experiment.experiment_id
     logger.info("Starting Experiment with id %s", experiment_id)
 
     # note starttime
@@ -274,100 +345,282 @@ def master(num_processes, logger, experiment):
     # tasks = [{"id": i, "data": "Task " + str(i)} for i in range(1, 100)]
     tasks = []
 
-
-    dummy_optimal_result = OptimalLambdaResult(0,0,0,0,None,None,None)
+    dummy_optimal_result = OptimalLambdaResult(0, 0, 0, 0, None, None, None)
     # load the optimal lambdas from the csv file
     optimal_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
-    
-    dummy_optimal_result = OptimalAdversarialLambdaResult(0,0,0,0,0,None,None,None)
+
+    dummy_optimal_result = OptimalAdversarialLambdaResult(
+        0, 0, 0, 0, 0, None, None, None
+    )
     optimal_adversarial_lambdas = load_csv_to_object_dictionary(dummy_optimal_result)
 
     # This main loop must be simplifieable somehow. It is too deeply nested...
 
     # iterate all the parameters and create process objects for each parameter
     idx = 1
-    for data_model_type, data_model_name in zip(experiment.data_model_types, experiment.data_model_names):
+    for data_model_type, data_model_name in zip(
+        experiment.data_model_types, experiment.data_model_names
+    ):
         for problem in experiment.problem_types:
-            for alpha in experiment.alphas:  
-
+            for alpha in experiment.alphas:
                 if ExperimentType.OptimalEpsilon == experiment.experiment_type:
                     # if that is the case, for each tau and lambda, compute the optimal epsilon
                     for tau in experiment.taus:
                         for lam in experiment.lambdas:
-                            tasks.append(Task(idx,experiment_id,"optimal_epsilon",problem,alpha,0,0,lam,tau,experiment.d,None,None, data_model_type, data_model_name,experiment.gamma_fair_error))
+                            tasks.append(
+                                Task(
+                                    idx,
+                                    experiment_id,
+                                    "optimal_epsilon",
+                                    problem,
+                                    alpha,
+                                    0,
+                                    0,
+                                    lam,
+                                    tau,
+                                    experiment.d,
+                                    None,
+                                    None,
+                                    data_model_type,
+                                    data_model_name,
+                                    experiment.gamma_fair_error,
+                                )
+                            )
                             idx += 1
 
-                elif ExperimentType.OptimalAdversarialErrorEpsilon == experiment.experiment_type:
+                elif (
+                    ExperimentType.OptimalAdversarialErrorEpsilon
+                    == experiment.experiment_type
+                ):
                     # if that is the case, for each tau and lambda, compute the optimal epsilon
                     for tau in experiment.taus:
                         for lam in experiment.lambdas:
-                            tasks.append(Task(idx,experiment_id,"optimal_adversarial_epsilon",problem,alpha,0,experiment.test_against_epsilons,lam,tau,experiment.d,None,None, data_model_type, data_model_name,experiment.gamma_fair_error))
+                            tasks.append(
+                                Task(
+                                    idx,
+                                    experiment_id,
+                                    "optimal_adversarial_epsilon",
+                                    problem,
+                                    alpha,
+                                    0,
+                                    experiment.test_against_epsilons,
+                                    lam,
+                                    tau,
+                                    experiment.d,
+                                    None,
+                                    None,
+                                    data_model_type,
+                                    data_model_name,
+                                    experiment.gamma_fair_error,
+                                )
+                            )
                             idx += 1
-                elif ExperimentType.SweepAtOptimalLambdaAdversarialTestError == experiment.experiment_type:
-                    raise Exception("SweepAtOptimalLambdaAdversarialTestError is not implemented yet")
+                elif (
+                    ExperimentType.SweepAtOptimalLambdaAdversarialTestError
+                    == experiment.experiment_type
+                ):
+                    raise Exception(
+                        "SweepAtOptimalLambdaAdversarialTestError is not implemented yet"
+                    )
                     # you would have to load the optimal epsilons from the csv file and then run the state evolution...
                 else:
                     for epsilon in experiment.epsilons:
                         for tau in experiment.taus:
-                            
-                            
-                            if ExperimentType.OptimalLambda == experiment.experiment_type:
-                                
-                                
-                                optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,data_model_type, data_model_name, problem)
+                            if (
+                                ExperimentType.OptimalLambda
+                                == experiment.experiment_type
+                            ):
+                                optimal_result = OptimalLambdaResult(
+                                    alpha,
+                                    epsilon,
+                                    tau,
+                                    0,
+                                    data_model_type,
+                                    data_model_name,
+                                    problem,
+                                )
 
                                 initial_lambda = 1
 
-                                if not optimal_result.get_key() in optimal_lambdas.keys():
-                                    tasks.append(Task(idx,experiment_id,"optimal_lambda",problem,alpha,epsilon, experiment.test_against_epsilons,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, data_model_type, data_model_name,experiment.gamma_fair_error))
+                                if (
+                                    not optimal_result.get_key()
+                                    in optimal_lambdas.keys()
+                                ):
+                                    tasks.append(
+                                        Task(
+                                            idx,
+                                            experiment_id,
+                                            "optimal_lambda",
+                                            problem,
+                                            alpha,
+                                            epsilon,
+                                            experiment.test_against_epsilons,
+                                            initial_lambda,
+                                            tau,
+                                            experiment.d,
+                                            experiment.ps,
+                                            experiment.dp,
+                                            data_model_type,
+                                            data_model_name,
+                                            experiment.gamma_fair_error,
+                                        )
+                                    )
                                     idx += 1
 
-                            elif ExperimentType.OptimalLambdaAdversarialTestError == experiment.experiment_type:
-                                
-                                optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,data_model_type,data_model_name, problem)
+                            elif (
+                                ExperimentType.OptimalLambdaAdversarialTestError
+                                == experiment.experiment_type
+                            ):
+                                optimal_result = OptimalAdversarialLambdaResult(
+                                    alpha,
+                                    epsilon,
+                                    experiment.test_against_epsilons[0],
+                                    tau,
+                                    0,
+                                    data_model_type,
+                                    data_model_name,
+                                    problem,
+                                )
 
                                 initial_lambda = 1
 
-                                if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
-                                    tasks.append(Task(idx,experiment_id,"optimal_adversarial_lambda",problem,alpha,epsilon, experiment.test_against_epsilons,initial_lambda,tau,experiment.d,experiment.ps,experiment.dp, data_model_type, data_model_name,experiment.gamma_fair_error))
+                                if (
+                                    not optimal_result.get_key()
+                                    in optimal_adversarial_lambdas.keys()
+                                ):
+                                    tasks.append(
+                                        Task(
+                                            idx,
+                                            experiment_id,
+                                            "optimal_adversarial_lambda",
+                                            problem,
+                                            alpha,
+                                            epsilon,
+                                            experiment.test_against_epsilons,
+                                            initial_lambda,
+                                            tau,
+                                            experiment.d,
+                                            experiment.ps,
+                                            experiment.dp,
+                                            data_model_type,
+                                            data_model_name,
+                                            experiment.gamma_fair_error,
+                                        )
+                                    )
                                     idx += 1
 
-                                
-                            else: 
+                            else:
                                 lambdas = experiment.lambdas
-                                if ExperimentType.SweepAtOptimalLambda == experiment.experiment_type:
+                                if (
+                                    ExperimentType.SweepAtOptimalLambda
+                                    == experiment.experiment_type
+                                ):
+                                    optimal_result = OptimalLambdaResult(
+                                        alpha,
+                                        epsilon,
+                                        tau,
+                                        0,
+                                        data_model_type,
+                                        data_model_name,
+                                        problem,
+                                    )
 
-                                    optimal_result = OptimalLambdaResult(alpha,epsilon,tau,0,data_model_type, data_model_name, problem)
-
-                                    if not optimal_result.get_key() in optimal_lambdas.keys():
-                                        logger.info(f"The key is '{optimal_result.get_key()}'")
-                                        logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. ")
+                                    if (
+                                        not optimal_result.get_key()
+                                        in optimal_lambdas.keys()
+                                    ):
+                                        logger.info(
+                                            f"The key is '{optimal_result.get_key()}'"
+                                        )
+                                        logger.error(
+                                            "Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda. "
+                                        )
                                         # lambdas = [0.001]
                                         lambdas = None
                                     else:
-                                        lambdas = [optimal_lambdas[optimal_result.get_key()]]
+                                        lambdas = [
+                                            optimal_lambdas[optimal_result.get_key()]
+                                        ]
 
-                                elif ExperimentType.SweepAtOptimalLambdaAdversarialTestError == experiment.experiment_type:
-                                
-                                    optimal_result = OptimalAdversarialLambdaResult(alpha,epsilon,experiment.test_against_epsilons[0],tau,0,data_model_type,data_model_name, problem)
+                                elif (
+                                    ExperimentType.SweepAtOptimalLambdaAdversarialTestError
+                                    == experiment.experiment_type
+                                ):
+                                    optimal_result = OptimalAdversarialLambdaResult(
+                                        alpha,
+                                        epsilon,
+                                        experiment.test_against_epsilons[0],
+                                        tau,
+                                        0,
+                                        data_model_type,
+                                        data_model_name,
+                                        problem,
+                                    )
 
-                                    if not optimal_result.get_key() in optimal_adversarial_lambdas.keys():
-                                        logger.info(f"The key is '{optimal_result.get_key()}'")
-                                        logger.error("Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda.")
+                                    if (
+                                        not optimal_result.get_key()
+                                        in optimal_adversarial_lambdas.keys()
+                                    ):
+                                        logger.info(
+                                            f"The key is '{optimal_result.get_key()}'"
+                                        )
+                                        logger.error(
+                                            "Optimal lambda not found in csv file. Run first a sweep to compute the optimal lambda."
+                                        )
                                         lambdas = None
                                     else:
-                                        lambdas = [optimal_adversarial_lambdas[optimal_result.get_key()]]
-
+                                        lambdas = [
+                                            optimal_adversarial_lambdas[
+                                                optimal_result.get_key()
+                                            ]
+                                        ]
 
                                 if lambdas is not None:
-                                    for lam in lambdas:                    
-
-                                        for _ in range(experiment.state_evolution_repetitions):
-                                            tasks.append(Task(idx,experiment_id,"state_evolution",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,None, data_model_type, data_model_name,experiment.gamma_fair_error))
+                                    for lam in lambdas:
+                                        for _ in range(
+                                            experiment.state_evolution_repetitions
+                                        ):
+                                            tasks.append(
+                                                Task(
+                                                    idx,
+                                                    experiment_id,
+                                                    "state_evolution",
+                                                    problem,
+                                                    alpha,
+                                                    epsilon,
+                                                    experiment.test_against_epsilons,
+                                                    lam,
+                                                    tau,
+                                                    experiment.d,
+                                                    experiment.ps,
+                                                    None,
+                                                    data_model_type,
+                                                    data_model_name,
+                                                    experiment.gamma_fair_error,
+                                                )
+                                            )
                                             idx += 1
 
                                         for _ in range(experiment.erm_repetitions):
-                                            tasks.append(Task(idx,experiment_id,"sklearn",problem,alpha,epsilon,experiment.test_against_epsilons,lam,tau,experiment.d,experiment.ps,experiment.dp, data_model_type, data_model_name,experiment.gamma_fair_error))
+                                            tasks.append(
+                                                Task(
+                                                    idx,
+                                                    experiment_id,
+                                                    "sklearn",
+                                                    problem,
+                                                    alpha,
+                                                    epsilon,
+                                                    experiment.test_against_epsilons,
+                                                    lam,
+                                                    tau,
+                                                    experiment.d,
+                                                    experiment.ps,
+                                                    experiment.dp,
+                                                    data_model_type,
+                                                    data_model_name,
+                                                    experiment.gamma_fair_error,
+                                                )
+                                            )
                                             idx += 1
 
     # Initialize the progress bar
@@ -383,7 +636,7 @@ def master(num_processes, logger, experiment):
             break
         task = tasks[task_idx]
         logger.info(f"Sending task {task_idx} to {i+1}")
-        MPI.COMM_WORLD.send(task, dest=i+1, tag=task.id)
+        MPI.COMM_WORLD.send(task, dest=i + 1, tag=task.id)
         task_idx += 1
 
     logger.info("All processes started - receiving results and sending new tasks")
@@ -391,22 +644,27 @@ def master(num_processes, logger, experiment):
     while received_tasks < len(tasks):
         status = MPI.Status()
         # log status information
-        logger.info(f"Received the {received_tasks}th task") 
-        
-        task = MPI.COMM_WORLD.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+        logger.info(f"Received the {received_tasks}th task")
+
+        task = MPI.COMM_WORLD.recv(
+            source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status
+        )
         received_tasks += 1
 
         logger.info(f"Received task {task.id} from {status.source}")
 
         # result
         result = task.result
-        
+
         # test if the result is an exception
         if not isinstance(result, Exception):
             if task.method == "state_evolution":
                 with DatabaseHandler(logger) as db:
                     db.insert_state_evolution(result)
-            elif task.method == "optimal_lambda" or task.method == "optimal_adversarial_lambda":
+            elif (
+                task.method == "optimal_lambda"
+                or task.method == "optimal_adversarial_lambda"
+            ):
                 append_object_to_csv(result)
             elif task.method == "optimal_epsilon":
                 append_object_to_csv(result)
@@ -430,7 +688,6 @@ def master(num_processes, logger, experiment):
             MPI.COMM_WORLD.send(task, dest=status.source, tag=task.id)
             task_idx += 1
 
-
     logger.info("All tasks sent and received")
 
     # mark the experiment as finished
@@ -438,7 +695,12 @@ def master(num_processes, logger, experiment):
     end = time.time()
     duration = end - start
     logger.info("Experiment took %d seconds", duration)
-    if experiment.experiment_type == ExperimentType.Sweep or experiment.experiment_type == ExperimentType.SweepAtOptimalLambda or experiment.experiment_type == ExperimentType.SweepAtOptimalLambdaAdversarialTestError:
+    if (
+        experiment.experiment_type == ExperimentType.Sweep
+        or experiment.experiment_type == ExperimentType.SweepAtOptimalLambda
+        or experiment.experiment_type
+        == ExperimentType.SweepAtOptimalLambdaAdversarialTestError
+    ):
         with DatabaseHandler(logger) as db:
             db.complete_experiment(experiment_id, duration)
     logger.info("Done")
@@ -449,7 +711,7 @@ def master(num_processes, logger, experiment):
     logger.info("All done - signaling exit")
     # signal all workers to stop
     for i in range(num_processes):
-        MPI.COMM_WORLD.send(None, dest=i+1, tag=0) 
+        MPI.COMM_WORLD.send(None, dest=i + 1, tag=0)
 
 
 if __name__ == "__main__":
@@ -460,11 +722,12 @@ if __name__ == "__main__":
 
     # read the filename from the command line
     filename = sys.argv[1]
-    
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(f'%(asctime)s - %(levelname)s - rank {rank} - %(message)s')
+    formatter = logging.Formatter(
+        f"%(asctime)s - %(levelname)s - rank {rank} - %(message)s"
+    )
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
@@ -493,14 +756,10 @@ if __name__ == "__main__":
 
     if rank == 0:
         # run the master
-        master(size-1, logger, experiment)
-        
-    else:
+        master(size - 1, logger, experiment)
 
+    else:
         # run the worker
         worker(logger, experiment, df_sigma)
 
     MPI.Finalize()
-    
-
-    

@@ -6,6 +6,7 @@ import time
 import os
 import inspect
 import sys
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
@@ -18,18 +19,66 @@ import logging
 
 # Define a function to process a data_model_definition
 def process_data_model_definition(data_model_definition, experiment, logger):
-    
     try:
         # Create the data model, just instantiating them produces the pickles...
 
         if data_model_definition.data_model_type == DataModelType.VanillaGaussian:
-            data_model = VanillaGaussianDataModel(experiment.d,logger,source_pickle_path="../",delete_existing=data_model_definition.delete_existing,normalize_matrices=data_model_definition.normalize_matrices, Sigma_w_content=data_model_definition.Sigma_w_content, Sigma_delta_content=data_model_definition.Sigma_delta_content, Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content, name=data_model_definition.name, description=data_model_definition.description)
+            data_model = VanillaGaussianDataModel(
+                experiment.d,
+                logger,
+                source_pickle_path="../",
+                delete_existing=data_model_definition.delete_existing,
+                normalize_matrices=data_model_definition.normalize_matrices,
+                Sigma_w_content=data_model_definition.Sigma_w_content,
+                Sigma_delta_content=data_model_definition.Sigma_delta_content,
+                Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content,
+                name=data_model_definition.name,
+                description=data_model_definition.description,
+            )
         elif data_model_definition.data_model_type == DataModelType.SourceCapacity:
-            data_model = SourceCapacityDataModel(experiment.d, logger, source_pickle_path="../", delete_existing=data_model_definition.delete_existing,normalize_matrices=data_model_definition.normalize_matrices, Sigma_w_content=data_model_definition.Sigma_w_content, Sigma_delta_content=data_model_definition.Sigma_delta_content, Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content, name=data_model_definition.name, description=data_model_definition.description)
+            data_model = SourceCapacityDataModel(
+                experiment.d,
+                logger,
+                source_pickle_path="../",
+                delete_existing=data_model_definition.delete_existing,
+                normalize_matrices=data_model_definition.normalize_matrices,
+                Sigma_w_content=data_model_definition.Sigma_w_content,
+                Sigma_delta_content=data_model_definition.Sigma_delta_content,
+                Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content,
+                name=data_model_definition.name,
+                description=data_model_definition.description,
+            )
         elif data_model_definition.data_model_type == DataModelType.MarginGaussian:
-            data_model = MarginGaussianDataModel(experiment.d,logger, source_pickle_path="../", delete_existing=data_model_definition.delete_existing,normalize_matrices=data_model_definition.normalize_matrices, Sigma_w_content=data_model_definition.Sigma_w_content, Sigma_delta_content=data_model_definition.Sigma_delta_content, Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content, name=data_model_definition.name, description=data_model_definition.description)
+            data_model = MarginGaussianDataModel(
+                experiment.d,
+                logger,
+                source_pickle_path="../",
+                delete_existing=data_model_definition.delete_existing,
+                normalize_matrices=data_model_definition.normalize_matrices,
+                Sigma_w_content=data_model_definition.Sigma_w_content,
+                Sigma_delta_content=data_model_definition.Sigma_delta_content,
+                Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content,
+                name=data_model_definition.name,
+                description=data_model_definition.description,
+            )
         elif data_model_definition.data_model_type == DataModelType.KFeaturesModel:
-            data_model = KFeaturesModel(experiment.d,logger, source_pickle_path="../", delete_existing=data_model_definition.delete_existing,normalize_matrices=data_model_definition.normalize_matrices, attack_equal_defense=data_model_definition.attack_equal_defense, Sigma_w_content=data_model_definition.Sigma_w_content, Sigma_delta_content=data_model_definition.Sigma_delta_content, Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content, name=data_model_definition.name, description=data_model_definition.description, feature_ratios =data_model_definition.feature_ratios, features_x =data_model_definition.features_x, features_theta =data_model_definition.features_theta, process_sigma_type=data_model_definition.sigma_delta_process_type)
+            data_model = KFeaturesModel(
+                experiment.d,
+                logger,
+                source_pickle_path="../",
+                delete_existing=data_model_definition.delete_existing,
+                normalize_matrices=data_model_definition.normalize_matrices,
+                attack_equal_defense=data_model_definition.attack_equal_defense,
+                Sigma_w_content=data_model_definition.Sigma_w_content,
+                Sigma_delta_content=data_model_definition.Sigma_delta_content,
+                Sigma_upsilon_content=data_model_definition.Sigma_upsilon_content,
+                name=data_model_definition.name,
+                description=data_model_definition.description,
+                feature_ratios=data_model_definition.feature_ratios,
+                features_x=data_model_definition.features_x,
+                features_theta=data_model_definition.features_theta,
+                process_sigma_type=data_model_definition.sigma_delta_process_type,
+            )
         else:
             raise ValueError("Unknown data model type")
 
@@ -41,10 +90,11 @@ def process_data_model_definition(data_model_definition, experiment, logger):
 
     return data_model_definition
 
+
 # Define the worker function
 def worker(logger, experiment):
     # get the rank
-    rank = MPI.COMM_WORLD.Get_rank()   
+    rank = MPI.COMM_WORLD.Get_rank()
 
     while True:
         try:
@@ -61,10 +111,9 @@ def worker(logger, experiment):
         except Exception as e:
             # log the exception
             logger.exception(e)
-            MPI.COMM_WORLD.send(e,dest=0,tag=0)
+            MPI.COMM_WORLD.send(e, dest=0, tag=0)
             return
     logger.info(f"Worker exiting - my rank is {rank}")
-
 
 
 def load_experiment(filename, logger):
@@ -76,7 +125,9 @@ def load_experiment(filename, logger):
     try:
         with open(filename) as f:
             experiment_dict = json.load(f, cls=NumpyDecoder)
-            experiment = ExperimentInformation.fromdict(experiment_dict) # Fromdict calls cls and thus creates a new experiment_id
+            experiment = ExperimentInformation.fromdict(
+                experiment_dict
+            )  # Fromdict calls cls and thus creates a new experiment_id
             logger.info("Loaded experiment from file %s", filename)
             # log the dataModelType, name and description
             # logger.info(f"DataModelTypes:")
@@ -91,22 +142,19 @@ def load_experiment(filename, logger):
 
             return experiment
     except FileNotFoundError:
-        logger.error("Could not find file %s. Using the standard elements instead", filename)
+        logger.error(
+            "Could not find file %s. Using the standard elements instead", filename
+        )
 
-    
 
 # Define the master function
 def master(num_processes, logger, experiment):
-
     logger.info("Starting Data-Model Creating with id ")
 
     # note starttime
     start = time.time()
 
-    
     data_model_definitions = experiment.load_data_model_definitions(base_path="../")
-    
-
 
     # Initialize the progress bar
     pbar = tqdm(total=len(data_model_definitions))
@@ -121,7 +169,7 @@ def master(num_processes, logger, experiment):
             break
         task = data_model_definitions[task_idx]
         logger.info(f"Sending task {task_idx} to {i+1}")
-        MPI.COMM_WORLD.send(task, dest=i+1)
+        MPI.COMM_WORLD.send(task, dest=i + 1)
         task_idx += 1
 
     logger.info("All processes started - receiving results and sending new tasks")
@@ -129,14 +177,15 @@ def master(num_processes, logger, experiment):
     while received_tasks < len(data_model_definitions):
         status = MPI.Status()
         # log status information
-        logger.info(f"Received the {received_tasks}th task") 
-        
-        task = MPI.COMM_WORLD.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+        logger.info(f"Received the {received_tasks}th task")
+
+        task = MPI.COMM_WORLD.recv(
+            source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status
+        )
         received_tasks += 1
 
         logger.info(f"Received task {task} from {status.source}")
 
-        
         # test if the result is an exception
         if not isinstance(task, Exception):
             logger.info(f"Created {task.name}")
@@ -152,7 +201,6 @@ def master(num_processes, logger, experiment):
             MPI.COMM_WORLD.send(task, dest=status.source, tag=task_idx)
             task_idx += 1
 
-
     logger.info("All tasks sent and received")
 
     # mark the experiment as finished
@@ -167,7 +215,7 @@ def master(num_processes, logger, experiment):
     logger.info("All done - signaling exit")
     # signal all workers to stop
     for i in range(num_processes):
-        MPI.COMM_WORLD.send(None, dest=i+1, tag=0) 
+        MPI.COMM_WORLD.send(None, dest=i + 1, tag=0)
 
 
 if __name__ == "__main__":
@@ -178,11 +226,12 @@ if __name__ == "__main__":
 
     # read the filename from the command line
     filename = sys.argv[1]
-    
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(f'%(asctime)s - %(levelname)s - rank {rank} - %(message)s')
+    formatter = logging.Formatter(
+        f"%(asctime)s - %(levelname)s - rank {rank} - %(message)s"
+    )
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
@@ -196,13 +245,10 @@ if __name__ == "__main__":
 
     if rank == 0:
         # run the master
-        master(size-1, logger, experiment)
-        
+        master(size - 1, logger, experiment)
+
     else:
         # run the worker
         worker(logger, experiment)
 
     MPI.Finalize()
-    
-
-    

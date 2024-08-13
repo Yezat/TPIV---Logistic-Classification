@@ -1,16 +1,24 @@
 import os
 import inspect
 import sys
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0, parentdir)
 from data_model import DataModelType, SigmaDeltaProcessType
-from experiment_information import NumpyEncoder, ExperimentInformation, ExperimentType, ProblemType, DataModelDefinition
+from experiment_information import (
+    NumpyEncoder,
+    ExperimentInformation,
+    ExperimentType,
+    ProblemType,
+    DataModelDefinition,
+)
 import json
 import numpy as np
 from helpers import *
 
 import logging
+
 logger = logging.getLogger()
 # Make the logger log to console
 logger.addHandler(logging.StreamHandler())
@@ -35,87 +43,152 @@ def set_experiment_up(experiment_name, sweep_definition):
     d = 500
 
     delta_ratio = 4
-    inverse_delta_ratio = 1/delta_ratio
-    Sigma_w_content = np.array([1,1])
-    Sigma_upsilon_content = np.array([1,1])
+    inverse_delta_ratio = 1 / delta_ratio
+    Sigma_w_content = np.array([1, 1])
+    Sigma_upsilon_content = np.array([1, 1])
 
     match experiment_name:
         case "SweepRobUseful":
-
-            features_x = np.linspace(0.1, 4, 15) # [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5]
-            features_theta = np.linspace(0.2, 10.0, 15) # [0.5, 1.0, 2.0, 4.0, 8.0, 10.0]
+            features_x = np.linspace(
+                0.1, 4, 15
+            )  # [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5]
+            features_theta = np.linspace(
+                0.2, 10.0, 15
+            )  # [0.5, 1.0, 2.0, 4.0, 8.0, 10.0]
 
             data_model_definitions = []
             data_models_description = f"SweepRobustnessUsefulFeatures"
 
             for x_val, theta_val in itertools.product(features_x, features_theta):
-
                 data_model_type = DataModelType.KFeaturesModel
-                feature_ratios = np.array([0.5,0.5])
+                feature_ratios = np.array([0.5, 0.5])
                 features_x = np.array([x_val, x_val])
-                features_theta = np.array([theta_val,theta_val])
+                features_theta = np.array([theta_val, theta_val])
                 data_model_name = f"AA_KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
                 data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-                Sigma_delta_content = np.array([1,1])
-                definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+                Sigma_delta_content = np.array([1, 1])
+                definition = DataModelDefinition(
+                    d,
+                    delete_existing,
+                    normalize_matrices,
+                    Sigma_w_content,
+                    Sigma_delta_content,
+                    Sigma_upsilon_content,
+                    data_model_name,
+                    data_model_description,
+                    data_model_type,
+                    feature_ratios,
+                    features_x,
+                    features_theta,
+                )
                 data_model_definitions.append(definition)
 
         case "Vanilla":
-
             data_model_definitions = []
 
             data_models_description = f"Vanilla"
 
             data_model_type = DataModelType.VanillaGaussian
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
-            Sigma_delta_content = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
+            Sigma_delta_content = np.array([1, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_Vanilla_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-            
-        case "DifferentSigmaW":
 
+        case "DifferentSigmaW":
             data_model_definitions = []
 
             data_models_description = f"DifferentSigmaW"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
-            Sigma_delta_content = np.array([1,5])
-            Sigma_upsilon_content = np.array([1,5])
-            Sigma_w_content = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
+            Sigma_delta_content = np.array([1, 5])
+            Sigma_upsilon_content = np.array([1, 5])
+            Sigma_w_content = np.array([1, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_NonuniformProtection_{feature_ratios}_{features_x}_{features_theta}_SD_{Sigma_delta_content}_SU_1_1_Sw_{Sigma_w_content}"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Non Id, Sigma w Id"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
-            Sigma_delta_content = np.array([1,5])
-            Sigma_upsilon_content = np.array([1,5])
-            Sigma_w_content = np.array([5,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
+            Sigma_delta_content = np.array([1, 5])
+            Sigma_upsilon_content = np.array([1, 5])
+            Sigma_w_content = np.array([5, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_NonuniformProtection_{feature_ratios}_{features_x}_{features_theta}_SD_{Sigma_delta_content}_SU_1_1_Sw_{Sigma_w_content}"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Non Id, Sigma w Non Id"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
-            Sigma_delta_content = np.array([1,5])
-            Sigma_upsilon_content = np.array([1,5])
-            Sigma_w_content = np.array([1,5])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
+            Sigma_delta_content = np.array([1, 5])
+            Sigma_upsilon_content = np.array([1, 5])
+            Sigma_w_content = np.array([1, 5])
             data_model_name = f"KFeaturesModel_TwoFeatures_NonuniformProtection_{feature_ratios}_{features_x}_{features_theta}_SD_{Sigma_delta_content}_SU_1_1_Sw_{Sigma_w_content}"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Non Id, Sigma w Non Id"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
         case "ObtainOptimalEpsilonAdvError":
@@ -125,49 +198,50 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             d = 1000
 
+            feature_ratios = np.array([0.5, 0.5])
 
-            feature_ratios = np.array([0.5,0.5])
-
-            Sigma_w_content = np.array([1,1])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
-            Sigma_upsilon_content = np.array([1,1])
-            Sigma_delta_content = np.array([1,1])
-
-
+            Sigma_w_content = np.array([1, 1])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
+            Sigma_upsilon_content = np.array([1, 1])
+            Sigma_delta_content = np.array([1, 1])
 
             data_model_type = DataModelType.KFeaturesModel
 
-
             data_model_name = f"KFeaturesModel_Vanilla_OptimalAdvErrorEpsilon"
             data_model_description = f"Vanilla"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
-
-
-
         case "ReviewerHE85":
-
-            
             data_model_definitions = []
 
             data_models_description = f"ReviewerHE85"
 
             d = 1000
 
+            feature_ratios = np.array([0.01, 0.99])
+            Sigma_w_content = np.array([1, 1])
 
-            feature_ratios = np.array([0.01,0.99])
-            Sigma_w_content = np.array([1,1])
-
-            features_x = np.array([1,1])
-            features_theta = np.array([1000,1])
-
-
+            features_x = np.array([1, 1])
+            features_theta = np.array([1000, 1])
 
             data_model_type = DataModelType.KFeaturesModel
 
-            Sigma_upsilon_content = np.array([1000,1])
+            Sigma_upsilon_content = np.array([1000, 1])
 
             # Sigma_delta_content = np.array([1,1])
             # data_model_name = f"KFeaturesModel_UniformDefense_TeacherAttacked"
@@ -175,24 +249,32 @@ def set_experiment_up(experiment_name, sweep_definition):
             # definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
             # data_model_definitions.append(definition)
 
-
-            Sigma_delta_content = np.array([1000,1])
+            Sigma_delta_content = np.array([1000, 1])
             data_model_name = f"KFeaturesModel_TeacherDefense_TeacherAttacked"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
-
-            Sigma_upsilon_content = np.array([1,1000])
+            Sigma_upsilon_content = np.array([1, 1000])
 
             # Sigma_delta_content = np.array([1,1])
             # data_model_name = f"KFeaturesModel_UniformDefense_OrthogonalAttacked"
             # data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             # definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
             # data_model_definitions.append(definition)
-
-
-
 
             # Sigma_delta_content = np.array([1,1000])
             # data_model_name = f"KFeaturesModel_OrthogonalDefense_OrthogonalAttacked"
@@ -204,7 +286,6 @@ def set_experiment_up(experiment_name, sweep_definition):
             """
             --------------------------------- All Feature Combination Attack Epsilon Sweep below ---------------------------------
             """
-
 
             data_model_definitions = []
 
@@ -218,50 +299,101 @@ def set_experiment_up(experiment_name, sweep_definition):
             data_models_description = f"FeatureComparisonsTest"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([inter_x,small_x])
-            features_theta = np.array([inter_theta,small_theta])
-            data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
-            data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
-            data_model_definitions.append(definition)
-
-            data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([inter_x,big_x])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([inter_x, small_x])
             features_theta = np.array([inter_theta, small_theta])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([inter_x, big_x])
+            features_theta = np.array([inter_theta, small_theta])
+            data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
+            data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
+            data_model_definitions.append(definition)
+
+            data_model_type = DataModelType.KFeaturesModel
+            feature_ratios = np.array([0.5, 0.5])
             features_x = np.array([inter_x, small_x])
-            features_theta = np.array([inter_theta,big_theta])
+            features_theta = np.array([inter_theta, big_theta])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([inter_x,big_x])
-            features_theta = np.array([inter_theta,big_theta])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([inter_x, big_x])
+            features_theta = np.array([inter_theta, big_theta])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
         case "FeatureCombinations":
             """
             --------------------------------- All Feature Combination Attack Epsilon Sweep below ---------------------------------
             """
-
 
             data_model_definitions = []
 
@@ -273,44 +405,95 @@ def set_experiment_up(experiment_name, sweep_definition):
             data_models_description = f"FeatureComparisonsTest"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([0.5,0.5])
-            features_theta = np.array([2,2])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([0.5, 0.5])
+            features_theta = np.array([2, 2])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([2,2])
-            features_theta = np.array([2,2])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([2, 2])
+            features_theta = np.array([2, 2])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
-
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([0.5,0.5])
-            features_theta = np.array([8,8])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([0.5, 0.5])
+            features_theta = np.array([8, 8])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([2,2])
-            features_theta = np.array([0.5,0.5])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([2, 2])
+            features_theta = np.array([0.5, 0.5])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
         case "DefenceSweep":
@@ -319,51 +502,84 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- Sweep Defence below ---------------------------------
             """
 
-
             data_model_definitions = []
-
-
 
             data_models_description = f"Defence Sweep"
 
             robustness_ratio = 5
             first_feature = robustness_ratio
-            second_feature = 1/robustness_ratio
-
+            second_feature = 1 / robustness_ratio
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([first_feature,second_feature])
-            features_theta = np.array([1,1])
-            Sigma_delta_content = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([first_feature, second_feature])
+            features_theta = np.array([1, 1])
+            Sigma_delta_content = np.array([1, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
 
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([first_feature,second_feature])
-            features_theta = np.array([1,1])
-            Sigma_delta_content = np.array([4,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([first_feature, second_feature])
+            features_theta = np.array([1, 1])
+            Sigma_delta_content = np.array([4, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingFirstStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_2_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta First Protectes"
 
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([first_feature,second_feature])
-            features_theta = np.array([1,1])
-            Sigma_delta_content = np.array([1,4])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([first_feature, second_feature])
+            features_theta = np.array([1, 1])
+            Sigma_delta_content = np.array([1, 4])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_2_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Second Protected"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
         case "EquivalentSweep":
             """
@@ -371,21 +587,31 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- Equivalent Loss below ---------------------------------
             """
 
-
             data_model_definitions = []
-
-
 
             data_models_description = f"EquivalentSweep"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
         case "OptimalRegularisationSearch":
@@ -394,24 +620,33 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- Optimal Regularisation Search below ---------------------------------
             """
 
-
             data_model_definitions = []
-
-
 
             data_models_description = f"ObtainOptimalLambda"
             data_models_description = f"SweepAtOptimalLambda"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
         case "PerturbedLogistic":
             """
@@ -419,20 +654,31 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- PerturbedLogistic below ---------------------------------
             """
 
-
             data_model_definitions = []
-
 
             data_models_description = f"PerturbedLogistic"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_TwoFeatures_ProtectingSecondStronger_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
         case "PowerLawData":
@@ -451,38 +697,77 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             alpha = 3.5
             data_model_type = DataModelType.KFeaturesModel
-            ratio = 1/d
+            ratio = 1 / d
             feature_ratios = ratio * np.ones(d)
-            features_x = np.array([10e2*i**-alpha for i in range(1,d+1)])
+            features_x = np.array([10e2 * i**-alpha for i in range(1, d + 1)])
             features_theta = np.ones(d)
             data_model_name = f"KFeaturesModel_PowerLaw_Coefficient_{alpha}"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.ones(d)
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             alpha = 2.5
             data_model_type = DataModelType.KFeaturesModel
-            ratio = 1/d
+            ratio = 1 / d
             feature_ratios = ratio * np.ones(d)
-            features_x = np.array([10e2*i**-alpha for i in range(1,d+1)])
+            features_x = np.array([10e2 * i**-alpha for i in range(1, d + 1)])
             features_theta = np.ones(d)
             data_model_name = f"KFeaturesModel_PowerLaw_Coefficient_{alpha}"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.ones(d)
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             alpha = 1.5
             data_model_type = DataModelType.KFeaturesModel
-            ratio = 1/d
+            ratio = 1 / d
             feature_ratios = ratio * np.ones(d)
-            features_x = np.array([10e2*i**-alpha for i in range(1,d+1)])
+            features_x = np.array([10e2 * i**-alpha for i in range(1, d + 1)])
             features_theta = np.ones(d)
             data_model_name = f"KFeaturesModel_PowerLaw_Coefficient_{alpha}"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.ones(d)
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
             # alpha = 1.2
@@ -499,23 +784,34 @@ def set_experiment_up(experiment_name, sweep_definition):
 
             alpha = 0.5
             data_model_type = DataModelType.KFeaturesModel
-            ratio = 1/d
+            ratio = 1 / d
             feature_ratios = ratio * np.ones(d)
-            features_x = np.array([10e2*i**-alpha for i in range(1,d+1)])
+            features_x = np.array([10e2 * i**-alpha for i in range(1, d + 1)])
             features_theta = np.ones(d)
             data_model_name = f"KFeaturesModel_PowerLaw_Coefficient_{alpha}"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
             Sigma_delta_content = np.ones(d)
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
         case "PowerLawBetaSweep":
             """
             --------------------------------- Power-Law Data above ---------------------------------
             --------------------------------- Power-Law Beta Sweep below ---------------------------------
             """
-
 
             data_models_description = f"PowerLawBetaSweep"
             data_model_definitions = []
@@ -525,23 +821,33 @@ def set_experiment_up(experiment_name, sweep_definition):
             Sigma_w_content = np.ones(d)
             Sigma_upsilon_content = np.ones(d)
 
-
-            for alpha in np.linspace(1.01,3,30):
-
+            for alpha in np.linspace(1.01, 3, 30):
                 # round alpha to 4 digits
-                alpha = np.round(alpha,4)
+                alpha = np.round(alpha, 4)
 
                 data_model_type = DataModelType.KFeaturesModel
-                ratio = 1/d
+                ratio = 1 / d
                 feature_ratios = ratio * np.ones(d)
-                features_x = np.array([10e2*i**-alpha for i in range(1,d+1)])
+                features_x = np.array([10e2 * i**-alpha for i in range(1, d + 1)])
                 features_theta = np.ones(d)
                 data_model_name = f"KFeaturesModel_PowerLaw_Coefficient_{alpha}"
                 data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
                 Sigma_delta_content = np.ones(d)
-                definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+                definition = DataModelDefinition(
+                    d,
+                    delete_existing,
+                    normalize_matrices,
+                    Sigma_w_content,
+                    Sigma_delta_content,
+                    Sigma_upsilon_content,
+                    data_model_name,
+                    data_model_description,
+                    data_model_type,
+                    feature_ratios,
+                    features_x,
+                    features_theta,
+                )
                 data_model_definitions.append(definition)
-
 
         case "HighAlphaSweep":
             """
@@ -549,24 +855,32 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- High Alpha Sweep below ---------------------------------
             """
 
-
             data_model_definitions = []
-
-
-
 
             data_models_description = f"HighAlphaSweep"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
         case "SweepTrainEpsilon":
             """
@@ -574,46 +888,78 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- Sweep Train-epsilon below ---------------------------------
             """
 
-
             data_model_definitions = []
-
-
-
 
             data_models_description = f"TrainEpsilonSweep"
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([0.1,0.1])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([0.1, 0.1])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([10,10])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([10, 10])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
         case "OptimalDefense":
             """
@@ -621,25 +967,21 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- Optimal Defense below ---------------------------------
             """
 
-
             data_model_definitions = []
 
             data_models_description = f"OptimalDefense"
 
             d = 1000
 
+            feature_ratios = np.array([0.01, 0.99])
+            Sigma_w_content = np.array([1, 1])
 
-            feature_ratios = np.array([0.01,0.99])
-            Sigma_w_content = np.array([1,1])
-
-            features_x = np.array([1,1])
-            features_theta = np.array([1000,1])
-
-
+            features_x = np.array([1, 1])
+            features_theta = np.array([1000, 1])
 
             data_model_type = DataModelType.KFeaturesModel
 
-            Sigma_upsilon_content = np.array([1000,1])
+            Sigma_upsilon_content = np.array([1000, 1])
 
             # Sigma_delta_content = np.array([1,1])
             # data_model_name = f"KFeaturesModel_UniformDefense_TeacherAttacked"
@@ -647,15 +989,26 @@ def set_experiment_up(experiment_name, sweep_definition):
             # definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
             # data_model_definitions.append(definition)
 
-
-            Sigma_delta_content = np.array([1000,1])
+            Sigma_delta_content = np.array([1000, 1])
             data_model_name = f"KFeaturesModel_TeacherDefense_TeacherAttacked"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
 
-
-            Sigma_upsilon_content = np.array([1,1000])
+            Sigma_upsilon_content = np.array([1, 1000])
 
             # Sigma_delta_content = np.array([1,1])
             # data_model_name = f"KFeaturesModel_UniformDefense_OrthogonalAttacked"
@@ -663,40 +1016,60 @@ def set_experiment_up(experiment_name, sweep_definition):
             # definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
             # data_model_definitions.append(definition)
 
-
-
-
-            Sigma_delta_content = np.array([1,1000])
+            Sigma_delta_content = np.array([1, 1000])
             data_model_name = f"KFeaturesModel_OrthogonalDefense_OrthogonalAttacked"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta, attack_equal_defense=True,sigma_delta_process_type=SigmaDeltaProcessType.ComputeTeacherDirection)
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+                attack_equal_defense=True,
+                sigma_delta_process_type=SigmaDeltaProcessType.ComputeTeacherDirection,
+            )
             data_model_definitions.append(definition)
 
-
-
         case "OverlapScalings":
-
             """
             --------------------------------- Optimal Defense  above ---------------------------------
             --------------------------------- Overlap Scalings below ---------------------------------
             """
 
-
             data_models_description = f"OverlapScalings"
             data_model_definitions = []
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
             # features_theta = np.array([1,1])
             # samples features theta from a normal distribution (0,1)
             # features_theta = np.random.normal(0,1,2)
             data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([5,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([5, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
 
         case "HighAlpha":
             """
@@ -704,21 +1077,31 @@ def set_experiment_up(experiment_name, sweep_definition):
             --------------------------------- High Alpha below ---------------------------------
             """
 
-
             data_models_description = f"HighAlpha"
             data_model_definitions = []
 
             data_model_type = DataModelType.KFeaturesModel
-            feature_ratios = np.array([0.5,0.5])
-            features_x = np.array([1,1])
-            features_theta = np.array([1,1])
+            feature_ratios = np.array([0.5, 0.5])
+            features_x = np.array([1, 1])
+            features_theta = np.array([1, 1])
             data_model_name = f"KFeaturesModel_Vanilla_ProtectingIdentity_AttackingIdentity_{feature_ratios}_{features_x}_{features_theta}_SD_1_1_SU_1_1"
             data_model_description = f"2 Features, Theta Identity, Sigma_upsilon Identity, Sigma_delta Identity"
-            Sigma_delta_content = np.array([1,1])
-            definition = DataModelDefinition(d,delete_existing,normalize_matrices, Sigma_w_content, Sigma_delta_content, Sigma_upsilon_content, data_model_name, data_model_description, data_model_type, feature_ratios, features_x, features_theta)
+            Sigma_delta_content = np.array([1, 1])
+            definition = DataModelDefinition(
+                d,
+                delete_existing,
+                normalize_matrices,
+                Sigma_w_content,
+                Sigma_delta_content,
+                Sigma_upsilon_content,
+                data_model_name,
+                data_model_description,
+                data_model_type,
+                feature_ratios,
+                features_x,
+                features_theta,
+            )
             data_model_definitions.append(definition)
-
-
 
     """
     --------------------------------- Sweeps in Protection and Data Model ---------------------------------
@@ -726,7 +1109,6 @@ def set_experiment_up(experiment_name, sweep_definition):
 
     for definition in data_model_definitions:
         definition.name += "___" + data_models_description
-
 
     memory = "250G"
 
@@ -740,11 +1122,18 @@ def set_experiment_up(experiment_name, sweep_definition):
     """
     experiment_filename = "sweep_experiment.json"
 
-
     # extract data_model_names, data_model_descriptions and data_model_types from the data_model_definitions
-    data_model_names = [data_model_definition.name for data_model_definition in data_model_definitions]
-    data_model_descriptions = [data_model_definition.description for data_model_definition in data_model_definitions]
-    data_model_types = [data_model_definition.data_model_type for data_model_definition in data_model_definitions]
+    data_model_names = [
+        data_model_definition.name for data_model_definition in data_model_definitions
+    ]
+    data_model_descriptions = [
+        data_model_definition.description
+        for data_model_definition in data_model_definitions
+    ]
+    data_model_types = [
+        data_model_definition.data_model_type
+        for data_model_definition in data_model_definitions
+    ]
 
     # # Create a SweepExperiment
 
@@ -754,22 +1143,20 @@ def set_experiment_up(experiment_name, sweep_definition):
 
     # sweeps
     alphas: np.ndarray = sweep_definition["alphas"]
-    epsilons: np.ndarray =  sweep_definition["epsilons"]
+    epsilons: np.ndarray = sweep_definition["epsilons"]
     lambdas: np.ndarray = sweep_definition["lambdas"]
     test_against_epsilons: np.ndarray = sweep_definition["test_against_epsilons"]
     taus: np.ndarray = sweep_definition["taus"]
 
     # round the lambdas, epsilons and alphas for 4 digits
-    alphas = np.round(alphas,4)    
-    epsilons = np.round(epsilons,4)
-    lambdas = np.round(lambdas,8)
-    taus = np.round(taus,4)
-    test_against_epsilons = np.round(test_against_epsilons,4)
-
-
+    alphas = np.round(alphas, 4)
+    epsilons = np.round(epsilons, 4)
+    lambdas = np.round(lambdas, 8)
+    taus = np.round(taus, 4)
+    test_against_epsilons = np.round(test_against_epsilons, 4)
 
     # calibration
-    ps: np.ndarray = None # np.array([0.6,0.75,0.9])
+    ps: np.ndarray = None  # np.array([0.6,0.75,0.9])
     dp: float = 0.01
 
     # Type, name and problem
@@ -780,11 +1167,25 @@ def set_experiment_up(experiment_name, sweep_definition):
     # Fair error
     gamma_fair_error: float = 0.0001
 
-
-
-    experiment = ExperimentInformation(state_evolution_repetitions,erm_repetitions,alphas,epsilons,lambdas,taus,d,experiment_type,ps,dp, data_model_types,data_model_names, data_model_descriptions, test_against_epsilons,problem_types,gamma_fair_error, experiment_name)
-
-
+    experiment = ExperimentInformation(
+        state_evolution_repetitions,
+        erm_repetitions,
+        alphas,
+        epsilons,
+        lambdas,
+        taus,
+        d,
+        experiment_type,
+        ps,
+        dp,
+        data_model_types,
+        data_model_names,
+        data_model_descriptions,
+        test_against_epsilons,
+        problem_types,
+        gamma_fair_error,
+        experiment_name,
+    )
 
     # Log the experiment object
     logger.info(f"Experiment: {experiment}")
@@ -797,21 +1198,19 @@ def set_experiment_up(experiment_name, sweep_definition):
 
     experiment.store_data_model_definitions(data_model_definitions)
 
-
     # make sure that the experiment directory exists
     if os.path.dirname(experiment_filename) != "":
         os.makedirs(os.path.dirname(experiment_filename), exist_ok=True)
 
     # use json dump to save the experiment parameters
-    with open(experiment_filename,"w") as f:
+    with open(experiment_filename, "w") as f:
         # use the NumpyEncoder to encode numpy arrays
         # Let's produce some json
-        json_string = json.dumps(experiment,cls= NumpyEncoder)
+        json_string = json.dumps(experiment, cls=NumpyEncoder)
         # now write it
         f.write(json_string)
 
     logger.info(f"Succesfully saved experiment to {experiment_filename}.")
-
 
     # Now let's create a batch file to run the experiment
     content = f"""#!/bin/bash
@@ -836,7 +1235,7 @@ deactivate
 """
 
     # save the batch file in the same directory as the experiment
-    with open(f"./run.sh","w") as f:
+    with open(f"./run.sh", "w") as f:
         f.write(content)
 
     # # Start the MPI
@@ -844,8 +1243,6 @@ deactivate
     # # Run this command
     # # mpiexec -n 2 python sweep.py sweep_experiment.json
     # subprocess.run(["mpiexec","-n","4","python","sweep.py","sweep_experiment.json"])
-            
-
 
 
 if __name__ == "__main__":
@@ -857,7 +1254,7 @@ if __name__ == "__main__":
         "normalize_matrices": False,
         "state_evolution_repetitions": 1,
         "erm_repetitions": 20,
-        "alphas": np.logspace(np.log10(1.5e-1), 2, 30), # np.array([0.01]),
+        "alphas": np.logspace(np.log10(1.5e-1), 2, 30),  # np.array([0.01]),
         "epsilons": np.array([0.0, 0.1, 0.2, 0.3]),
         "lambdas": np.array([0.001]),
         "taus": np.array([0.05]),
