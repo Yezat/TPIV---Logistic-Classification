@@ -16,5 +16,5 @@ repos:
         name: Increment version
         entry: bash hooks/increment_version.sh
         language: system
-        stages: [pre-commit]
+        stages: [commit]
 
