@@ -297,19 +297,20 @@ class LogisticProblem:
         wSw = weights.dot(sigma_delta@weights)
         nww = np.sqrt(weights@weights)
 
-        optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+        # optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+        optimal_attack = epsilon/np.sqrt(n_features) * np.sqrt(wSw) # / nww 
 
         loss = LogisticProblem.compute_loss(raw_prediction,optimal_attack,y)
         loss = loss.sum()
-        loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
+        loss += l2_reg_strength * (weights @ covariance_prior @ weights)
 
 
-        epsilon_gradient_per_sample,gradient_per_sample = LogisticProblem.compute_gradient(raw_prediction,optimal_attack,y)   
+        epsilon_gradient_per_sample, gradient_per_sample = LogisticProblem.compute_gradient(raw_prediction,optimal_attack,y)   
 
-        derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        # derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        derivative_optimal_attack = epsilon/np.sqrt(n_features) * sigma_delta @ weights / (np.sqrt(wSw))
 
         adv_grad_summand = np.outer(epsilon_gradient_per_sample, derivative_optimal_attack).sum(axis=0)
-
 
         # if epsilon is zero, assert that the norm of adv_grad_summand is zero
         if epsilon == 0:
