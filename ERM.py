@@ -518,7 +518,8 @@ class PerturbedBoundaryLogisticProblem():
         wSw = weights.dot(sigma_delta@weights)
         nww = np.sqrt(weights@weights)
 
-        optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+        # optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+        optimal_attack = epsilon/np.sqrt(n_features) * np.sqrt(wSw)
 
         margins = y*raw_prediction
 
@@ -570,17 +571,16 @@ class PerturbedBoundaryLogisticProblem():
 
         positive_gradient_per_sample, negative_gradient_per_sample = PerturbedBoundaryLogisticProblem.compute_gradient(shifted_margins_positive, shifted_margins_negative)   
 
-        derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        # derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        derivative_optimal_attack = epsilon/np.sqrt(n_features) * sigma_delta @ weights / (np.sqrt(wSw))
 
         positive_adv_grad_summand = np.outer(positive_gradient_per_sample, -derivative_optimal_attack).sum(axis=0)
         negative_adv_grad_summand = np.outer(negative_gradient_per_sample, -derivative_optimal_attack).sum(axis=0)
-
 
         # if epsilon is zero, assert that the norm of adv_grad_summand is zero
         if epsilon == 0:
             assert np.linalg.norm(positive_adv_grad_summand) == 0, f"derivative_optimal_attack {np.linalg.norm(derivative_optimal_attack)}, gradient_per_sample {np.linalg.norm(positive_gradient_per_sample)}"
             assert np.linalg.norm(negative_adv_grad_summand) == 0, f"derivative_optimal_attack {np.linalg.norm(derivative_optimal_attack)}, gradient_per_sample {np.linalg.norm(negative_gradient_per_sample)}"
-
 
         positive_data = X[mask_positive]
         negative_data = X[~mask_positive]
@@ -672,7 +672,8 @@ class PerturbedBoundaryCoefficientLogisticProblem():
         wSw = weights.dot(sigma_delta@weights)
         nww = np.sqrt(weights@weights)
 
-        optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+        # optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
+        optimal_attack = epsilon/np.sqrt(n_features) * np.sqrt(wSw)
 
         margins = y*raw_prediction
 
@@ -696,12 +697,13 @@ class PerturbedBoundaryCoefficientLogisticProblem():
 
         loss = PerturbedBoundaryCoefficientLogisticProblem.compute_loss(margins)
         loss += (np.log(2) + empirical_e_lam_1 * wSw/nww + direct_cross_term * wSw)
-        loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
+        loss += l2_reg_strength * (weights @ covariance_prior @ weights)
 
 
         gradient_per_sample = PerturbedBoundaryCoefficientLogisticProblem.compute_gradient(margins)   
 
-        derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        # derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        derivative_optimal_attack = epsilon/np.sqrt(n_features) * sigma_delta @ weights / (np.sqrt(wSw))
 
         adv_grad_summand = np.outer(gradient_per_sample, -derivative_optimal_attack).sum(axis=0)
         adv_grad_summand = 0
