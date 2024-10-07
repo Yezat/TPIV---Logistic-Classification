@@ -431,9 +431,10 @@ class EquivalentLogisticProblem:
         raw_prediction = X @ weights / np.sqrt(n_features)   
 
         wSw = weights.dot(sigma_delta@weights)
-        nww = np.sqrt(weights@weights)
+        # nww = np.sqrt(weights@weights)
 
-        optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww
+        # optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww
+        optimal_attack = epsilon/np.sqrt(n_features) * np.sqrt(wSw) # / nww
 
         margins = y * raw_prediction
 
@@ -446,7 +447,8 @@ class EquivalentLogisticProblem:
 
         data_gradient_per_sample, attack_gradient_per_sample = EquivalentLogisticProblem.compute_gradient(margins,optimal_attack)   
 
-        derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        # derivative_optimal_attack = epsilon/np.sqrt(n_features) * ( 2*sigma_delta@weights / nww  - ( wSw / nww**3 ) * weights )
+        derivative_optimal_attack = epsilon/np.sqrt(n_features) * sigma_delta @ weights / (np.sqrt(wSw))
 
 
         adv_grad_summand = np.outer(attack_gradient_per_sample, derivative_optimal_attack).sum(axis=0)
@@ -458,7 +460,7 @@ class EquivalentLogisticProblem:
 
         
         grad = np.empty_like(coef, dtype=weights.dtype)
-        grad[:n_features] = contribution +  l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
+        grad[:n_features] = contribution + l2_reg_strength * ( covariance_prior + covariance_prior.T) @ weights + adv_grad_summand
 
         return loss, grad
 
@@ -577,10 +579,12 @@ class PerturbedBoundaryLogisticProblem():
         positive_adv_grad_summand = np.outer(positive_gradient_per_sample, -derivative_optimal_attack).sum(axis=0)
         negative_adv_grad_summand = np.outer(negative_gradient_per_sample, -derivative_optimal_attack).sum(axis=0)
 
+
         # if epsilon is zero, assert that the norm of adv_grad_summand is zero
         if epsilon == 0:
             assert np.linalg.norm(positive_adv_grad_summand) == 0, f"derivative_optimal_attack {np.linalg.norm(derivative_optimal_attack)}, gradient_per_sample {np.linalg.norm(positive_gradient_per_sample)}"
             assert np.linalg.norm(negative_adv_grad_summand) == 0, f"derivative_optimal_attack {np.linalg.norm(derivative_optimal_attack)}, gradient_per_sample {np.linalg.norm(negative_gradient_per_sample)}"
+
 
         positive_data = X[mask_positive]
         negative_data = X[~mask_positive]
@@ -672,7 +676,6 @@ class PerturbedBoundaryCoefficientLogisticProblem():
         wSw = weights.dot(sigma_delta@weights)
         nww = np.sqrt(weights@weights)
 
-        # optimal_attack = epsilon/np.sqrt(n_features) *  wSw / nww 
         optimal_attack = epsilon/np.sqrt(n_features) * np.sqrt(wSw)
 
         margins = y*raw_prediction
@@ -697,7 +700,7 @@ class PerturbedBoundaryCoefficientLogisticProblem():
 
         loss = PerturbedBoundaryCoefficientLogisticProblem.compute_loss(margins)
         loss += (np.log(2) + empirical_e_lam_1 * wSw/nww + direct_cross_term * wSw)
-        loss += l2_reg_strength * (weights @ covariance_prior @ weights)
+        loss +=  l2_reg_strength * (weights @ covariance_prior @ weights)
 
 
         gradient_per_sample = PerturbedBoundaryCoefficientLogisticProblem.compute_gradient(margins)   
@@ -778,7 +781,8 @@ def adversarial_error(y, Xtest, w_gd, epsilon, Sigma_upsilon):
     wSw = w_gd.dot(Sigma_upsilon@w_gd)
     nww = np.sqrt(w_gd@w_gd)
 
-    return error(y, np.sign( Xtest@w_gd/np.sqrt(d) - y*epsilon/np.sqrt(d) * wSw/nww  ))
+    # return error(y, np.sign( Xtest@w_gd/np.sqrt(d) - y*epsilon/np.sqrt(d) * wSw/nww  ))
+    return error(y, np.sign( Xtest@w_gd/np.sqrt(d) - y*epsilon/np.sqrt(d) * np.sqrt(wSw)))
 
 def compute_boundary_loss(y, Xtest, epsilon, sigma_delta, w_gd, l2_reg_strength):
     d = Xtest.shape[1]
